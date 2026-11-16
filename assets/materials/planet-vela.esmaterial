@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "planet.esshader",
+  "blendMode": 9,
+  "depthTest": true,
+  "depthWrite": true,
+  "cull": 1,
+  "properties": {
+    "u_kind": 1,
+    "u_sun": [
+      0.5,
+      0.35,
+      -0.8
+    ],
+    "u_sunColor": {
+      "r": 0.82,
+      "g": 0.92,
+      "b": 1.0,
+      "a": 1
+    },
+    "u_power": 1.7,
+    "u_night": 0.012
+  }
+}

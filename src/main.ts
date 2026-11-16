@@ -9,6 +9,7 @@ import { createImpacts } from './impacts';
 import { createRaiders, foes } from './raiders';
 import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
+import { installSky } from './sky';
 import { SYSTEMS } from './systems';
 
 const PLUMES = [
@@ -53,6 +54,7 @@ addPlugin({
     build(app) {
         const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
         app.insertResource(Playthrough, { facts });
+        installSky();
         installHud(app);
         installAudio(app);
         const ids = new Map<string, Entity>();
@@ -97,10 +99,11 @@ addPlugin({
             light(world, 'Sun', way(a.sun, b.sun), tone(a.sunColor, b.sunColor), mix(a.sunPower, b.sunPower, k));
             light(world, 'PlanetShine', way(a.shine, b.shine), tone(a.shineColor, b.shineColor), mix(a.shinePower, b.shinePower, k));
             const sky = get(world, 'Sky'), here = k < 0.5 ? a : b;
-            world.insert(sky, Light, { ...world.get(sky, Light), environmentRotation: here.skyTurn, color: { ...here.skyTint } });
+            world.insert(sky, Light, { ...world.get(sky, Light), color: { r: here.skyTint.r / here.skyVeil.r, g: here.skyTint.g / here.skyVeil.g, b: here.skyTint.b / here.skyVeil.b, a: 1 } });
         };
         let stars: Record<string, number> | null = null;
-        const grade = (world: World, exposure: number, band: number, clear: number): void => {
+        const grade = (world: World, exposure: number, system: number, clear: number): void => {
+            const here = SYSTEMS[system]!;
             const camera = get(world, 'Camera');
             const volume = world.get(camera, PostProcessVolume);
             stars ??= { ...volume.effects.find((effect) => effect.type === 'starfield')!.uniforms };
@@ -108,7 +111,8 @@ addPlugin({
             world.insert(camera, PostProcessVolume, {
                 ...volume,
                 effects: volume.effects.map((effect) => effect.type === 'colorGrade' ? { ...effect, uniforms: { ...effect.uniforms, u_exposure: exposure } }
-                    : effect.type === 'starfield' ? { ...effect, uniforms: { ...effect.uniforms, u_bandTurn: band, u_intensity: sky.u_intensity! * clear, u_sunSize: sky.u_sunSize! * clear, u_sunGlow: sky.u_sunGlow! * clear } } : effect),
+                    : effect.type === 'nebula' ? { ...effect, uniforms: { ...effect.uniforms, u_turn: here.skyTurn }, colors: { ...effect.colors, u_tint: { ...here.skyVeil } } }
+                    : effect.type === 'starfield' ? { ...effect, uniforms: { ...effect.uniforms, u_bandTurn: here.bandTurn, u_intensity: sky.u_intensity! * clear, u_sunSize: sky.u_sunSize! * clear, u_sunGlow: sky.u_sunGlow! * clear } } : effect),
             });
         };
         const stage = (world: World, system: number): void => {
@@ -253,7 +257,7 @@ addPlugin({
                     stage(world, ship.system);
                 }
                 dress(world, leaving, ship.bound, leap.blend);
-                grade(world, EXPOSURE + JUMP.glare * leap.flash, SYSTEMS[ship.system]!.bandTurn, 1 - leap.tunnel);
+                grade(world, EXPOSURE + JUMP.glare * leap.flash, ship.system, 1 - leap.tunnel);
                 travel = (travel + dt * JUMP.travel * (0.2 + leap.rush)) % 100000;
                 if (leap.over) ship.jump = -1;
             }
