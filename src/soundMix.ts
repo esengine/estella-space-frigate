@@ -9,6 +9,8 @@ export const SOUNDS = {
     gun: 'assets/audio/gun.essound',
     jump: 'assets/audio/jump.essound',
     impact: 'assets/audio/impact.essound',
+    foeGun: 'assets/audio/raider-gun.essound',
+    explosion: 'assets/audio/explosion.essound',
 } as const;
 
 export const MUSIC = 'assets/audio/drift.esmusic';
@@ -36,6 +38,9 @@ export interface ShipSound {
     jumps: number;
     impacts: number;
     blow: number;
+    foeShots: number;
+    stung: number;
+    kills: number;
 }
 
 export interface Voice { playing: boolean; volume: number; pitch: number }
@@ -62,5 +67,8 @@ export function cuesBetween(before: ShipSound, now: ShipSound): Cue[] {
     if (now.shots > before.shots) cues.push({ sound: 'gun', volume: 0.85, pitch: 0.92 + 0.03 * (now.shots % 5) });
     if (now.jumps > before.jumps) cues.push({ sound: 'jump', volume: 0.7, pitch: 1 });
     if (now.impacts > before.impacts) cues.push({ sound: 'impact', volume: 0.35 + 0.5 * unit(now.blow / 50), pitch: 1.1 - 0.25 * unit(now.blow / 50) });
+    if (now.foeShots > before.foeShots) cues.push({ sound: 'foeGun', volume: 0.3, pitch: 0.94 + 0.04 * (now.foeShots % 4) });
+    if (now.stung > before.stung) cues.push({ sound: 'impact', volume: 0.4, pitch: 1.5 });
+    if (now.kills > before.kills) cues.push({ sound: 'explosion', volume: 0.9, pitch: 1 });
     return cues;
 }

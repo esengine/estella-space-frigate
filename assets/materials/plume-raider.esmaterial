@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "plume.esshader",
+  "blendMode": 5,
+  "depthTest": true,
+  "depthWrite": false,
+  "cull": 0,
+  "properties": {
+    "u_core": {
+      "r": 1.0,
+      "g": 0.8,
+      "b": 0.5,
+      "a": 1
+    },
+    "u_edge": {
+      "r": 1.0,
+      "g": 0.25,
+      "b": 0.04,
+      "a": 1
+    },
+    "u_strength": 3.2,
+    "u_length": 11,
+    "u_falloff": 1.8,
+    "u_fade": 2.0,
+    "u_diamonds": 4,
+    "u_knots": 1.0,
+    "u_flicker": 0.14
+  }
+}

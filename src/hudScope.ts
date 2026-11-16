@@ -1,6 +1,7 @@
 import { TextAlign, Transform, UIVisual } from 'esengine';
 import { METRES, helm, turnBack } from './helm';
-import { AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Rock } from './hudKit';
+import { ALERT, AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Rock } from './hudKit';
+import { foes } from './raiders';
 import type { TargetProbe } from './hudTargets';
 
 const SCOPE = { radius: 104, range: 2000, lift: 40, tilt: 1.12, top: 776, sweep: 1.5 } as const;
@@ -33,15 +34,16 @@ export function buildScope(kit: Kit, rocks: readonly Rock[], probe: TargetProbe)
         rocks.forEach((rock, i) => {
             const at = turnBack(helm.level, world.get(rock.entity, Transform).position);
             const blip = blips[i]!;
-            if (Math.hypot(at.x, at.z) > SCOPE.range) { fade(blip.at, 0); return; }
+            const hostile = rock.foe !== undefined;
+            if (Math.hypot(at.x, at.z) > SCOPE.range || (hostile && !foes.list[rock.foe!]?.alive)) { fade(blip.at, 0); return; }
             const chosen = i === probe.current, locked = chosen && probe.selected >= 0;
             const rise = Math.max(-SCOPE.lift, Math.min(SCOPE.lift, at.y * k));
-            const dot = locked ? 17 : chosen ? 14 : rock.big ? 14 : 10;
+            const dot = locked ? 17 : chosen || hostile ? 14 : rock.big ? 14 : 10;
             place(blip.at, half(-at.x * k), half(-at.z * k));
             tilt(blip.at, lean, 0);
             place(blip.pip, -dot / 2, half(-rise - dot / 2));
             size(blip.pip, dot, dot);
-            ink(blip.pip, locked ? rgb(AMBER) : rgb(ICE, chosen ? 1 : rise < 0 ? 0.55 : 0.88), UIVisual);
+            ink(blip.pip, hostile ? rgb(ALERT) : locked ? rgb(AMBER) : rgb(ICE, chosen ? 1 : rise < 0 ? 0.55 : 0.88), UIVisual);
             place(blip.stem, -0.5, half(Math.min(0, -rise)));
             size(blip.stem, 1, Math.max(1, half(Math.abs(rise))));
             fade(blip.at, 1);

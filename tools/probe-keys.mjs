@@ -23,7 +23,12 @@ try {
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
     let reel = 0;
-    const film = async () => { await page.screenshot({ path: path.join(out, `film-${String(++reel).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92, timeout: 60000 }); };
+    let kills = 0;
+    const film = async () => {
+        await page.screenshot({ path: path.join(out, `film-${String(++reel).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92, timeout: 60000 });
+        const now = await facts();
+        if ((now.kills ?? 0) !== kills) { kills = now.kills; console.log(JSON.stringify({ kill: kills, frame: reel, time: +now.time.toFixed(2) })); }
+    };
     const step = async (frames) => {
         for (let left = frames; left > 0; left -= 120) {
             await page.evaluate((k) => window.__estellaCooked.step(k), Math.min(120, left));
@@ -53,6 +58,9 @@ try {
             await step(b);
             await page.mouse.up();
             await step(1);
+        } else if (verb === 'summon') {
+            await page.evaluate(() => { window.__spaceHud.foes.due = 0; });
+            await step(2);
         } else if (verb === 'film') {
             for (let done = 0; done < a; done += b) { await step(b); await film(); }
         } else if (verb === 'shot') {

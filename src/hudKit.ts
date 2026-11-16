@@ -6,6 +6,7 @@ import {
 import type { Entity, World } from 'esengine';
 import { clamp } from './flight';
 import { METRES, helm, turnBack } from './helm';
+import { ROCKS } from './shipState';
 
 export type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -48,7 +49,7 @@ export const FONTS = { regular: 'assets/ui/fonts/ChakraPetch-Regular.ttf', stron
 
 export type Textures = Record<keyof typeof TEXTURES, number>;
 
-export interface Rock { entity: Entity; index: number; big: boolean }
+export interface Rock { entity: Entity; index: number; big: boolean; foe?: number }
 
 export interface Box { left?: number; top?: number; right?: number; bottom?: number; width?: number; height?: number }
 
@@ -71,6 +72,7 @@ export interface Frame {
 export interface Log { say(text: string, tone?: number): void }
 
 export const pad = (n: number, width: number): string => String(Math.max(0, Math.round(n))).padStart(width, '0');
+export const contactName = (index: number): string => (index >= ROCKS ? `RAIDER ${index - ROCKS + 1}` : `ROCK ${pad(index + 1, 2)}`);
 export const stamp = (seconds: number): string => `${pad(Math.floor(seconds / 60), 2)}:${pad(Math.floor(seconds % 60), 2)}`;
 export const spaced = (n: number): string => Math.round(n).toLocaleString('en-US').replace(/,/g, ' ');
 export const reach = (units: number): string => { const m = units * METRES; return m >= 1000 ? `${(m / 1000).toFixed(1)} KM` : `${Math.round(m)} M`; };

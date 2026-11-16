@@ -3,9 +3,10 @@ import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
 import { createGunnery, guns } from './gunnery';
-import { helm, mulQuat, turnBy, type Quat } from './helm';
+import { helm, mulQuat, turnBack, turnBy, type Quat } from './helm';
 import { installHud } from './hud';
 import { createImpacts } from './impacts';
+import { createRaiders, foes } from './raiders';
 import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { SYSTEMS } from './systems';
@@ -50,7 +51,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
         app.insertResource(Playthrough, { facts });
         installHud(app);
         installAudio(app);
@@ -73,6 +74,7 @@ addPlugin({
         const downs = new Map<string, boolean>();
         const jets = JETS.map(() => 0);
         let sight = 0;
+        let swing: { yaw: number; pitch: number } | null = null;
         let leaving = 0;
         let shown = -1;
         let travel = 0;
@@ -80,6 +82,7 @@ addPlugin({
         let open = false;
         const gunnery = createGunnery(app);
         const impacts = createImpacts(app);
+        const raiders = createRaiders(app);
 
         const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
         const light = (world: World, name: string, way: { x: number; y: number; z: number }, color: { r: number; g: number; b: number; a: number }, intensity: number): void => {
@@ -173,6 +176,23 @@ addPlugin({
                     tour = false;
                 }
             }
+            if ((struck('KeyL') || guns.look) && helm.aim) {
+                if (tour) hand = { ...live };
+                tour = false;
+                const to = turnBack(helm.frame, helm.aim), seat = guns.view ? { height: SIGHT.height, along: 0 } : hand;
+                const bearing = { x: to.x, y: to.y - seat.height, z: to.z - seat.along }, far = Math.hypot(bearing.x, bearing.y, bearing.z) || 1;
+                swing = { yaw: Math.atan2(-bearing.x, -bearing.z), pitch: clamp(Math.asin(clamp(-bearing.y / far, -1, 1)), -1.2, 1.2) };
+            }
+            guns.look = false;
+            if (drag.x !== 0 || drag.y !== 0) swing = null;
+            if (swing && !tour) {
+                let turn = swing.yaw - hand.yaw;
+                turn -= Math.round(turn / (Math.PI * 2)) * Math.PI * 2;
+                const share = Math.min(1, dt * 7);
+                hand.yaw += turn * share;
+                hand.pitch += (swing.pitch - hand.pitch) * share;
+                if (Math.abs(turn) + Math.abs(swing.pitch - hand.pitch) < 0.004) swing = null;
+            }
             if (struck('KeyC') && guns.view) guns.auto = !guns.auto;
             if (!guns.view) guns.auto = false;
             const space = struck('Space');
@@ -262,6 +282,13 @@ addPlugin({
             const cruise = ship.speed * FIELD_DRIFT * dt, drift = cruise * (1 + JUMP.rush * leap.rush);
             const leavingField = ship.jump >= 0 && !leap.swapped, past = leavingField ? drift : cruise;
             impacts(world, dt, cruise, past, leavingField);
+            raiders(world, dt);
+            facts.foes = foes.list.filter((foe) => foe.alive).length;
+            facts.kills = foes.kills;
+            facts.foeShots = foes.shots;
+            facts.stung = foes.stung;
+            facts.foeBerth = Number.isFinite(foes.berth) ? foes.berth : 9999;
+            facts.foeRange = foes.list.reduce((least, foe) => (foe.alive ? Math.min(least, Math.hypot(foe.mind.at.x, foe.mind.at.y, foe.mind.at.z)) : least), 9999);
             facts.shield = ship.shield;
             facts.hull = ship.hull;
             facts.impacts = ship.impacts;

@@ -17,19 +17,18 @@ import { buildScope } from './hudScope';
 import { installHudEffects } from './hudEffects';
 import { buildTargets } from './hudTargets';
 import { JUMP } from './jump';
-import { ship } from './shipState';
+import { foes } from './raiders';
+import { MAJOR_FROM, ROCKS, ship } from './shipState';
 import { SYSTEMS } from './systems';
 
 const GAUGE = { box: 320, sweep: 0.75, fullScale: 440, redline: 400, labels: 114, command: 106 };
 const BAR_CELLS = 24;
-const ROCKS = 46;
-const MAJOR_FROM = 40;
 const LOG_LINES = 4;
 const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -183,6 +182,11 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         const entity = world.findEntityByName(`Rock${i}`);
         if (entity !== null) rocks.push({ entity, index: i, big: i >= MAJOR_FROM });
     }
+    for (let i = 0; ; i++) {
+        const entity = world.findEntityByName(`Raider${i}`);
+        if (entity === null) break;
+        rocks.push({ entity, index: ROCKS + i, big: true, foe: i });
+    }
     const camera = world.findEntityByName('Camera');
     const targets = buildTargets(kit, rocks, log);
     const mine = installMining(app, world, rocks, targets.probe, log);
@@ -192,7 +196,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
     const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
-    let jumps = ship.jumps, landed = true, impacts = ship.impacts, breaches = ship.breaches, mended = ship.hull;
+    let jumps = ship.jumps, landed = true, impacts = ship.impacts, breaches = ship.breaches, mended = ship.hull, stung = foes.stung, stungAt = -10;
     const press = { down: false, at: 0, left: 0, top: 0, travel: 0 };
     const groups: readonly (readonly [Entity, number, number])[] = [[identity, 0, 1], [view, 0.15, 1], [systems, 0.35, 1], [gauge, 0.5, 1], [desk.root, 0.9, 1]];
     const leans: readonly (readonly [Entity, number, number])[] = [[identityAt, 0.1, 0.26], [viewAt, 0.1, -0.26], [systemsAt, -0.12, 0.3], [gaugeAt, -0.12, -0.3]];
@@ -293,6 +297,12 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
             ink(pip, rgb(ICE, (here ? 0.55 + 0.45 * (1 - within) : ship.tour ? 0.2 : 0.1) * (1 - combat)), UIVisual);
         });
 
+        if (foes.note) { log.say(foes.note, ALERT); foes.note = ''; }
+        if (foes.stung !== stung && ship.time - stungAt > 1.5) {
+            stungAt = ship.time;
+            log.say(`UNDER FIRE   ${ship.shield > 0 ? `SHIELD ${Math.round(ship.shield * 100)} %` : `HULL ${Math.round(ship.hull * 100)} %`}`, ALERT);
+        }
+        stung = foes.stung;
         if (ship.impacts !== impacts) {
             impacts = ship.impacts;
             const blow = ship.blow!;
@@ -303,8 +313,9 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         if (helm.arrived && mended < 1) log.say('HULL REPAIRED AT THE GATE', AMBER);
         mended = ship.hull;
         const breached = ship.hull <= 0, bare = ship.shield <= 0, holed = ship.hull < 0.999;
-        say(systemsState, breached ? 'DRIVES OFFLINE' : bare ? 'SHIELD DOWN' : holed ? 'HULL DAMAGE' : mining.firing ? 'MINING' : 'NOMINAL');
-        ink(systemsState, breached || bare ? rgb(ALERT) : holed || mining.firing ? rgb(AMBER) : rgb(HAZE));
+        const fight = foes.list.some((foe) => foe.alive);
+        say(systemsState, breached ? 'DRIVES OFFLINE' : bare ? 'SHIELD DOWN' : holed ? 'HULL DAMAGE' : fight ? 'HOSTILES' : mining.firing ? 'MINING' : 'NOMINAL');
+        ink(systemsState, breached || bare || fight ? rgb(ALERT) : holed || mining.firing ? rgb(AMBER) : rgb(HAZE));
         const readings: readonly (readonly [number, string, Rgba])[] = [
             [ship.shield, `${Math.round(ship.shield * 100)} %`, ship.shield < 0.25 ? rgb(ALERT) : ship.shield < 0.6 ? rgb(AMBER) : rgb(ICE)],
             [ship.hull, `${Math.round(ship.hull * 100)} %`, ship.hull < 0.35 ? rgb(ALERT) : ship.hull < 0.999 ? rgb(AMBER) : rgb(ICE)],

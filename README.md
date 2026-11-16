@@ -4,7 +4,7 @@ Made with the [Estella engine](https://github.com/esengine/estella).
 
 ![Cruising, turning on thrusters, mining, gunnery, and a jump through a gate to a ringed planet](docs/demo.gif)
 
-A frigate on patrol: fly her, mine asteroids, fight with five turrets, and jump through gates from one star system to the next: a banded gas giant, a ringed ice giant and a rust-red desert world. Rocks are solid: running into one costs shield, then hull, and knocks both of you off course. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
+A frigate on patrol: fly her, mine asteroids, fight off raiders with five turrets, and jump through gates from one star system to the next: a banded gas giant, a ringed ice giant and a rust-red desert world. Rocks are solid: running into one costs shield, then hull, and knocks both of you off course. Once you take the helm, raiders arrive in waves and make firing passes; lock one with `T`, face it with `L`, and shoot it down. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
 
 ## Controls
 
@@ -15,12 +15,13 @@ A frigate on patrol: fly her, mine asteroids, fight with five turrets, and jump 
 | `Q` / `E` | Pitch down / up, one step at a time |
 | `X` | Rudder and pitch to neutral (she holds her attitude) |
 | `Z` | Come level |
-| `T` / `R` | Lock next target / release |
+| `T` / `R` | Lock next target (raiders first) / release |
 | `F` | Mining beam (cruise mode) |
 | `V` / `B` | Autopilot: close on target / align to gate (flying through a gate jumps to the next system) |
 | `G` | Combat mode on / off |
 | `Space` | Fire in combat mode (twice for a salvo, hold to keep firing); toggle the camera tour in cruise mode |
 | `C` | Auto fire on the locked target (combat mode) |
+| `L` | Swing the view to the locked target |
 | Drag | Look around; aim in combat mode |
 | Wheel, `1`–`6` | Zoom, camera presets |
 | `M` | Music |

@@ -3,6 +3,7 @@ import type { App, Entity, World } from 'esengine';
 import { guns } from './gunnery';
 import { helm, turnBy, type Vec } from './helm';
 import { mining } from './hudMining';
+import { foes } from './raiders';
 import { ship } from './shipState';
 import { AUDIO_CACHE_BYTES, BEAM_REACH, ENGINE_AT, ENGINE_REACH, MUSIC, MUSIC_VOLUME, SOUNDS, beamVoice, cuesBetween, engineVoice, type ShipSound, type Voice } from './soundMix';
 
@@ -59,7 +60,7 @@ export function installAudio(app: App): void {
 
         const now: ShipSound = {
             throttle: ship.throttle, order: helm.order, rudder: helm.rudder, elevation: helm.elevation, mode: helm.mode, arrivals: helm.arrivals,
-            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps, impacts: ship.impacts, blow: ship.blow?.closing ?? 0,
+            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps, impacts: ship.impacts, blow: ship.blow?.closing ?? 0, foeShots: foes.shots, stung: foes.stung, kills: foes.kills,
         };
         const hum = engineVoice(now.throttle), cut = beamVoice(now.firing, now.heat);
         engine = voice(world, engine, 'EngineSound', SOUNDS.engine, ENGINE_AT, ENGINE_REACH, hum, 1.2);

@@ -1,10 +1,12 @@
 import { FillMethod, FillOrigin, TextAlign, Transform, UINode, UIVisual, UIVisualType, UIWorldAnchor, placeOnScreen } from 'esengine';
 import type { Entity } from 'esengine';
 import { clamp } from './flight';
-import { guns } from './gunnery';
+import { GUNNERY, guns } from './gunnery';
 import { METRES, helm, turnBy } from './helm';
-import { AMBER, DESIGN, HAZE, ICE, KEPT_CLEAR, ease, hullBlocks, keptClear, pad, reach, sameRoom, rgb, spaced, stamp, towardOnScreen, type Frame, type Kit, type Log, type Rock } from './hudKit';
+import { ALERT, AMBER, DESIGN, HAZE, ICE, KEPT_CLEAR, contactName, ease, hullBlocks, keptClear, pad, reach, sameRoom, rgb, spaced, stamp, towardOnScreen, type Frame, type Kit, type Log, type Rock } from './hudKit';
 import { MINING, mining, rockClass } from './hudMining';
+import { RAIDER } from './raiderMind';
+import { foes } from './raiders';
 import { ship } from './shipState';
 import { SYSTEMS } from './systems';
 
@@ -79,7 +81,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         selected = index;
         lockAt = time;
         announced = false;
-        if (index >= 0) log.say(`ROCK ${pad(index + 1, 2)}  ACQUIRING`);
+        if (index >= 0) log.say(`${contactName(index)}  ACQUIRING`);
     };
 
     const update = (frame: Frame): void => {
@@ -94,16 +96,18 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             return Math.hypot(left - bow.left - keel.x * k, top - bow.top - keel.y * k);
         };
         const girth = hull.slice(2).reduce((most, p) => Math.max(most, off(p.left, p.top)), 0) + 14;
+        const alive = (i: number): boolean => { const foe = rocks[i]!.foe; return foe === undefined || foes.list[foe]?.alive === true; };
         rocks.forEach((rock, i) => {
             const at = world.get(rock.entity, Transform).position;
             const s = seen[i]!;
+            if (!alive(i)) { s.range = Infinity; s.visible = false; s.free = false; near.delete(i); return; }
             s.range = Math.hypot(at.x, at.y, at.z);
             const on = frame.lens ? placeOnScreen(at, frame.lens, box, false, 0) : null;
             s.visible = on !== null && on.onScreen && !hullBlocks(frame.lens!.position, at);
             s.left = on ? on.left : 0;
             s.top = on ? on.top : 0;
             s.free = s.visible && s.left > 90 && s.left < box.width - 300 && s.top > 112 && s.top < box.height - 340 && !(s.left < 470 && s.top < 204);
-            if (s.range < NEAR && !near.has(i)) { near.add(i); if (primed) log.say(`PROXIMITY  ROCK ${pad(i + 1, 2)}  ${reach(s.range)}`, AMBER); }
+            if (s.range < NEAR && !near.has(i)) { near.add(i); if (primed && rock.foe === undefined) log.say(`PROXIMITY  ROCK ${pad(i + 1, 2)}  ${reach(s.range)}`, AMBER); }
             else if (s.range > NEAR * 1.15) near.delete(i);
         });
         const byRange = rocks.map((_, i) => i).sort((a, b) => seen[a]!.range - seen[b]!.range);
@@ -112,11 +116,12 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const t = frame.held('KeyT'), r = frame.held('KeyR');
         if ((t && !keyT) || probe.next) {
             probe.next = false;
-            const inView = byRange.filter((i) => seen[i]!.visible);
-            const pool = inView.length > 0 ? inView : byRange;
+            const hostile = byRange.filter((i) => rocks[i]!.foe !== undefined && alive(i)), inView = byRange.filter((i) => seen[i]!.visible);
+            const pool = hostile.length > 0 ? hostile : inView.length > 0 ? inView : byRange.filter(alive);
             choose(pool[(pool.indexOf(selected) + 1) % pool.length] ?? -1, frame.time);
         }
-        if (r && !keyR && selected >= 0) { log.say(`ROCK ${pad(selected + 1, 2)}  RELEASED`); selected = -1; }
+        if (r && !keyR && selected >= 0) { log.say(`${contactName(selected)}  RELEASED`); selected = -1; }
+        if (selected >= 0 && !alive(selected)) selected = -1;
         if (probe.release) { probe.release = false; selected = -1; }
         keyT = t; keyR = r;
         if (frame.click) {
@@ -129,7 +134,8 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             if (hit >= 0 && hit !== selected) choose(hit, frame.time);
         }
 
-        if (selected < 0 && (tracked < 0 || !seen[tracked]!.free)) tracked = byRange.find((i) => seen[i]!.free) ?? -1;
+        const threat = byRange.find((i) => rocks[i]!.foe !== undefined && seen[i]!.visible) ?? -1;
+        if (selected < 0 && (threat >= 0 || tracked < 0 || !seen[tracked]!.free)) tracked = threat >= 0 ? threat : byRange.find((i) => seen[i]!.free) ?? -1;
         const current = selected >= 0 ? selected : tracked;
         const held = world.get(primary, UIWorldAnchor);
         const room = keptClear(box.width, world.get(primary, UINode).insetLeft.value, 112, held.onScreen);
@@ -159,9 +165,11 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             const aside = world.get(primary, UINode).insetLeft.value > box.width - 360;
             fade(brief, selected >= 0 && !held.clamped ? 0 : 1);
             place(brief, aside ? -128 : 58, 16);
-            ink(briefName, selected >= 0 ? rgb(AMBER) : rgb(ICE));
+            const hostile = rocks[current]!.foe !== undefined;
+            ink(briefName, hostile ? rgb(ALERT) : selected >= 0 ? rgb(AMBER) : rgb(ICE));
+            ink(reticle, hostile ? rgb(ALERT) : rgb(ICE, 0.9), UIVisual);
             fade(card, selected >= 0 && !held.clamped ? settle : 0);
-            const name = `ROCK ${pad(current + 1, 2)}`;
+            const name = contactName(current);
             say(briefName, name);
             say(briefRange, reach(s.range));
             if (selected >= 0) {
@@ -175,13 +183,13 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
                 say(cardRange, reach(s.range));
                 say(cardRate, Math.abs(rate) < 0.5 ? 'HOLDING RANGE' : `${rate > 0 ? 'CLOSING' : 'OPENING'}  ${spaced(Math.abs(rate) * METRES)} M/S`);
                 const kind = rockClass(current);
-                say(cardSize, rocks[current]!.big ? 'MAJOR BODY  TOO LARGE TO MINE' : `${kind.code}-TYPE  ${kind.name}`);
-                const near = s.range <= MINING.range;
-                say(cardReach, rocks[current]!.big ? '' : near ? 'IN RANGE' : 'OUT OF RANGE');
+                say(cardSize, hostile ? 'HOSTILE  RAIDER' : rocks[current]!.big ? 'MAJOR BODY  TOO LARGE TO MINE' : `${kind.code}-TYPE  ${kind.name}`);
+                const near = s.range <= (hostile ? GUNNERY.reach : MINING.range);
+                say(cardReach, hostile ? (near ? 'IN GUN RANGE' : 'OUT OF RANGE') : rocks[current]!.big ? '' : near ? 'IN RANGE' : 'OUT OF RANGE');
                 ink(cardReach, near ? rgb(HAZE) : rgb(AMBER));
-                const whole = clamp(mining.integrity[current] ?? 1, 0, 1);
+                const whole = hostile ? clamp(foes.list[rocks[current]!.foe!]!.hull / RAIDER.hull, 0, 1) : clamp(mining.integrity[current] ?? 1, 0, 1);
                 fill(cardWhole, Math.round(whole * 24) / 24);
-                ink(cardWhole, working ? rgb(AMBER) : rgb(ICE), UIVisual);
+                ink(cardWhole, hostile ? rgb(ALERT) : working ? rgb(AMBER) : rgb(ICE), UIVisual);
             }
         }
 

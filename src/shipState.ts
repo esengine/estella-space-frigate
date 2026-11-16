@@ -15,12 +15,15 @@ export const ship = {
     breaches: 0,
     struck: -100,
     blow: null as { rock: number; closing: number; shielded: boolean } | null,
+    stings: [] as { at: { x: number; y: number; z: number }; weight: number }[],
     gap: Infinity,
     closest: Infinity,
 };
 
 export const TOP_SPEED = 420;
 
+export const ROCKS = 46;
+export const MAJOR_FROM = 40;
 export const DRIFTING_ROCKS = 40;
 export const FIELD_HALF_LENGTH = 1600;
 export const FIELD_DRIFT = 0.12;

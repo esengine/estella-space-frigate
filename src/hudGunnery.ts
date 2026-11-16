@@ -1,7 +1,7 @@
 import { FillMethod, FillOrigin, TextAlign, UIVisual, UIVisualType, placeOnScreen } from 'esengine';
 import { GUNNERY, guns } from './gunnery';
 import { helm, turnBy } from './helm';
-import { ALERT, AMBER, DESIGN, EDGE, HAZE, ICE, pad, reach, rgb, type Frame, type Kit, type Log } from './hudKit';
+import { ALERT, AMBER, DESIGN, EDGE, HAZE, ICE, contactName, reach, rgb, type Frame, type Kit, type Log } from './hudKit';
 import type { TargetProbe } from './hudTargets';
 
 const SIGHT = { top: DESIGN.height / 2, arm: 250, gap: 18, tick: 40 };
@@ -125,7 +125,7 @@ export function buildGunnery(kit: Kit, log: Log, probe: TargetProbe): (frame: Fr
         say(range, onRock ? reach(guns.range) : 'NO RETURN');
         ink(range, onRock ? rgb(ICE) : rgb(HAZE));
         say(flight, onRock ? `FLIGHT ${(guns.range / GUNNERY.boltSpeed).toFixed(1)} S` : 'OPEN SPACE');
-        say(mark, auto ? `ROCK ${pad(probe.selected + 1, 2)}  AUTO` : guns.rock >= 0 ? `ROCK ${pad(guns.rock + 1, 2)}` : '');
+        say(mark, auto ? `${contactName(probe.selected)}  AUTO` : guns.rock >= 0 ? contactName(guns.rock) : '');
         say(bearing, `${guns.bearing} OF ${guns.turrets.length} BEAR`);
         ink(bearing, guns.bearing === 0 ? rgb(ALERT) : rgb(HAZE));
         ink(dot, guns.ready > 0 ? rgb(ICE) : rgb(AMBER), UIVisual);

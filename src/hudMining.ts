@@ -91,6 +91,7 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
         system = ship.system;
         const turn = system * 2.1, c = Math.cos(turn), s = Math.sin(turn), flip = system % 2 === 0 ? 1 : -1;
         rocks.forEach((rock, index) => {
+            if (rock.foe !== undefined) return;
             mining.integrity[index] = 1;
             const home = homes[index]!;
             const at = { x: home.x * c + home.z * s, y: home.y * flip, z: home.z * c - home.x * s };
@@ -120,7 +121,8 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
         if (mining.overheated && mining.heat < 0.45) mining.overheated = false;
         let reason = '';
         if (wants) {
-            if (rock!.big) reason = 'TOO LARGE TO MINE';
+            if (rock!.foe !== undefined) reason = 'HOSTILE  USE THE GUNS';
+            else if (rock!.big) reason = 'TOO LARGE TO MINE';
             else if (range > MINING.range) reason = 'OUT OF RANGE';
             else if (mining.hold >= MINING.capacity) reason = 'HOLD FULL';
             else if (mining.overheated) reason = 'EMITTER COOLING';

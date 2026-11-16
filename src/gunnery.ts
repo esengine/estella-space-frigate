@@ -12,6 +12,7 @@ export type AimSource = 'view' | 'auto' | 'target' | 'stowed';
 export const guns = {
     view: false,
     toggle: false,
+    look: false,
     auto: false,
     locked: false,
     squeeze: false,
@@ -31,6 +32,8 @@ export const guns = {
     note: '',
     turrets: [] as Turret[],
     strike: null as ((rock: number, amount: number) => void) | null,
+    marks: [] as { at: Vec; radius: number; live: boolean }[],
+    hurt: null as ((slot: number, at: Vec) => void) | null,
 };
 
 interface Bolt { entity: Entity; at: Vec; way: Vec; flown: number; live: boolean }
@@ -148,6 +151,10 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 const hit = rayToSphere(sight.from, sight.way, t.position, t.scale.x * 0.95);
                 if (hit < best) { best = hit; guns.rock = i; }
             });
+            guns.marks.forEach((mark, k) => {
+                const hit = mark.live ? rayToSphere(sight.from, sight.way, mark.at, mark.radius) : Infinity;
+                if (hit < best) { best = hit; guns.rock = rocks.length + k; }
+            });
             const eye = Math.hypot(sight.from.x, sight.from.y, sight.from.z);
             const far = best < Infinity ? best : eye + GUNNERY.convergence;
             aim = { x: sight.from.x + sight.way.x * far, y: sight.from.y + sight.way.y * far, z: sight.from.z + sight.way.z * far };
@@ -224,6 +231,10 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 const hit = rayToSphere(bolt.at, bolt.way, t.position, t.scale.x * 0.95);
                 if (hit <= near) { near = hit; struck = i; }
             });
+            guns.marks.forEach((mark, k) => {
+                const hit = mark.live ? rayToSphere(bolt.at, bolt.way, mark.at, mark.radius) : Infinity;
+                if (hit <= near) { near = hit; struck = rocks.length + k; }
+            });
             const step = struck >= 0 ? Math.max(0, near) : stride;
             for (let k = 1; k <= 3; k++) puff(tracer, 1, { x: bolt.at.x + (bolt.way.x * step * k) / 3, y: bolt.at.y + (bolt.way.y * step * k) / 3, z: bolt.at.z + (bolt.way.z * step * k) / 3 });
             bolt.at = { x: bolt.at.x + bolt.way.x * step, y: bolt.at.y + bolt.way.y * step, z: bolt.at.z + bolt.way.z * step };
@@ -233,7 +244,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 if (burst) {
                     burst.age = 0;
                     burst.live = true;
-                    burst.size = 5 + world.get(rocks[struck]!, Transform).scale.x * 0.35;
+                    burst.size = 5 + (struck < rocks.length ? world.get(rocks[struck]!, Transform).scale.x : guns.marks[struck - rocks.length]!.radius) * 0.35;
                     world.update(burst.entity, Transform, (t) => { t.position = { ...bolt.at }; });
                 }
                 guns.hits++;
@@ -241,7 +252,8 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 puff(sparks, 110, bolt.at);
                 puff(smoke, 22, bolt.at);
                 puff(blast, 1, bolt.at);
-                guns.strike?.(struck, GUNNERY.damage);
+                if (struck < rocks.length) guns.strike?.(struck, GUNNERY.damage);
+                else guns.hurt?.(struck - rocks.length, bolt.at);
             }
             bolt.live = struck < 0 && bolt.flown < GUNNERY.reach;
             const ahead = [bolt.at.x + bolt.way.x, bolt.at.y + bolt.way.y, bolt.at.z + bolt.way.z];

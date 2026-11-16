@@ -15,6 +15,8 @@ try {
     page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
     await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__spaceHud, null, { timeout: 120000 });
+    await page.evaluate(() => { window.__spaceHud.foes.peace = true; });
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
     const step = (n) => page.evaluate((frames) => window.__estellaCooked.step(frames), n);
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
@@ -200,6 +202,7 @@ try {
     await ram.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
     await ram.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 });
     await ram.evaluate(() => window.__estellaCooked.setPaused(true));
+    await ram.evaluate(() => { window.__spaceHud.foes.peace = true; });
     const drive = (n) => ram.evaluate((frames) => window.__estellaCooked.step(frames), n);
     const press = async (key) => { await ram.keyboard.down(key); await drive(1); await ram.keyboard.up(key); await drive(1); };
     const state = () => ram.evaluate(() => { const f = window.__estellaCooked.facts(), h = window.__spaceHud.helm; return { time: f.time, shield: f.shield, hull: f.hull, impacts: f.impacts, gap: f.gap, closest: f.closest, speed: f.speed, mode: h.mode, order: h.order, aim: h.aim ? Math.round(Math.hypot(h.aim.x, h.aim.y, h.aim.z)) : null }; });
@@ -229,6 +232,51 @@ try {
     await drive(60 * 9);
     const mended = await state();
     expect('left alone the shield comes back', mended.shield > after.shield && mended.impacts === after.impacts, { before: after.shield, now: mended.shield, impacts: [after.impacts, mended.impacts] });
+    }
+    await ram.close();
+
+    const fight = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    fight.on('pageerror', (e) => problems.push(String(e)));
+    fight.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
+    await fight.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
+    await fight.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await fight.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 });
+    await fight.evaluate(() => window.__estellaCooked.setPaused(true));
+    {
+        const go = (n) => fight.evaluate((frames) => window.__estellaCooked.step(frames), n);
+        const hit = async (key) => { await fight.keyboard.down(key); await go(1); await fight.keyboard.up(key); await go(1); };
+        const view = () => fight.evaluate(() => { const f = window.__estellaCooked.facts(), h = window.__spaceHud; return { time: f.time, foes: f.foes, kills: f.kills, foeShots: f.foeShots, stung: f.stung, berth: f.foeBerth, range: f.foeRange, shield: f.shield, hull: f.hull, shots: f.gunShots, hits: f.gunHits, selected: h.selected, auto: f.gunAuto, due: h.foes.due }; });
+        await go(240);
+        const calm = await view();
+        expect('on the tour no raider comes', calm.foes === 0 && calm.foeShots === 0 && !(calm.due < 1e9), calm);
+        await hit('KeyG');
+        await go(30);
+        const waiting = await view();
+        expect('once she is in hand a wave is due, and not at once', waiting.foes === 0 && waiting.due > waiting.time + 10, waiting);
+        await fight.evaluate(() => { window.__spaceHud.foes.due = 0; });
+        await go(2);
+        const met = await view();
+        expect('a wave is two raiders, arriving far off', met.foes === 2 && met.range > 2000 && met.range < 2700, met);
+        await hit('KeyT');
+        await go(120);
+        const locked = await view();
+        expect('T locks a raider before any rock', locked.selected >= 46, locked);
+        await hit('KeyC');
+        let seen = locked, nearest = locked.range, lowest = 1, firstShot = -1, firstKill = -1;
+        for (let second = 0; second < 150 && seen.kills < 2; second++) {
+            await go(60);
+            seen = await view();
+            nearest = Math.min(nearest, seen.range);
+            lowest = Math.min(lowest, seen.shield);
+            if (firstShot < 0 && seen.foeShots > 0) firstShot = seen.time - locked.time;
+            if (firstKill < 0 && seen.kills > 0) firstKill = seen.time - locked.time;
+            if (seen.selected < 46 && seen.foes > 0) await hit('KeyT');
+        }
+        expect('they close and open fire', firstShot > 0 && firstShot < 45, { firstShot, shots: seen.foeShots });
+        expect('some of it lands, and comes off the shield', seen.stung > 0 && lowest < 1, { stung: seen.stung, lowest });
+        expect('they make their passes without ramming her', nearest > 100 && nearest < 400, nearest);
+        expect('her guns, laid on a locked raider, hit it', seen.hits > 0, { shots: seen.shots, hits: seen.hits });
+        expect('and destroy it', seen.kills >= 1, { kills: seen.kills, firstKill, foes: seen.foes });
     }
 } finally {
     await browser.close();

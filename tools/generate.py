@@ -328,6 +328,9 @@ TURRET_SCALE = 1.25
 TRUNNION = (0, 0.95, 1.7)
 MUZZLE = 5.75
 SHELLS = 24
+RAIDERS = 3
+FOE_BOLTS = 18
+PARKED = (0, -90000, 0)
 IMPACTS = 4
 
 
@@ -437,6 +440,52 @@ def turret_source():
     worn(step, P, {'tag': ['plate', 'plateSide', 'ring', 'optic', 'hatch', 'cheek', 'gear']}, 61)
     step(op='decimate', **{'from': 'blockout'}, ratio=1)
     src['normalBake'] = {'from': 'dense', 'size': min(MAP, 1024), 'distance': 0.12, 'color': True, 'surface': True, 'occlusion': {'samples': 24, 'size': 256, 'reach': 0.6}}
+    return src
+
+
+def raider_source():
+    S = []
+    def step(**k): S.append(k); return k
+    def oct(w, h, c): return [[-w + c, -h], [w - c, -h], [w, -h + c], [w, h - c], [w - c, h], [-w + c, h], [-w, h - c], [-w, -h + c]]
+    HULL = [0.21, 0.2, 0.195]; DARK = [0.08, 0.08, 0.086]; ACCENT = [0.55, 0.06, 0.04]; HOT = [1.0, 0.45, 0.12]
+    step(op='loft', sections=[{'at': [0, 0, z], 'points': oct(w, h, c)} for (z, w, h, c) in [(-18, 3.2, 2.4, 0.8), (-8, 4.6, 3.0, 1.0), (4, 3.8, 2.4, 0.8), (14, 2.2, 1.5, 0.5), (22, 0.9, 0.7, 0.25)]], curve=1, tag='hull', color=HULL)
+    step(op='loft', sections=[{'at': [0, 2.3, z], 'points': oct(w, h, c)} for (z, w, h, c) in [(-12, 1.6, 0.9, 0.3), (-2, 2.0, 1.2, 0.4), (7, 1.3, 0.8, 0.3)]], curve=1, tag='hull', color=HULL)
+    step(op='box', size=[1.5, 0.7, 3.6], at=[0, 2.75, 5.2], tag='lens', color=[1.0, 0.16, 0.08])
+    step(op='box', size=[0.5, 5.2, 8.5], at=[0, 5.2, -11.5], tag='fin', color=HULL)
+    step(op='box', size=[0.7, 0.5, 5], at=[0, 8.0, -12.5], tag='fin', color=DARK)
+    for side in (1, -1):
+        step(op='box', size=[9.5, 1.1, 11], at=[side * 8.6, -0.4, -6.5], tag='wing', color=HULL)
+        step(op='loft', sections=[{'at': [side * 13.2, -0.4, z], 'points': oct(w, h, c)} for (z, w, h, c) in [(-9, 1.6, 1.2, 0.4), (2, 1.5, 1.1, 0.35), (12, 0.9, 0.7, 0.25), (17.5, 0.35, 0.3, 0.1)]], curve=1, tag='prong', color=HULL)
+        step(op='loft', path=[[side * 13.2, -0.4, 16.5], [side * 13.2, -0.4, 21.5]], section={'radius': 0.24}, sides=8, tag='barrel', color=DARK)
+        step(op='box', size=[4.2, 3.4, 9.5], at=[side * 6.0, 0.5, -17.2], tag='engine', color=HULL)
+        step(op='loft', path=[[side * 6.0, 0.5, -21.6], [side * 6.0, 0.5, -24.0]], section={'radius': 1.55}, sides=14, tag='nozzle', color=DARK)
+        step(op='box', size=[2.1, 2.1, 0.3], at=[side * 6.0, 0.5, -23.7], tag='burn', color=HOT)
+        step(op='box', size=[0.5, 0.5, 0.5], at=[side * 14.9, -0.4, -7], tag='lamp', color=[1.0, 0.1, 0.05])
+    for x in (0.55, -0.55):
+        step(op='loft', path=[[x, -0.5, 20.5], [x, -0.5, 24.5]], section={'radius': 0.2}, sides=8, tag='barrel', color=DARK)
+    S[-1]['id'] = 'blockout'
+    src = {'version': 1, 'smoothAngle': 28, 'material': {'roughness': 0.46, 'metallic': 0, 'coat': 0.12, 'coatRoughness': 0.3, 'emissive': [16, 16, 16]}, 'steps': S}
+    step(op='paint', faces={'tag': ['barrel', 'nozzle']}, color=[0.2, 0.2, 0.22], roughness=0.32, metallic=0.9)
+    step(op='paint', faces='lens', glow=0.2, roughness=0.08)
+    step(op='paint', faces='burn', glow=0.9)
+    step(op='paint', faces='lamp', glow=1)
+    step(op='panels', faces={'tag': ['hull', 'wing', 'prong', 'engine', 'fin']}, size=3.2, uneven=0.8, gap=0.12, height=[0.05, 0.18], bevel=0.05, tones=0.2, seed=13, tag='plate')
+    step(op='panels', faces='plate', size=1.2, uneven=0.75, gap=0.05, height=[0.01, 0.03], bevel=0.012, tones=0.08, seed=29, tag='plate')
+    P = {'tag': ['plate', 'plateSide']}
+    step(op='paint', faces={**P, 'within': {'min': [None, None, 8.5], 'max': [None, None, 11.5]}}, color=ACCENT, roughness=0.44)
+    step(op='paint', faces={**P, 'within': {'min': [None, None, -12.5], 'max': [None, None, -10.2]}}, color=ACCENT, roughness=0.44)
+    step(op='paint', faces={**P, 'within': {'min': [None, 6.4, None], 'max': [None, 7.7, None]}}, color=ACCENT, roughness=0.44)
+    S[-1]['id'] = 'dense'
+    T = dict(op='stain', texel=True)
+    step(**T, faces=P, pattern='bumps', scale=4.5, octaves=5, threshold=0.5, softness=0.4, roughness=0.62, amount=0.75, seed=71)
+    step(**T, faces=P, pattern='bumps', scale=12, octaves=5, threshold=0.56, softness=0.22, color=[0.05, 0.048, 0.046], roughness=0.72, amount=0.45, seed=72)
+    step(**T, faces=P, where='edges', reach=0.4, pattern='bumps', scale=0.9, octaves=5, fray=0.8, threshold=0.5, softness=0.14, color=[0.5, 0.5, 0.5], roughness=0.6, amount=0.6, seed=73)
+    step(**T, faces=P, pattern='scratches', scale=2.2, width=0.01, threshold=0.5, softness=0.3, color=[0.5, 0.5, 0.5], roughness=0.3, amount=0.45, seed=74)
+    step(**T, faces={'not': {'tag': ['lens', 'burn', 'lamp']}}, where='cavity', reach=0.35, threshold=0.3, softness=0.12, color=[0.012, 0.011, 0.01], roughness=0.95, metallic=0, amount=0.9)
+    for side in (1, -1):
+        step(**T, faces={'not': {'tag': ['burn', 'lens', 'lamp']}}, near={'at': [side * 6.0, 0.5, -24], 'radius': 4.5}, color=[1.0, 0.4, 0.1], glow=0.06, amount=0.7)
+    step(op='decimate', **{'from': 'blockout'}, ratio=1)
+    src['normalBake'] = {'from': 'dense', 'size': min(MAP, 2048), 'distance': 0.3, 'color': True, 'surface': True, 'occlusion': {'samples': 24, 'size': 512, 'reach': 2.0}}
     return src
 
 
@@ -739,7 +788,7 @@ SMALL = {
 
 
 def make_models():
-    sources = {'frigate': ship_source(), 'turret': turret_source(), 'guns': guns_source(), 'gate': gate_source(), **SMALL}
+    sources = {'frigate': ship_source(), 'turret': turret_source(), 'guns': guns_source(), 'raider': raider_source(), 'gate': gate_source(), **SMALL}
     for name, source in sources.items():
         if MODELS_ONLY and name not in MODELS_ONLY:
             continue
@@ -765,6 +814,9 @@ def make_materials():
            for sys in SYSTEMS if 'veil' in sys},
         'shield': {'version': '1.0', 'type': 'material', 'shader': 'shield.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                    'properties': {'u_tint': {'r': 0.35, 'g': 0.7, 'b': 1.0, 'a': 1}, 'u_hot': {'r': 0.85, 'g': 0.95, 'b': 1.0, 'a': 1}, 'u_strength': 1.7, 'u_glow': 0, 'u_hit': [0, 0, 1]}},
+        'plume-raider': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                         'properties': {'u_core': {'r': 1.0, 'g': 0.8, 'b': 0.5, 'a': 1}, 'u_edge': {'r': 1.0, 'g': 0.25, 'b': 0.04, 'a': 1}, 'u_strength': 3.2, 'u_length': 11,
+                                        'u_falloff': 1.8, 'u_fade': 2.0, 'u_diamonds': 4, 'u_knots': 1.0, 'u_flicker': 0.14}},
         'warp': {'version': '1.0', 'type': 'material', 'shader': 'warp.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                  'properties': {'u_core': {'r': 0.8, 'g': 0.93, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.1, 'g': 0.3, 'b': 1.0, 'a': 1}, 'u_strength': 1, 'u_cover': 0, 'u_travel': 0, 'u_flash': 0, 'u_half': WARP['half']}},
         'plume': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
@@ -913,6 +965,20 @@ def make_scene():
         add(f'Jet{name}', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), look((0, 0, 0), way), (0.001,) * 3), mesh('jet', 'assets/materials/jet.esmaterial', None, False, False, False, False)], ship)
         add(f'Jet{name}Gas', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), aim_y(way)), emitter(**GAS)], ship)
     add('Shield', [transform(SHIELD['at'], None, (0.001,) * 3), mesh('shield', 'assets/materials/shield.esmaterial', None, False, False, False, False)], ship)
+    for i in range(RAIDERS):
+        raider = add(f'Raider{i}', [transform((PARKED[0] + i * 400, PARKED[1], PARKED[2]))])
+        add(f'Raider{i}Hull', [transform(), mesh('raider', 'assets/models/raider.esmaterial', 'assets/models/raider_color.png', True, True, True, False)], raider)
+        for side, x in (('L', 6.0), ('R', -6.0)):
+            add(f'Raider{i}Plume{side}', [transform((x, 0.5, -23.9), None, (1.75, 1.75, 1.3)), mesh('plume', 'assets/materials/plume-raider.esmaterial', None, False, False, False, False)], raider)
+        add(f'Raider{i}Glow', [transform((0, 0.5, -27)), {'type': 'Light', 'data': {'type': 0, 'color': {'r': 1.0, 'g': 0.5, 'b': 0.2, 'a': 1}, 'intensity': 0.6, 'radius': 16, 'enabled': True, 'meshShadows': False}}], raider)
+        add(f'Raider{i}Smoke', [transform((0, 1, -8)), emitter(**{**SMOKE, 'maxParticles': 120, 'lifetimeMin': 0.9, 'lifetimeMax': 1.8})], raider)
+    for i in range(FOE_BOLTS):
+        add(f'FoeBolt{i}', [transform(PARKED, None, (0.001,) * 3), mesh('flare', 'assets/materials/flare-red.esmaterial', None, False, False, True, False)])
+    add('FoeFire', [transform(), emitter(**{**IMPACT_FIRE, 'maxParticles': 400, 'shapeRadius': 6, 'speedMax': 90, 'lifetimeMax': 0.9, 'endSizeMin': 14, 'endSizeMax': 30})])
+    add('FoeSparks', [transform(), emitter(**{**SPARKS, 'maxParticles': 700})])
+    add('FoeSmoke', [transform(), emitter(**{**SMOKE, 'maxParticles': 300, 'shapeRadius': 8, 'lifetimeMax': 2.4})])
+    add('FoeBlast', [transform(), emitter(**BLAST)])
+    add('FoeFlash', [transform(PARKED), {'type': 'Light', 'data': {'type': 0, 'color': {'r': 1.0, 'g': 0.6, 'b': 0.25, 'a': 1}, 'intensity': 0, 'radius': 420, 'enabled': True, 'meshShadows': False}}])
     add('HullSparks', [transform(), emitter(**SPARKS)])
     add('HullDust', [transform(), emitter(**SMOKE)])
     add('GunSparks', [transform(), emitter(**SPARKS)])

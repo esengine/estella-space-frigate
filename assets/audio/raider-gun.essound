@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "duration": 0.7,
+  "gain": 0.7,
+  "lowpass": 6500,
+  "reverb": {
+    "size": 0.4,
+    "mix": 0.22,
+    "kind": "open"
+  },
+  "layers": [
+    {
+      "id": "zap",
+      "source": "triangle",
+      "freq": [
+        [
+          0,
+          1500
+        ],
+        [
+          0.12,
+          420
+        ],
+        [
+          0.3,
+          210
+        ]
+      ],
+      "attack": 0.001,
+      "decay": 0.14,
+      "gain": 0.7,
+      "filters": [
+        {
+          "type": "lowpass",
+          "freq": 4200
+        }
+      ]
+    },
+    {
+      "id": "snap",
+      "source": "noise",
+      "band": [
+        1200,
+        5200
+      ],
+      "seed": 131,
+      "attack": 0.001,
+      "decay": 0.03,
+      "gain": 0.5
+    },
+    {
+      "id": "body",
+      "source": "sine",
+      "freq": [
+        [
+          0,
+          260
+        ],
+        [
+          0.2,
+          90
+        ]
+      ],
+      "attack": 0.002,
+      "decay": 0.2,
+      "gain": 0.5
+    }
+  ]
+}

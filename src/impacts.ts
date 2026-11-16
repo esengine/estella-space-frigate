@@ -104,6 +104,13 @@ export function createImpacts(app: App): (world: World, dt: number, cruise: numb
         }
         if (helm.arrived && ship.hull > 0) ship.hull = 1;
 
+        for (const sting of ship.stings.splice(0)) {
+            if (shield === null || ship.shield <= 0) continue;
+            glow = Math.max(glow, sting.weight);
+            const from = { x: (sting.at.x - SHIELD.at.x) / SHIELD.scale.x, y: (sting.at.y - SHIELD.at.y) / SHIELD.scale.y, z: (sting.at.z - SHIELD.at.z) / SHIELD.scale.z };
+            const reach = Math.hypot(from.x, from.y, from.z) || 1;
+            Material.setUniform(world.get(shield, MeshRenderer).material, 'u_hit', { x: from.x / reach, y: from.y / reach, z: from.z / reach });
+        }
         if (shield !== null) {
             glow *= Math.exp(-dt * 2.4);
             const lit = glow > 0.01;
