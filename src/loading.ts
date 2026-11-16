@@ -2,12 +2,12 @@ import { Assets, GetWorld, Name, Res, SceneManager, Time, defineSystem, loadWork
 import type { App, Entity } from 'esengine';
 import { AMBER, DESIGN, FONTS, HAZE, ICE, createKit, rgb, type Textures } from './hudKit';
 import { applyStoredGraphics } from './hudSettings';
+import { SETTLED_FRAMES, pendingShaders } from './shaders';
 
 const BAR = { width: 560, height: 2 };
 const NAMES: Record<string, string> = { stage: 'CLEARING MOORINGS', frigate: 'HULL PLATING', gate: 'JUMP GATE', raider: 'CONTACT PROFILES', turret: 'TURRETS', guns: 'BATTERIES' };
 const SHADE_SECONDS = 0.25;
 const LIFT_SECONDS = 0.5;
-const SETTLED_FRAMES = 12;
 const STAGED_SHARE = 0.96;
 
 export const loading = { share: 0, done: false, cover: false, error: '' };
@@ -15,7 +15,6 @@ export const loading = { share: 0, done: false, cover: false, error: '' };
 type Phase = 'working' | 'shading' | 'switching' | 'settling' | 'lifting' | 'gone';
 
 export function installLoading(app: App): void {
-    const pendingShaders = (): number => (app as unknown as { wasmModule?: { renderer_getPendingShaders?: () => number } }).wasmModule?.renderer_getPendingShaders?.() ?? 0;
     let fonts: { regular: number; strong: number } | null = null;
     let asked = false, baked = false, staged = false, target = 0, subject = '';
     let phase: Phase = 'working', clock = 0, quiet = 0;
@@ -80,7 +79,7 @@ export function installLoading(app: App): void {
             }
         }
         if (phase === 'settling') {
-            quiet = pendingShaders() === 0 ? quiet + 1 : 0;
+            quiet = pendingShaders(app) === 0 ? quiet + 1 : 0;
             if (quiet >= SETTLED_FRAMES) { phase = 'lifting'; clock = 0; target = 1; loading.share = 1; }
         }
         screen.update(dt);
