@@ -141,29 +141,15 @@ try {
     await step(120);
     const tracking = await facts();
     expect('a locked target is followed by the guns, which hold their fire', tracking.gunSource === 'target' && tracking.gunShots === pressed.gunShots, guns(tracking));
+    expect('fire at will is on from the start', tracking.gunAuto === true, guns(tracking));
     await tap('KeyC');
     await step(30);
-    const cruising = await facts();
-    expect('out of combat C does nothing: the guns are a combat tool', cruising.gunAuto === false && cruising.gunSource === 'target', guns(cruising));
-    await tap('KeyG');
-    await step(20);
+    const holding = await facts();
+    expect('C holds their fire', holding.gunAuto === false && holding.gunSource === 'target', guns(holding));
     await tap('KeyC');
-    await step(80);
-    const auto = await facts();
-    expect('C lets them fire on it themselves', auto.gunAuto === true && auto.gunSource === 'auto' && (auto.gunShots > tracking.gunShots || auto.gunBearing === 0), guns(auto));
-    expect('laying ahead of it by a flight time, with a spread that narrows as the solution is held', auto.gunLead > 0 && auto.gunSpread > 0.25 && auto.gunHeld > 1, { lead: auto.gunLead, spread: auto.gunSpread, held: auto.gunHeld });
-    await tap('KeyC');
-    await step(30);
-    const quiet = await facts();
     await step(240);
-    const still = await facts();
-    expect('and C again stops them', still.gunAuto === false && still.gunShots === quiet.gunShots, guns(still));
-    await tap('KeyC');
-    await step(10);
-    await tap('KeyG');
-    await step(30);
-    const left = await facts();
-    expect('leaving combat takes auto fire off with it', left.gunView === false && left.gunAuto === false, guns(left));
+    const free = await facts();
+    expect('and C again frees it, and a rock is still only followed, not shot at', free.gunAuto === true && free.gunSource === 'target' && free.gunShots === tracking.gunShots, guns(free));
     await page.close();
 
     const voyage = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
@@ -257,11 +243,10 @@ try {
         await go(2);
         const met = await view();
         expect('a wave is two raiders, arriving far off', met.foes === 2 && met.range > 2000 && met.range < 2700, met);
-        await hit('KeyT');
+        await hit('KeyG');
         await go(120);
         const locked = await view();
-        expect('T locks a raider before any rock', locked.selected >= 46, locked);
-        await hit('KeyC');
+        expect('out of combat mode a raider in range is locked by itself', locked.selected >= 46, locked);
         let seen = locked, nearest = locked.range, lowest = 1, firstShot = -1, firstKill = -1;
         for (let second = 0; second < 150 && seen.kills < 2; second++) {
             await go(60);
@@ -270,12 +255,11 @@ try {
             lowest = Math.min(lowest, seen.shield);
             if (firstShot < 0 && seen.foeShots > 0) firstShot = seen.time - locked.time;
             if (firstKill < 0 && seen.kills > 0) firstKill = seen.time - locked.time;
-            if (seen.selected < 46 && seen.foes > 0) await hit('KeyT');
         }
         expect('they close and open fire', firstShot > 0 && firstShot < 45, { firstShot, shots: seen.foeShots });
         expect('some of it lands, and comes off the shield', seen.stung > 0 && lowest < 1, { stung: seen.stung, lowest });
         expect('they make their passes without ramming her', nearest > 100 && nearest < 400, nearest);
-        expect('her guns, laid on a locked raider, hit it', seen.hits > 0, { shots: seen.shots, hits: seen.hits });
+        expect('her guns, firing at will on the locked raider, hit it', seen.hits > 0, { shots: seen.shots, hits: seen.hits });
         expect('and destroy it', seen.kills >= 1, { kills: seen.kills, firstKill, foes: seen.foes });
     }
 } finally {

@@ -17,14 +17,15 @@ A frigate on patrol: fly her, mine asteroids, fight off raiders with five turret
 | `Q` / `E` | Pitch down / up, one step at a time |
 | `X` | Rudder and pitch to neutral (she holds her attitude) |
 | `Z` | Come level |
+| Click | Lock what you click on; on a desktop, a click on open space takes the mouse to look around (`Esc` gives the cursor back) |
 | `T` / `R` | Lock next target (raiders first) / release |
 | `F` | Mining beam (cruise mode) |
 | `V` / `B` | Autopilot: close on target / align to gate (flying through a gate jumps to the next system) |
-| `G` | Combat mode on / off |
+| `C` | Fire at will on / off (on from the start): raiders are locked as they come in range, and the turrets train on the locked raider and fire by themselves |
+| `G` | Combat mode on / off: the gun camera, to aim and fire by hand |
 | `Space` | Fire in combat mode (twice for a salvo, hold to keep firing); toggle the camera tour in cruise mode |
-| `C` | Auto fire on the locked target (combat mode) |
 | `L` | Swing the view to the locked target |
-| Drag | Look around; aim in combat mode |
+| Drag | Look around (a phone, or a desktop without the mouse taken); aim in combat mode |
 | Wheel, `1`–`6` | Zoom, camera presets |
 | `M` | Music |
 

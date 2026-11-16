@@ -1,5 +1,5 @@
 import {
-    Assets, Camera, FillMethod, FillOrigin, Input, ScreenOverlay, TextAlign, Transform, UIVisual, UIVisualType,
+    Assets, Camera, Device, FillMethod, FillOrigin, Input, ScreenOverlay, TextAlign, Transform, UIVisual, UIVisualType,
     defineSystem, GetWorld, Res, Time,
 } from 'esengine';
 import { loading as boot } from './loading';
@@ -80,6 +80,8 @@ async function load(app: App): Promise<Loaded> {
     };
 }
 
+const RETICLE = 18;
+
 function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number, input: InputState) => void {
     const kit = createKit(world, textures, fonts);
     const { root, node, image, sliced, solid, label, centred, pivot, tilt, lift, glow, say, ink, fill, fade, place } = kit;
@@ -87,6 +89,11 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     installHudEffects(app);
 
     image(root, 'ScrimTop', { left: 0, right: 0, top: 0, height: 170 }, textures.scrimTop);
+    const touched = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    const reticle = node(root, 'Reticle', { left: 0, top: 0, width: RETICLE, height: RETICLE });
+    solid(reticle, 'ReticleAcross', { left: 0, top: RETICLE / 2 - 1, width: RETICLE, height: 2 }, rgb(ICE, 0.9));
+    solid(reticle, 'ReticleDown', { left: RETICLE / 2 - 1, top: 0, width: 2, height: RETICLE }, rgb(ICE, 0.9));
+    fade(reticle, 0);
     image(root, 'ShadeIdentity', { left: -120, top: -70, width: 680, height: 320 }, textures.shade);
     image(root, 'ShadeView', { right: -120, top: -70, width: 560, height: 270 }, textures.shade);
     image(root, 'ScrimBottom', { left: 0, right: 0, bottom: 0, height: 300 }, textures.scrimBottom);
@@ -223,7 +230,10 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         }
         const surge = clamp((ship.wanted - ship.throttle) * 0.12, -0.05, 0.05);
         for (const [group, x, y] of leans) tilt(group, x + sway.x + surge, y + sway.y);
-        const pointer = { left: screen.pointerX + across / 2, top: DESIGN.height / 2 - screen.pointerY };
+        const looking = Device.state().pointerLocked;
+        const pointer = looking ? { left: across / 2, top: DESIGN.height / 2 } : { left: screen.pointerX + across / 2, top: DESIGN.height / 2 - screen.pointerY };
+        place(reticle, across / 2 - RETICLE / 2, DESIGN.height / 2 - RETICLE / 2);
+        fade(reticle, looking ? 0.8 : 0);
         const pressing = input.isMouseButtonDown(0);
         let click: Frame['click'] = null;
         if (pressing && !press.down) { press.at = ship.time; press.left = pointer.left; press.top = pointer.top; press.travel = 0; }
@@ -364,6 +374,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         desk.update(frame);
         battery(frame);
         targets.update(frame);
+        if (frame.click && !looking && !touched && Device.capabilities().pointerLock) void Device.pointerLock(true);
         mine(frame);
         scope(frame);
         const laden = mining.hold >= MINING.capacity;

@@ -16,6 +16,8 @@ const PICK_REACH = 38;
 const NEAR = 450;
 const LOCK_SECONDS = 0.9;
 
+const HOLD_OFF = 6;
+
 export interface TargetProbe {
     selected: number;
     current: number;
@@ -74,7 +76,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
     const seen = rocks.map(() => ({ range: Infinity, left: 0, top: 0, visible: false, free: false }));
     const near = new Set<number>();
     let selected = -1, tracked = -1, shownFor = -1, lockAt = 0, announced = false, rate = 0, before = 0;
-    let primed = false;
+    let primed = false, heldOff = -Infinity;
     let keyT = false, keyR = false;
 
     const choose = (index: number, time: number): void => {
@@ -120,9 +122,13 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             const pool = hostile.length > 0 ? hostile : inView.length > 0 ? inView : byRange.filter(alive);
             choose(pool[(pool.indexOf(selected) + 1) % pool.length] ?? -1, frame.time);
         }
-        if (r && !keyR && selected >= 0) { log.say(`${contactName(selected)}  RELEASED`); selected = -1; }
+        if (r && !keyR && selected >= 0) { log.say(`${contactName(selected)}  RELEASED`); selected = -1; heldOff = frame.time; }
         if (selected >= 0 && !alive(selected)) selected = -1;
-        if (probe.release) { probe.release = false; selected = -1; }
+        if (probe.release) { probe.release = false; selected = -1; heldOff = frame.time; }
+        if (guns.auto && frame.time - heldOff > HOLD_OFF && (selected < 0 || rocks[selected]!.foe === undefined)) {
+            const foe = byRange.find((i) => rocks[i]!.foe !== undefined && alive(i) && seen[i]!.range < GUNNERY.reach);
+            if (foe !== undefined) choose(foe, frame.time);
+        }
         keyT = t; keyR = r;
         if (frame.click) {
             let best = PICK_REACH, hit = -1;
@@ -131,6 +137,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
                 const off = Math.hypot(seenAt.left - frame.click!.left, seenAt.top - frame.click!.top);
                 if (seenAt.visible && off < best) { best = off; hit = i; }
             });
+            if (hit >= 0) frame.click = null;
             if (hit >= 0 && hit !== selected) choose(hit, frame.time);
         }
 
@@ -208,6 +215,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const gate = helm.gate, away = Math.hypot(gate.x, gate.y, gate.z);
         if (Math.abs(anchor.offset.x - gate.x) + Math.abs(anchor.offset.y - gate.y) + Math.abs(anchor.offset.z - gate.z) > 0.5) world.update(marker, UIWorldAnchor, (anchored) => { anchored.offset = { ...gate }; });
         helm.aim = selected >= 0 ? { ...world.get(rocks[selected]!.entity, Transform).position } : null;
+        guns.hostile = selected >= 0 && rocks[selected]!.foe !== undefined;
         const clear = keptClear(box.width, world.get(marker, UINode).insetLeft.value, 64, anchor.onScreen);
         if (!sameRoom(anchor.edgeInsets, clear)) world.update(marker, UIWorldAnchor, (anchored) => { anchored.edgeInsets = clear; });
         place(callout, world.get(marker, UINode).insetLeft.value > box.width - 380 ? -246 : 86, 2);

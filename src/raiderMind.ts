@@ -3,8 +3,8 @@ import { intercept, scatter } from './gunSolution';
 export type V = { x: number; y: number; z: number };
 
 export const RAIDER = {
-    speed: 105, turn: 1.25, near: 330, far: 1050, range: 1450, cone: 0.07, burst: 3, every: 0.2, rest: 2.6,
-    boltSpeed: 560, reach: 2400, hull: 9, radius: 15, scatter: 0.03, berth: 110, shieldCost: 0.035, hullCost: 0.03,
+    speed: 85, turn: 0.8, near: 330, far: 1050, range: 1450, cone: 0.07, burst: 3, every: 0.2, rest: 2.6,
+    boltSpeed: 560, reach: 2400, hull: 9, radius: 19, scatter: 0.03, berth: 110, shieldCost: 0.035, hullCost: 0.03,
     first: 25, gap: 40, arrive: 2400, most: 3,
 } as const;
 

@@ -65,14 +65,14 @@ export function buildHelm(kit: Kit, probe: TargetProbe): Desk {
     control('Lock', left, rowAt(0), BUTTON.w, BUTTON.h, 'T   LOCK', () => { probe.next = true; }, () => probe.selected >= 0);
     control('Release', left, rowAt(1), BUTTON.w, BUTTON.h, 'R   RELEASE', () => { probe.release = true; }, () => false, cruising);
     control('Face', left, rowAt(1), BUTTON.w, BUTTON.h, 'L   FACE IT', () => { guns.look = true; }, () => false, fighting);
-    control('Mine', left, rowAt(2), BUTTON.w, BUTTON.h, 'F   MINE', () => { mining.armed = !mining.armed; }, () => mining.armed, cruising);
-    control('Auto', left, rowAt(2), BUTTON.w, BUTTON.h, 'C   AUTO FIRE', () => { guns.auto = !guns.auto; }, () => guns.auto, fighting);
+    control('Mine', left, rowAt(2), BUTTON.w, BUTTON.h, 'F   MINE', () => { mining.armed = !mining.armed; }, () => mining.armed, () => !guns.view && !guns.hostile);
+    control('Auto', left, rowAt(2), BUTTON.w, BUTTON.h, 'C   FIRE AT WILL', () => { guns.auto = !guns.auto; }, () => guns.auto, () => guns.view || guns.hostile);
     control('Guns', left, rowAt(3), BUTTON.w, BUTTON.h, 'G   COMBAT', () => { guns.toggle = true; }, () => guns.view);
     control('Gate', right, rowAt(0), BUTTON.w, BUTTON.h, 'B   GATE', () => engage('align'), () => helm.mode === 'align');
     control('Close', right, rowAt(1), BUTTON.w, BUTTON.h, 'V   CLOSE', () => engage('approach'), () => helm.mode === 'approach');
     control('Level', right, rowAt(2), BUTTON.w, BUTTON.h, 'Z   LEVEL', () => engage('level'), () => helm.mode === 'level');
     control('Steady', right, rowAt(3), BUTTON.w, BUTTON.h, 'X   STEADY', () => steady(), () => false);
-    const cruiseHints = header('Hints', -420, RUDDER.top + RUDDER.h + 14, 840, 'W S  ENGINE      A D  RUDDER      Q E  PITCH      Z  LEVEL      DRAG  LOOK      1 - 6  VIEWS      SPACE  TOUR      G  COMBAT');
+    const cruiseHints = header('Hints', -420, RUDDER.top + RUDDER.h + 14, 840, 'W S  ENGINE      A D  RUDDER      Q E  PITCH      Z  LEVEL      CLICK  MOUSE LOOK      1 - 6  VIEWS      SPACE  TOUR      G  COMBAT');
     const combatHints = header('CombatHints', -420, RUDDER.top + RUDDER.h + 14, 840, 'DRAG  AIM      SPACE OR CLICK  FIRE      TWICE  SALVO      T  LOCK      L  FACE IT      C  AUTO FIRE      A D Q E  STEER      G  LEAVE COMBAT');
 
     const along = (value: number, low: number, high: number): number => {

@@ -13,7 +13,8 @@ export const guns = {
     view: false,
     toggle: false,
     look: false,
-    auto: false,
+    auto: true,
+    hostile: false,
     locked: false,
     squeeze: false,
     holding: false,
@@ -141,7 +142,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
 
         let aim: Vec | null = null;
         guns.rock = -1;
-        if (guns.auto && guns.view && guns.locked && meet) {
+        if (guns.auto && guns.hostile && guns.locked && meet) {
             aim = { x: hull.position.x + meet.point.x, y: hull.position.y + meet.point.y, z: hull.position.z + meet.point.z };
             guns.source = 'auto';
         } else if (guns.view && sight) {

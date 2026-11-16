@@ -1,4 +1,4 @@
-import { addPlugin, defineSystem, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
+import { addPlugin, defineSystem, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
@@ -41,6 +41,7 @@ const JETS = [
 ] as const;
 const WAVE_SECONDS = 0.9;
 const FOV = 34;
+const LOOK = 0.55;
 const EXPOSURE = -0.15;
 const SIGHT = { height: 15, yaw: Math.PI + 0.45, pitch: 0.02, distance: 100, low: -0.6, high: 0.9 };
 
@@ -163,7 +164,9 @@ addPlugin({
             };
             const held = input.isMouseButtonDown(0);
             const pointer = input.getMousePosition();
-            const drag = held && grabbed && !guns.holding ? { x: pointer.x - last.x, y: pointer.y - last.y } : { x: 0, y: 0 };
+            const looking = Device.state().pointerLocked;
+            const moved = input.getMouseDelta();
+            const drag = looking ? { x: moved.x * LOOK, y: moved.y * LOOK } : held && grabbed && !guns.holding ? { x: pointer.x - last.x, y: pointer.y - last.y } : { x: 0, y: 0 };
             grabbed = held;
             last = { x: pointer.x, y: pointer.y };
             const wheel = input.getScrollDelta().y;
@@ -200,8 +203,7 @@ addPlugin({
                 hand.pitch += (swing.pitch - hand.pitch) * share;
                 if (Math.abs(turn) + Math.abs(swing.pitch - hand.pitch) < 0.004) swing = null;
             }
-            if (struck('KeyC') && guns.view) guns.auto = !guns.auto;
-            if (!guns.view) guns.auto = false;
+            if (struck('KeyC')) guns.auto = !guns.auto;
             const space = struck('Space');
             if (!guns.view && space) {
                 tour = !tour;
