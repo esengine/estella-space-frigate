@@ -15,12 +15,18 @@ const problems = [];
 try {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
     page.on('pageerror', (e) => problems.push(String(e)));
-    page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text().slice(0, 300)); });
+    let baked = false;
+    page.on('console', (m) => {
+        if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text().slice(0, 300));
+        if (/^\[model-bake\] \d+ model\(s\) at /.test(m.text())) baked = true;
+    });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 300000 });
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 120000 }).catch(() => {});
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
+    for (const until = Date.now() + 300000; !baked && Date.now() < until;) await page.waitForTimeout(500);
+    if (!baked) problems.push('the models were not baked within five minutes; the shots show placeholders');
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
     let reel = 0;
     let kills = 0;
