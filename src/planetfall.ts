@@ -5,6 +5,7 @@ type PostProcessEffectData = PostProcessVolumeData['effects'][number];
 import { Planet, registerPlanetProvider } from 'esengine/terrain';
 import { groundFor, heightAt, type Ground } from './grounds';
 import { GROUND_ID, GROUND_VERSION, groundRange, groundSample, groundWorkerSource } from './planetGround';
+import { lookRotation } from './flight';
 import { helm, mulQuat, type Quat, type Vec } from './helm';
 import { ship } from './shipState';
 import { systemAt } from './worlds';
@@ -21,6 +22,7 @@ export const PLANETFALL = {
     unitsPerKm: 550,
     skyLight: 0.42,
     skyReflection: 0.3,
+    sunHeight: 0.75,
     descent: -0.16,
     gasFloor: 0.995,
     entryShell: 1.03,
@@ -84,7 +86,20 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     let surface: Entity | null = null;
     let lens: Record<string, number> | null = null;
     let daylight: { intensity: number; reflectionScale: number; color: Color } | null = null;
+    let sunWas: Quat | null = null;
     const ambient = (world: World, ground: Ground | null): void => {
+        const sun = world.findEntityByName('Sun');
+        if (sun !== null && ground) {
+            sunWas ??= { ...world.get(sun, Transform).rotation };
+            const way = systemAt(ship.system).sun, flat = Math.hypot(way.x, way.z);
+            const across = flat > 1e-3 ? { x: way.x / flat, z: way.z / flat } : { x: 0.6, z: 0.8 };
+            const level = Math.cos(PLANETFALL.sunHeight), drop = Math.sin(PLANETFALL.sunHeight);
+            world.update(sun, Transform, (t) => { t.rotation = lookRotation([0, 0, 0], [across.x * level, -drop, across.z * level]); });
+        } else if (sun !== null && sunWas) {
+            const was = sunWas;
+            world.update(sun, Transform, (t) => { t.rotation = was; });
+            sunWas = null;
+        }
         const sky = world.findEntityByName('Sky');
         if (sky === null) return;
         const light = world.get(sky, Light) as { intensity: number; reflectionScale: number; color: Color };
