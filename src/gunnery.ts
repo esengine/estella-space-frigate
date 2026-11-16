@@ -106,7 +106,6 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
             bolt.live = true;
             puff(rig.fire, 30, bolt.at);
             puff(rig.smoke, 26, bolt.at);
-            puff(sparks, 22, bolt.at);
             puff(blast, 1, bolt.at);
         }
     };
