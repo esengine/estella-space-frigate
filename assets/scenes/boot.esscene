@@ -63,20 +63,6 @@
         }
        },
        {
-        "type": "starfield",
-        "enabled": true,
-        "uniforms": {
-         "u_intensity": 1.0,
-         "u_density": 0.7,
-         "u_size": 1.0,
-         "u_band": 0.6,
-         "u_bandTilt": 25,
-         "u_bandTurn": 40,
-         "u_sunSize": 1.3,
-         "u_sunGlow": 1.0
-        }
-       },
-       {
         "type": "colorGrade",
         "enabled": true,
         "uniforms": {

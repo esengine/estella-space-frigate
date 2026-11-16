@@ -899,7 +899,7 @@ def make_scene():
     boot = [{'id': 0, 'name': 'BootCamera', 'parent': None, 'children': [], 'visible': True, 'components': [
         transform((0, 0, 0), look((0, 0, 0), (-0.55, 0.12, -0.8))),
         {'type': 'Camera', 'data': {'projectionType': 0, 'fov': 34, 'nearPlane': 1, 'farPlane': 30000, 'isActive': True, 'priority': 0, 'clearFlags': 3}},
-        {'type': 'PostProcessVolume', 'data': {'isGlobal': True, 'weight': 1, 'priority': 0, 'effects': [effect for effect in effects if effect['type'] in ('nebula', 'starfield', 'colorGrade', 'filmGrain', 'vignette')]}},
+        {'type': 'PostProcessVolume', 'data': {'isGlobal': True, 'weight': 1, 'priority': 0, 'effects': [effect for effect in effects if effect['type'] in ('nebula', 'colorGrade', 'filmGrain', 'vignette')]}},
     ]}]
     BOOT.write_text(json.dumps({'version': 4, 'name': 'Boot', 'entities': boot}, indent=1) + '\n')
     stamp(BOOT, 'scene')
