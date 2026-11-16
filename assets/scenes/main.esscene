@@ -417,6 +417,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume.esmaterial"
      }
     }
@@ -459,6 +460,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume-core.esmaterial"
      }
     }
@@ -503,6 +505,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume.esmaterial"
      }
     }
@@ -545,6 +548,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume-core.esmaterial"
      }
     }
@@ -589,6 +593,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume.esmaterial"
      }
     }
@@ -631,6 +636,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume-core.esmaterial"
      }
     }
@@ -675,6 +681,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume.esmaterial"
      }
     }
@@ -717,6 +724,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/plume-core.esmaterial"
      }
     }
@@ -905,6 +913,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -982,6 +991,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1073,6 +1083,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1150,6 +1161,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1241,6 +1253,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1312,6 +1325,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1403,6 +1417,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1480,6 +1495,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1571,6 +1587,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1648,6 +1665,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1739,6 +1757,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1816,6 +1835,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -1907,6 +1927,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -1978,6 +1999,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2069,6 +2091,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -2146,6 +2169,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2237,6 +2261,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -2308,6 +2333,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2399,6 +2425,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -2476,6 +2503,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2567,6 +2595,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -2638,6 +2667,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2729,6 +2759,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/jet.esmaterial"
      }
     }
@@ -2806,6 +2837,7 @@
       "intensity": 1.1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 5,
       "noiseFrequency": 0.35,
@@ -2920,6 +2952,7 @@
       "intensity": 6,
       "collisionEnabled": false,
       "material": "assets/materials/particle-hard.esmaterial",
+      "layer": 2,
       "velocityScale": 0.012,
       "lengthScale": 5,
       "colorGradient": {
@@ -3032,6 +3065,7 @@
       "intensity": 0.9,
       "collisionEnabled": false,
       "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
       "noiseStrength": 3,
       "noiseFrequency": 0.3,
       "noiseScrollSpeed": 1,
@@ -3136,6 +3170,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-blast.esmaterial",
+      "layer": 2,
       "colorGradient": {
        "stops": [
         {
@@ -3228,6 +3263,7 @@
       "intensity": 5,
       "collisionEnabled": false,
       "material": "assets/materials/particle-hard.esmaterial",
+      "layer": 2,
       "colorGradient": {
        "stops": [
         {
@@ -3329,6 +3365,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -3503,6 +3540,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -3615,6 +3653,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -3735,6 +3774,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-smoke.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 4,
       "noiseFrequency": 0.22,
@@ -3909,6 +3949,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -4021,6 +4062,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -4141,6 +4183,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-smoke.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 4,
       "noiseFrequency": 0.22,
@@ -4315,6 +4358,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -4427,6 +4471,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -4547,6 +4592,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-smoke.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 4,
       "noiseFrequency": 0.22,
@@ -4721,6 +4767,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -4833,6 +4880,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -4953,6 +5001,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-smoke.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 4,
       "noiseFrequency": 0.22,
@@ -5133,6 +5182,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5245,6 +5295,7 @@
       "intensity": 3.2,
       "collisionEnabled": false,
       "material": "assets/materials/particle-fire.esmaterial",
+      "layer": 2,
       "shapeAngle": 11,
       "noiseStrength": 8,
       "noiseFrequency": 0.3,
@@ -5365,6 +5416,7 @@
       "intensity": 1,
       "collisionEnabled": false,
       "material": "assets/materials/particle-smoke.esmaterial",
+      "layer": 2,
       "shapeAngle": 30,
       "noiseStrength": 4,
       "noiseFrequency": 0.22,
@@ -5450,6 +5502,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5492,6 +5545,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5534,6 +5588,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5576,6 +5631,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5618,6 +5674,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5660,6 +5717,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5702,6 +5760,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5744,6 +5803,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5786,6 +5846,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5828,6 +5889,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5870,6 +5932,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5912,6 +5975,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5954,6 +6018,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -5996,6 +6061,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6038,6 +6104,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6080,6 +6147,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6122,6 +6190,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6164,6 +6233,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6206,6 +6276,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6248,6 +6319,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6290,6 +6362,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6332,6 +6405,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6374,6 +6448,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6416,6 +6491,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6460,6 +6536,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6539,6 +6616,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6618,6 +6696,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6697,6 +6776,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
      }
     }
@@ -6776,6 +6856,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-white.esmaterial"
      }
     }
@@ -6855,6 +6936,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-red.esmaterial"
      }
     }
@@ -6934,6 +7016,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-red.esmaterial"
      }
     }
@@ -7013,6 +7096,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-green.esmaterial"
      }
     }
@@ -7092,6 +7176,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-white.esmaterial"
      }
     }
@@ -7171,6 +7256,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-white.esmaterial"
      }
     }
@@ -7248,7 +7334,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
-      "layer": -50,
+      "layer": 1,
       "material": "assets/materials/warp.esmaterial"
      }
     }
@@ -16971,6 +17057,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-white.esmaterial"
      }
     }
@@ -17013,6 +17100,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/gatefield.esmaterial"
      }
     }
@@ -17096,6 +17184,7 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/flare-white.esmaterial"
      }
     }
@@ -17138,6 +17227,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
+      "layer": 2,
       "material": "assets/materials/gatefield.esmaterial"
      }
     }

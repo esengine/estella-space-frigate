@@ -10,6 +10,7 @@ import { FIELD_HALF_LENGTH, ship } from './shipState';
 const FX = 'assets/fx/mining.esprefab';
 const NO_TURRET = [{ at: { x: 0, y: 5.4, z: 13 }, bears: true }];
 const PLUME_LENGTH = 11;
+const LANE = 340;
 
 export const MINING = { range: 1500, capacity: 40, drain: 0.15, recharge: 0.055, heating: 0.13, cooling: 0.11 };
 
@@ -92,8 +93,13 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
         rocks.forEach((rock, index) => {
             mining.integrity[index] = 1;
             const home = homes[index]!;
+            const at = { x: home.x * c + home.z * s, y: home.y * flip, z: home.z * c - home.x * s };
+            const along = at.x * helm.forward.x + at.y * helm.forward.y + at.z * helm.forward.z;
+            const off = { x: at.x - helm.forward.x * along, y: at.y - helm.forward.y * along, z: at.z - helm.forward.z * along };
+            const clear = LANE + sizes[index]! * 2, wide = Math.hypot(off.x, off.y, off.z);
+            const out = wide >= clear ? 0 : wide > 1e-3 ? clear / wide - 1 : 0;
             world.update(rock.entity, Transform, (t) => {
-                t.position = { x: home.x * c + home.z * s, y: home.y * flip, z: home.z * c - home.x * s };
+                t.position = { x: at.x + off.x * out, y: at.y + off.y * out, z: at.z + off.z * out };
                 t.scale = { x: sizes[index]!, y: sizes[index]!, z: sizes[index]! };
             });
         });

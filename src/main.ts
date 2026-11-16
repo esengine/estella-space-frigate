@@ -328,12 +328,12 @@ addPlugin({
             for (let i = 0; i < motes; i++) {
                 const e = get(world, `Mote${i}`);
                 const t = world.get(e, Transform);
-                const wrap = (v: number, half: number): number => (v < -half ? v + half * 2 : v > half ? v - half * 2 : v);
-                let x = wrap(t.position.x - helm.forward.x * drift, MOTE_FIELD.x);
-                let y = wrap(t.position.y - helm.forward.y * drift, MOTE_FIELD.y);
-                const z = wrap(t.position.z - helm.forward.z * drift, MOTE_FIELD.z);
+                const wrap = (v: number, half: number): number => (leavingField ? v : v < -half ? v + half * 2 * Math.ceil((-half - v) / (half * 2)) : v > half ? v - half * 2 * Math.ceil((v - half) / (half * 2)) : v);
+                let x = wrap(t.position.x - helm.forward.x * past, MOTE_FIELD.x);
+                let y = wrap(t.position.y - helm.forward.y * past, MOTE_FIELD.y);
+                const z = wrap(t.position.z - helm.forward.z * past, MOTE_FIELD.z);
                 const off = Math.hypot(x, y);
-                if (off < MOTE_CLEAR && Math.abs(z) < 80) {
+                if (!leavingField && off < MOTE_CLEAR && Math.abs(z) < 80) {
                     const out = MOTE_CLEAR / (off || 1);
                     x = off ? x * out : MOTE_CLEAR;
                     y *= out;

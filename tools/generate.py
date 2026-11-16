@@ -35,6 +35,7 @@ SYSTEMS = [
 SUN = SYSTEMS[0]['sun']
 WARP = dict(radius=300.0, half=2600.0)
 SKY_VEIL = 26000
+LAYERS = dict(veil=-100, far=0, tunnel=1, fx=2)
 SHIP_COAT = (0.22, 0.24)
 SHIP_DETAIL = {'texture': 'assets/textures/hull-grain.png', 'size': 1.1, 'strength': 0.1, 'bump': 0.1}
 
@@ -352,7 +353,7 @@ def emitter(**over):
             'speedMin': 0, 'speedMax': 1, 'gravity': {'x': 0, 'y': 0, 'z': 0}, 'damping': 0, 'rotationMin': 0, 'rotationMax': 360, 'angularVelocityMin': -40, 'angularVelocityMax': 40,
             'startColor': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'endColor': {'r': 1, 'g': 1, 'b': 1, 'a': 0}, 'blendMode': 1, 'texture': 'assets/fx/cloud.png',
             'lifetimeMin': 0.3, 'lifetimeMax': 0.6, 'maxParticles': 200, 'startSizeMin': 1, 'startSizeMax': 1, 'endSizeMin': 1, 'endSizeMax': 1, 'renderMode': 0, 'intensity': 1, 'collisionEnabled': False,
-            'material': 'assets/materials/particle-soft.esmaterial'}
+            'material': 'assets/materials/particle-soft.esmaterial', 'layer': LAYERS['fx']}
     return {'type': 'ParticleEmitter', 'data': {**base, **over}}
 
 
@@ -862,7 +863,8 @@ def make_scene():
             data['scale'] = v3(scale)
         return {'type': 'Transform', 'data': data}
 
-    def mesh(mesh, material=None, texture=None, lit=True, opaque=True, cull=True, shadows=True, layer=0):
+    def mesh(mesh, material=None, texture=None, lit=True, opaque=True, cull=True, shadows=True, layer=None):
+        layer = layer if layer is not None else LAYERS['far'] if opaque else LAYERS['fx']
         data = {'mesh': f'assets/models/{mesh}.esmesh', 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'enabled': True, 'lit': lit, 'opaque': opaque, 'cullBackfaces': cull, 'castShadows': shadows}
         if layer:
             data['layer'] = layer
@@ -927,7 +929,7 @@ def make_scene():
     for name, at, tint, size in STROBES:
         lamp = add(name, [transform(at, None, (size,) * 3), mesh('flare', f'assets/materials/flare-{tint}.esmaterial', None, False, False, True, False)], ship)
         add(name + 'Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES[tint]), a=1), 'intensity': 0.5, 'radius': 9, 'enabled': True, 'meshShadows': False}}], lamp)
-    add('Warp', [transform((0, 0, 0), None, (0.001,) * 3), mesh('warp', 'assets/materials/warp.esmaterial', None, False, False, False, False, -50)], ship)
+    add('Warp', [transform((0, 0, 0), None, (0.001,) * 3), mesh('warp', 'assets/materials/warp.esmaterial', None, False, False, False, False, LAYERS['tunnel'])], ship)
     add('GateFlash', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': {'r': 0.55, 'g': 0.78, 'b': 1.0, 'a': 1}, 'intensity': 0, 'radius': 320, 'enabled': True, 'meshShadows': False}}])
     dust = random.Random(71)
     for i in range(MOTES):
@@ -961,12 +963,12 @@ def make_scene():
         add(name + 'Field', [transform((0, 0, 0), None, (GATE_RADIUS - 13,) * 3), mesh('gate-field', 'assets/materials/gatefield.esmaterial', None, False, False, False, False)], gate)
     for i, sys in enumerate(SYSTEMS):
         add(f'Planet{i}', [transform(sys['at'], None, (sys['radius'],) * 3), mesh('planet', 'assets/models/planet.esmaterial', f"assets/textures/{sys['texture']}.png", True, True, True, False)])
-        add(f'Atmosphere{i}', [transform(sys['at'], None, (sys['radius'] * sys['air'],) * 3), mesh('shell', f"assets/materials/atmosphere-{sys['key']}.esmaterial", None, False, False, True, False)])
+        add(f'Atmosphere{i}', [transform(sys['at'], None, (sys['radius'] * sys['air'],) * 3), mesh('shell', f"assets/materials/atmosphere-{sys['key']}.esmaterial", None, False, False, True, False, LAYERS['far'])])
         if 'veil' in sys:
-            add(f'Veil{i}', [transform((0, 0, 0), None, (SKY_VEIL,) * 3), mesh('shell', f"assets/materials/veil-{sys['key']}.esmaterial", None, False, False, False, False, -100)])
+            add(f'Veil{i}', [transform((0, 0, 0), None, (SKY_VEIL,) * 3), mesh('shell', f"assets/materials/veil-{sys['key']}.esmaterial", None, False, False, False, False, LAYERS['veil'])])
         if 'ring' in sys:
             add(f'Ring{i}', [transform(sys['at'], look((0, 0, 0), sys['ring']['normal']), (sys['radius'] * sys['ring']['outer'],) * 3),
-                             mesh('gate-field', f"assets/materials/ring-{sys['key']}.esmaterial", None, False, False, False, False)])
+                             mesh('gate-field', f"assets/materials/ring-{sys['key']}.esmaterial", None, False, False, False, False, LAYERS['far'])])
     SCENE.write_text(json.dumps({'version': 4, 'name': 'SpaceFrigate', 'entities': entities}, indent=1) + '\n')
     stamp(SCENE, 'scene')
     unit = lambda v: [c / math.sqrt(sum(x * x for x in v)) for c in v]
