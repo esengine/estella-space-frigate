@@ -1,4 +1,4 @@
-import { TextAlign, Transform, UIVisual } from 'esengine';
+import { TextAlign, UIVisual } from 'esengine';
 import { METRES, helm, turnBack } from './helm';
 import { ALERT, AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Rock } from './hudKit';
 import { foes } from './raiders';
@@ -7,7 +7,7 @@ import type { TargetProbe } from './hudTargets';
 const SCOPE = { radius: 104, range: 2000, lift: 40, tilt: 1.12, top: 776, sweep: 1.5 } as const;
 
 export function buildScope(kit: Kit, rocks: readonly Rock[], probe: TargetProbe): (frame: Frame) => void {
-    const { world, root, textures, image, solid, label, pivot, tilt, glow, fade, place, size, ink, turn } = kit;
+    const { root, textures, image, solid, label, pivot, tilt, glow, fade, place, size, ink, turn } = kit;
     const R = SCOPE.radius;
     const scope = pivot(root, 'Scope', { left: 0, top: SCOPE.top });
     label(scope, 'ScopeTitle', { left: -R - 4, top: -84, width: 120, height: 13 }, { size: 10, color: rgb(HAZE), spacing: 2.6, content: 'TACTICAL' });
@@ -32,7 +32,7 @@ export function buildScope(kit: Kit, rocks: readonly Rock[], probe: TargetProbe)
         tilt(plane, -lean, frame.sway.y * 0.5);
         turn(sweep, -frame.time * SCOPE.sweep);
         rocks.forEach((rock, i) => {
-            const at = turnBack(helm.level, world.get(rock.entity, Transform).position);
+            const at = turnBack(helm.level, rock.at);
             const blip = blips[i]!;
             const hostile = rock.foe !== undefined;
             if (Math.hypot(at.x, at.z) > SCOPE.range || (hostile && !foes.list[rock.foe!]?.alive)) { fade(blip.at, 0); return; }

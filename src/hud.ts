@@ -1,5 +1,5 @@
 import {
-    Assets, Camera, Device, FillMethod, FillOrigin, Input, ScreenOverlay, TextAlign, Transform, UIVisual, UIVisualType,
+    Assets, Camera, Device, FillMethod, FillOrigin, Input, Query, ScreenOverlay, TextAlign, Transform, UIVisual, UIVisualType,
     defineSystem, GetWorld, Res, Time,
 } from 'esengine';
 import { loading as boot } from './loading';
@@ -7,7 +7,7 @@ import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
 import { METRES, helm, stepHelm } from './helm';
 import {
-    ALERT, AMBER, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
+    ALERT, AMBER, Contact, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
 } from './hudKit';
 import { guns } from './gunnery';
@@ -39,6 +39,7 @@ export function installHud(app: App): void {
     let update: ((dt: number, input: InputState) => void) | null = null;
 
     const majors: Entity[] = [];
+    const contacts: Rock[] = [];
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
         if (world.findEntityByName('Camera') === null) return;
         const moved = stepHelm({
@@ -50,8 +51,15 @@ export function installHud(app: App): void {
         }
         for (const e of majors) world.update(e, Transform, (t) => { t.position = { x: t.position.x + moved.x, y: t.position.y + moved.y, z: t.position.z + moved.z }; });
     }, { name: 'space-frigate:helm' }));
-    app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
-        if (update) { update(Math.min(time.delta, 0.05), input); return; }
+    app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input), Query(Transform, Contact)], (world, time, input, seen) => {
+        if (update) {
+            seen.forEach((_, t, c) => {
+                const at = contacts[c.slot]?.at;
+                if (at) { at.x = t.position.x; at.y = t.position.y; at.z = t.position.z; }
+            });
+            update(Math.min(time.delta, 0.05), input);
+            return;
+        }
         if (world.findEntityByName('Camera') === null || boot.cover) return;
         if (!loading) {
             const began = Date.now();
@@ -63,7 +71,7 @@ export function installHud(app: App): void {
             });
         }
         if (loaded) {
-            update = build(app, world, loaded);
+            update = build(app, world, loaded, contacts);
             state.ready = true;
         }
     }, { name: 'space-frigate:hud' }));
@@ -84,7 +92,7 @@ async function load(app: App): Promise<Loaded> {
 
 const RETICLE = 18;
 
-function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number, input: InputState) => void {
+function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Rock[]): (dt: number, input: InputState) => void {
     const kit = createKit(world, textures, fonts);
     const { root, node, image, sliced, solid, label, centred, pivot, tilt, lift, glow, say, ink, fill, fade, place } = kit;
     app.getResource(ScreenOverlay).perspective = 1500;
@@ -190,13 +198,15 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     const rocks: Rock[] = [];
     for (let i = 0; i < ROCKS; i++) {
         const entity = world.findEntityByName(`Rock${i}`);
-        if (entity !== null) rocks.push({ entity, index: i, big: i >= MAJOR_FROM });
+        if (entity !== null) rocks.push({ entity, index: i, big: i >= MAJOR_FROM, at: { ...world.get(entity, Transform).position } });
     }
     for (let i = 0; ; i++) {
         const entity = world.findEntityByName(`Raider${i}`);
         if (entity === null) break;
-        rocks.push({ entity, index: ROCKS + i, big: true, foe: i });
+        rocks.push({ entity, index: ROCKS + i, big: true, foe: i, at: { ...world.get(entity, Transform).position } });
     }
+    rocks.forEach((rock, slot) => world.insert(rock.entity, Contact, { slot }));
+    contacts.push(...rocks);
     const camera = world.findEntityByName('Camera');
     const targets = buildTargets(kit, rocks, log);
     const mine = installMining(app, world, rocks, targets.probe, log);

@@ -111,7 +111,7 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
         if (ship.system !== system) scatter();
         const index = probe.selected;
         const rock = index >= 0 ? rocks[index]! : null;
-        const there = rock ? world.get(rock.entity, Transform).position : null;
+        const there = rock ? rock.at : null;
         const range = there ? Math.hypot(there.x, there.y, there.z) : Infinity;
         const key = frame.held('KeyF');
         if (key && !pressed) mining.armed = !mining.armed;

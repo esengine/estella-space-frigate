@@ -1,7 +1,7 @@
 import { HULL_BOXES } from './collision';
 import {
     BlendMode, Canvas, Material, Name, ScaleMode, Text, TextAlign, TextVerticalAlign, Transform, UINode, UIPointerEvents, UIPositionType, UIVisual, UIVisualType,
-    placeOnScreen, px, spawnUIEntity,
+    defineComponent, placeOnScreen, px, spawnUIEntity,
 } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { clamp } from './flight';
@@ -49,7 +49,9 @@ export const FONTS = { regular: 'assets/ui/fonts/ChakraPetch-Regular.ttf', stron
 
 export type Textures = Record<keyof typeof TEXTURES, number>;
 
-export interface Rock { entity: Entity; index: number; big: boolean; foe?: number }
+export interface Rock { entity: Entity; index: number; big: boolean; foe?: number; at: { x: number; y: number; z: number } }
+
+export const Contact = defineComponent('SpaceFrigateContact', { slot: 0 });
 
 export interface Box { left?: number; top?: number; right?: number; bottom?: number; width?: number; height?: number }
 

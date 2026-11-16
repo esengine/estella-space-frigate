@@ -1,4 +1,4 @@
-import { FillMethod, FillOrigin, TextAlign, Transform, UINode, UIVisual, UIVisualType, UIWorldAnchor, placeOnScreen } from 'esengine';
+import { FillMethod, FillOrigin, TextAlign, UINode, UIVisual, UIVisualType, UIWorldAnchor, placeOnScreen } from 'esengine';
 import type { Entity } from 'esengine';
 import { clamp } from './flight';
 import { GUNNERY, guns } from './gunnery';
@@ -101,7 +101,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const girth = hull.slice(2).reduce((most, p) => Math.max(most, off(p.left, p.top)), 0) + 14;
         const alive = (i: number): boolean => { const foe = rocks[i]!.foe; return foe === undefined || foes.list[foe]?.alive === true; };
         rocks.forEach((rock, i) => {
-            const at = world.get(rock.entity, Transform).position;
+            const at = rock.at;
             const s = seen[i]!;
             if (!alive(i)) { s.range = Infinity; s.visible = false; s.free = false; near.delete(i); return; }
             s.range = Math.hypot(at.x, at.y, at.z);
@@ -169,7 +169,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             size(reticle, span, span);
             turn(reticle, (1 - settle) * 0.9);
             fade(arrow, held.clamped ? 0.75 + 0.25 * Math.sin(frame.time * 5) : 0);
-            if (held.clamped && frame.lens) turn(arrow, towardOnScreen(frame.lens, world.get(rocks[current]!.entity, Transform).position));
+            if (held.clamped && frame.lens) turn(arrow, towardOnScreen(frame.lens, rocks[current]!.at));
             const aside = world.get(primary, UINode).insetLeft.value > box.width - 360;
             fade(brief, selected >= 0 && !held.clamped ? 0 : 1);
             place(brief, aside ? -128 : 58, 16);
@@ -215,7 +215,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const anchor = world.get(marker, UIWorldAnchor);
         const gate = helm.gate, away = Math.hypot(gate.x, gate.y, gate.z);
         if (Math.abs(anchor.offset.x - gate.x) + Math.abs(anchor.offset.y - gate.y) + Math.abs(anchor.offset.z - gate.z) > 0.5) world.update(marker, UIWorldAnchor, (anchored) => { anchored.offset = { ...gate }; });
-        helm.aim = selected >= 0 ? { ...world.get(rocks[selected]!.entity, Transform).position } : null;
+        helm.aim = selected >= 0 ? { ...rocks[selected]!.at } : null;
         guns.hostile = selected >= 0 && rocks[selected]!.foe !== undefined;
         const clear = keptClear(box.width, world.get(marker, UINode).insetLeft.value, 64, anchor.onScreen);
         if (!sameRoom(anchor.edgeInsets, clear)) world.update(marker, UIWorldAnchor, (anchored) => { anchored.edgeInsets = clear; });
