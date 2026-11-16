@@ -12383,7 +12383,7 @@
   },
   {
    "id": 221,
-   "name": "Planet0",
+   "name": "Planet",
    "parent": null,
    "children": [],
    "visible": true,
@@ -12418,14 +12418,14 @@
       "opaque": true,
       "cullBackfaces": true,
       "castShadows": false,
-      "material": "assets/materials/planet-karis.esmaterial"
+      "material": "assets/materials/world-planet.esmaterial"
      }
     }
    ]
   },
   {
    "id": 222,
-   "name": "Atmosphere0",
+   "name": "Atmosphere",
    "parent": null,
    "children": [],
    "visible": true,
@@ -12460,14 +12460,14 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
-      "material": "assets/materials/atmosphere-karis.esmaterial"
+      "material": "assets/materials/world-air.esmaterial"
      }
     }
    ]
   },
   {
    "id": 223,
-   "name": "Planet1",
+   "name": "Ring",
    "parent": null,
    "children": [],
    "visible": true,
@@ -12476,93 +12476,9 @@
      "type": "Transform",
      "data": {
       "position": {
-       "x": 5200,
-       "y": 3400,
-       "z": 6400
-      },
-      "scale": {
-       "x": 3000,
-       "y": 3000,
-       "z": 3000
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/planet.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/materials/planet-vela.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 224,
-   "name": "Atmosphere1",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 5200,
-       "y": 3400,
-       "z": 6400
-      },
-      "scale": {
-       "x": 3090.0,
-       "y": 3090.0,
-       "z": 3090.0
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/shell.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/materials/atmosphere-vela.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 225,
-   "name": "Ring1",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 5200,
-       "y": 3400,
-       "z": 6400
+       "x": -6000,
+       "y": -5760,
+       "z": -3500
       },
       "rotation": {
        "x": 0.47871952702103837,
@@ -12571,9 +12487,9 @@
        "w": 0.7672556554886404
       },
       "scale": {
-       "x": 6750.0,
-       "y": 6750.0,
-       "z": 6750.0
+       "x": 9675.0,
+       "y": 9675.0,
+       "z": 9675.0
       }
      }
     },
@@ -12592,91 +12508,7 @@
       "opaque": false,
       "cullBackfaces": false,
       "castShadows": false,
-      "material": "assets/materials/ring-vela.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 226,
-   "name": "Planet2",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 3800,
-       "y": -4200,
-       "z": -5200
-      },
-      "scale": {
-       "x": 3300,
-       "y": 3300,
-       "z": 3300
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/planet.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/materials/planet-morn.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 227,
-   "name": "Atmosphere2",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 3800,
-       "y": -4200,
-       "z": -5200
-      },
-      "scale": {
-       "x": 3346.2,
-       "y": 3346.2,
-       "z": 3346.2
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/shell.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/materials/atmosphere-morn.esmaterial"
+      "material": "assets/materials/world-ring.esmaterial"
      }
     }
    ]

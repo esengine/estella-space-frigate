@@ -11,8 +11,8 @@ import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { installLoading, loading } from './loading';
 import { installSky } from './sky';
-import { SYSTEMS } from './systems';
 import { graphics } from './hudSettings';
+import { KINDS, galaxy, ringSun, systemAt, voyageSeed } from './worlds';
 
 const PLUMES = [
     { name: 'PlumeL', width: 4.0, length: 2.3 },
@@ -55,7 +55,8 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
+        galaxy.seed = voyageSeed((globalThis as { location?: { search?: string } }).location?.search ?? '', Math.random);
         app.insertResource(Playthrough, { facts });
         installSky();
         installLoading(app);
@@ -97,7 +98,7 @@ addPlugin({
             world.update(e, Transform, (t) => { t.rotation = lookRotation([0, 0, 0], [way.x, way.y, way.z]); });
         };
         const dress = (world: World, from: number, to: number, k: number): void => {
-            const a = SYSTEMS[from]!, b = SYSTEMS[to]!;
+            const a = systemAt(from), b = systemAt(to);
             const way = (p: { x: number; y: number; z: number }, q: { x: number; y: number; z: number }) => ({ x: mix(p.x, q.x, k), y: mix(p.y, q.y, k), z: mix(p.z, q.z, k) });
             const tone = (p: { r: number; g: number; b: number }, q: { r: number; g: number; b: number }) => ({ r: mix(p.r, q.r, k), g: mix(p.g, q.g, k), b: mix(p.b, q.b, k), a: 1 });
             light(world, 'Sun', way(a.sun, b.sun), tone(a.sunColor, b.sunColor), mix(a.sunPower, b.sunPower, k));
@@ -107,7 +108,7 @@ addPlugin({
         };
         let stars: Record<string, number> | null = null;
         const grade = (world: World, exposure: number, system: number, clear: number): void => {
-            const here = SYSTEMS[system]!;
+            const here = systemAt(system);
             const camera = get(world, 'Camera');
             const volume = world.get(camera, PostProcessVolume);
             stars ??= { ...volume.effects.find((effect) => effect.type === 'starfield')!.uniforms };
@@ -119,10 +120,47 @@ addPlugin({
                     : effect.type === 'starfield' ? { ...effect, uniforms: { ...effect.uniforms, u_bandTurn: here.bandTurn, u_intensity: sky.u_intensity! * clear, u_sunSize: sky.u_sunSize! * clear, u_sunGlow: sky.u_sunGlow! * clear } } : effect),
             });
         };
+        const tone = (t: { r: number; g: number; b: number }): number[] => [t.r, t.g, t.b, 1];
         const stage = (world: World, system: number): void => {
-            SYSTEMS.forEach((each, i) => {
-                for (const part of each.parts) world.update(get(world, part), MeshRenderer, (m) => { m.enabled = i === system; });
-            });
+            const here = systemAt(system), look = here.surface, toSun = { x: -here.sun.x, y: -here.sun.y, z: -here.sun.z };
+            const planet = get(world, 'Planet'), air = get(world, 'Atmosphere'), ring = get(world, 'Ring');
+            world.update(planet, Transform, (t) => { t.position = { ...here.at }; t.rotation = { ...look.tilt }; t.scale = { x: here.radius, y: here.radius, z: here.radius }; });
+            const ground = world.get(planet, MeshRenderer).material;
+            Material.setUniform(ground, 'u_kind', look.kind);
+            look.palette.forEach((color, i) => Material.setUniform(ground, `u_c${i}`, tone(color)));
+            Material.setUniform(ground, 'u_accent', tone(look.accent));
+            Material.setUniform(ground, 'u_pole', tone(look.pole));
+            Material.setUniform(ground, 'u_glow', tone(look.glow));
+            Material.setUniform(ground, 'u_seed', { ...look.seed });
+            Material.setUniform(ground, 'u_shape', { ...look.shape });
+            Material.setUniform(ground, 'u_spot', { ...look.spot });
+            Material.setUniform(ground, 'u_sun', toSun);
+            Material.setUniform(ground, 'u_sunColor', tone(here.sunColor));
+            Material.setUniform(ground, 'u_power', here.sunPower);
+            const shell = here.radius * here.air;
+            world.update(air, Transform, (t) => { t.position = { ...here.at }; t.scale = { x: shell, y: shell, z: shell }; });
+            const sky = world.get(air, MeshRenderer).material;
+            Material.setUniform(sky, 'u_rim', tone(here.rim));
+            Material.setUniform(sky, 'u_power', here.rimPower);
+            Material.setUniform(sky, 'u_strength', here.rimStrength);
+            Material.setUniform(sky, 'u_sun', toSun);
+            world.update(ring, MeshRenderer, (m) => { m.enabled = here.ring !== null; });
+            if (here.ring) {
+                const band = here.ring, reach = here.radius * band.outer;
+                world.update(ring, Transform, (t) => {
+                    t.position = { ...here.at };
+                    t.rotation = lookRotation([0, 0, 0], [band.normal.x, band.normal.y, band.normal.z]);
+                    t.scale = { x: reach, y: reach, z: reach };
+                });
+                const disc = world.get(ring, MeshRenderer).material;
+                Material.setUniform(disc, 'u_bright', tone(band.bright));
+                Material.setUniform(disc, 'u_dim', tone(band.dim));
+                Material.setUniform(disc, 'u_inner', band.inner / band.outer);
+                Material.setUniform(disc, 'u_planet', 1 / band.outer);
+                Material.setUniform(disc, 'u_sun', ringSun(band, here.sun));
+                Material.setUniform(disc, 'u_split', { x: band.split, y: band.gap, z: 0, w: 0 });
+                Material.setUniform(disc, 'u_second', tone(band.second));
+            }
             shown = system;
         };
 
@@ -254,7 +292,11 @@ addPlugin({
             ship.tour = tour;
             ship.shot = Math.floor(clock / SHOT_SECONDS) % SHOTS.length;
 
-            if (shown < 0) stage(world, ship.system);
+            if (shown < 0) {
+                stage(world, ship.system);
+                dress(world, ship.system, ship.system, 1);
+                grade(world, EXPOSURE, ship.system, 1);
+            }
             if (ship.jump >= 0) ship.jump += dt;
             const leap = jumpAt(ship.jump);
             if (ship.jump >= 0) {
@@ -284,11 +326,22 @@ addPlugin({
                 Material.setUniform(field, 'u_flash', 0.2 * leap.flash);
             }
             facts.system = ship.system;
-            facts.systemName = SYSTEMS[ship.system]!.name;
+            facts.systemName = systemAt(ship.system).name;
+            facts.seed = galaxy.seed;
+            const world0 = systemAt(ship.system), bearing = turnBack(helm.frame, world0.at);
+            facts.planetKind = KINDS[world0.surface.kind];
+            facts.planetX = bearing.x;
+            facts.planetY = bearing.y;
+            facts.planetZ = bearing.z;
+            facts.planetRadius = world0.radius;
+            const toSun = turnBack(helm.frame, { x: -world0.sun.x, y: -world0.sun.y, z: -world0.sun.z });
+            facts.sunX = toSun.x;
+            facts.sunY = toSun.y;
+            facts.sunZ = toSun.z;
             facts.jump = ship.jump;
             facts.jumps = ship.jumps;
             facts.fov = world.get(camera, Camera).fov;
-            facts.planets = SYSTEMS.map((each) => (world.get(get(world, each.parts[0]), MeshRenderer).enabled ? 1 : 0)).join('');
+            facts.planets = `${world.get(get(world, 'Planet'), MeshRenderer).enabled ? 1 : 0}${world.get(get(world, 'Ring'), MeshRenderer).enabled ? 1 : 0}`;
 
             const cruise = ship.speed * FIELD_DRIFT * dt, drift = cruise * (1 + JUMP.rush * leap.rush);
             const leavingField = ship.jump >= 0 && !leap.swapped, past = leavingField ? drift : cruise;
@@ -337,7 +390,7 @@ addPlugin({
                 facts.transits++;
                 if (ship.jump < 0) {
                     leaving = ship.system;
-                    ship.bound = nextSystem(ship.system, SYSTEMS.length);
+                    ship.bound = nextSystem(ship.system);
                     ship.jump = 0;
                     ship.jumps++;
                 }

@@ -2,7 +2,19 @@
 #pragma version 300 es
 #pragma domain Unlit
 #pragma feature MESH_LOCAL_POSITION
-#pragma param u_kind float default(0) range(0,2)
+#pragma param u_kind float default(0) range(0,6)
+#pragma param u_c0 color default(0.78,0.62,0.44,1)
+#pragma param u_c1 color default(0.52,0.33,0.2,1)
+#pragma param u_c2 color default(0.86,0.78,0.64,1)
+#pragma param u_c3 color default(0.36,0.24,0.18,1)
+#pragma param u_c4 color default(0.7,0.48,0.3,1)
+#pragma param u_c5 color default(0.9,0.84,0.74,1)
+#pragma param u_accent color default(0.72,0.3,0.16,1)
+#pragma param u_pole color default(0.34,0.38,0.44,1)
+#pragma param u_glow color default(0,0,0,1)
+#pragma param u_seed vec3 default(0,0,0)
+#pragma param u_shape vec4 default(9,1.6,-0.32,0.9)
+#pragma param u_spot vec4 default(0.16,1,0.74,0)
 #pragma param u_sun vec3 default(0,1,0)
 #pragma param u_sunColor color default(1,1,1,1)
 #pragma param u_power float default(1.5) range(0,8)
@@ -46,6 +58,7 @@ float noise(vec3 p) {
 
 float cloud(vec3 p, int octaves, float gain) {
     float sum = 0.0, weight = 1.0, total = 0.0;
+    p += u_seed;
     for (int i = 0; i < 8; i++) {
         if (i >= octaves) break;
         sum += weight * noise(p);
@@ -58,6 +71,7 @@ float cloud(vec3 p, int octaves, float gain) {
 
 float ridge(vec3 p, int octaves) {
     float sum = 0.0, weight = 1.0, total = 0.0;
+    p += u_seed;
     for (int i = 0; i < 8; i++) {
         if (i >= octaves) break;
         sum += weight * (1.0 - abs(noise(p) * 2.0 - 1.0));
@@ -77,11 +91,11 @@ float fall(float far, float near, float x) {
     return 1.0 - smoothstep(near, far, x);
 }
 
-vec3 pick(vec3 a, vec3 b, vec3 c, vec3 d, vec3 e, vec3 f, float sel, float soft) {
+vec3 pick(float sel, float soft) {
     float i = floor(sel), k = sel - i;
     k = mix(k, k * k * (3.0 - 2.0 * k), soft);
-    vec3 lo = i < 1.0 ? a : i < 2.0 ? b : i < 3.0 ? c : i < 4.0 ? d : e;
-    vec3 hi = i < 1.0 ? b : i < 2.0 ? c : i < 3.0 ? d : i < 4.0 ? e : f;
+    vec3 lo = i < 1.0 ? u_c0.rgb : i < 2.0 ? u_c1.rgb : i < 3.0 ? u_c2.rgb : i < 4.0 ? u_c3.rgb : u_c4.rgb;
+    vec3 hi = i < 1.0 ? u_c1.rgb : i < 2.0 ? u_c2.rgb : i < 3.0 ? u_c3.rgb : i < 4.0 ? u_c4.rgb : u_c5.rgb;
     return mix(lo, hi, k);
 }
 
@@ -99,21 +113,22 @@ vec3 saturate(vec3 col, float amount, float gain) {
 
 vec3 giant(vec3 D) {
     float lat = D.y;
+    float bands = u_shape.x, churn = u_shape.y;
     float turb = cloud(D * vec3(3.0, 9.0, 3.0) + 2.0, 5, 0.5) - 0.5;
     float turb2 = cloud(D * vec3(7.0, 22.0, 7.0) + 9.0, 5, 0.5) - 0.5;
-    float band = lat * 9.0 + turb * 1.6 + turb2 * 0.5;
+    float band = lat * bands + turb * churn + turb2 * 0.5;
     float stripe = 0.5 + 0.5 * sin(band * 3.14159265);
     float fine = cloud(vec3(D.x * 5.0, band * 3.0, D.z * 5.0), 6, 0.55);
     float swirl = cloud(vec3(D.x * 14.0 + turb * 6.0, band * 8.0, D.z * 14.0 + turb2 * 6.0), 5, 0.55);
     float sel = (sin(band * 0.9 + 1.3) * 0.5 + 0.5) * 4.999;
-    vec3 col = pick(vec3(0.78, 0.62, 0.44), vec3(0.52, 0.33, 0.20), vec3(0.86, 0.78, 0.64), vec3(0.36, 0.24, 0.18), vec3(0.70, 0.48, 0.30), vec3(0.90, 0.84, 0.74), sel, 0.0);
+    vec3 col = pick(sel, 0.0);
     col *= 0.72 + 0.25 * stripe;
     col *= 0.8 + 0.54 * (fine - 0.5);
     col *= 0.9 + 0.3 * (swirl - 0.5);
-    float storm = spot(D, 0.9, -0.32, 0.16, 0.03, 3.0, 0.02);
-    col = mix(col, vec3(0.72, 0.30, 0.16) * (0.8 + 0.4 * swirl), storm);
-    float pole = smoothstep(0.74, 0.98, abs(lat));
-    col = mix(col, vec3(0.34, 0.38, 0.44) * (0.8 + 0.3 * fine), pole);
+    float storm = spot(D, u_shape.w, u_shape.z, u_spot.x, u_spot.x * 0.2, 3.0, 0.02) * u_spot.y;
+    col = mix(col, u_accent.rgb * (0.8 + 0.4 * swirl), storm);
+    float pole = smoothstep(u_spot.z, 0.98, abs(lat));
+    col = mix(col, u_pole.rgb * (0.8 + 0.3 * fine), pole);
     return saturate(col, 1.35, 0.62);
 }
 
@@ -121,26 +136,26 @@ vec3 ice(vec3 D) {
     float lat = D.y;
     float turb = cloud(D * vec3(2.0, 5.0, 2.0) + 4.0, 5, 0.5) - 0.5;
     float slow = cloud(vec3(lat * 2.2, 3.0, 7.0), 4, 0.5) - 0.5;
-    float band = lat * 4.2 + turb * 0.5 + slow * 2.4;
+    float band = lat * u_shape.x + turb * u_shape.y + slow * 2.4;
     float sel = (sin(band * 1.7 + 0.4) * 0.5 + 0.5) * 4.999;
-    vec3 col = pick(vec3(0.10, 0.33, 0.56), vec3(0.16, 0.45, 0.66), vec3(0.30, 0.62, 0.76), vec3(0.13, 0.38, 0.60), vec3(0.38, 0.70, 0.80), vec3(0.09, 0.27, 0.50), sel, 1.0);
+    vec3 col = pick(sel, 1.0);
     float streak = cloud(vec3(D.x * 2.5 + turb * 2.0, band * 5.0, D.z * 2.5 - turb * 2.0), 6, 0.55);
     col *= 0.9 + 0.24 * (streak - 0.5);
     float wisp = cloud(vec3(D.x * 3.0 + turb * 4.0, lat * 46.0 + turb * 5.0, D.z * 3.0 - turb * 4.0), 5, 0.5);
     float cover = smoothstep(0.3, 0.75, cloud(D * vec3(2.5, 7.0, 2.5) + 13.0, 4, 0.5));
     float haze = smoothstep(0.6, 0.82, wisp) * cover;
-    col = mix(col, vec3(0.88, 0.96, 0.98), 0.6 * haze);
-    float bright = spot(D, 2.2, 0.36, 0.1, 0.03, 5.0, 0.01);
-    col = mix(col, vec3(0.9, 0.97, 1.0) * (0.8 + 0.4 * streak), bright * 0.8);
-    float dark = spot(D, 4.4, -0.2, 0.075, 0.0225, 5.0, 0.01);
-    col = mix(col, vec3(0.05, 0.14, 0.32) * (0.8 + 0.4 * streak), dark * 0.8);
-    float pole = smoothstep(0.7, 0.97, abs(lat));
-    col = mix(col, vec3(0.06, 0.2, 0.4), pole * 0.6);
+    col = mix(col, u_accent.rgb, u_spot.w * haze);
+    float bright = spot(D, u_shape.w, u_shape.z, u_spot.x, u_spot.x * 0.3, 5.0, 0.01);
+    col = mix(col, u_accent.rgb * (0.8 + 0.4 * streak), bright * u_spot.y);
+    float dark = spot(D, u_shape.w + 2.2, -u_shape.z * 0.6, u_spot.x * 0.75, u_spot.x * 0.22, 5.0, 0.01);
+    col = mix(col, u_pole.rgb * (0.8 + 0.4 * streak), dark * u_spot.y);
+    float pole = smoothstep(u_spot.z, 0.97, abs(lat));
+    col = mix(col, u_pole.rgb, pole * 0.6);
     return saturate(col, 1.15, 0.82);
 }
 
 vec2 craters(vec3 D, float freq) {
-    vec3 p = D * freq, cell = floor(p);
+    vec3 p = D * freq + u_seed, cell = floor(p);
     float bowl = 0.0, rim = 0.0;
     for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
         vec3 at = cell + vec3(float(x), float(y), float(z));
@@ -156,27 +171,126 @@ vec2 craters(vec3 D, float freq) {
     return vec2(bowl, rim);
 }
 
-vec3 rust(vec3 D) {
+vec3 desert(vec3 D) {
     float lat = D.y;
-    vec3 w1 = warp(D * 1.6, 0.9, 1.2);
+    vec3 w1 = warp(D * 1.6, 0.9, u_shape.x);
     float land = cloud(w1 * 1.5, 7, 0.55);
     float rough = cloud(w1 * 7.0, 6, 0.6);
     float crest = ridge(warp(D * 2.4, 0.7, 1.4) * 3.2, 6);
-    float high = smoothstep(0.42, 0.66, land + 0.12 * (rough - 0.5));
-    vec3 lowland = vec3(0.17, 0.12, 0.105) * (0.55 + 0.9 * rough) * (0.8 + 0.5 * crest);
-    vec3 upland = mix(vec3(0.58, 0.25, 0.12), vec3(0.78, 0.50, 0.27), smoothstep(0.55, 0.8, land)) * (0.75 + 0.5 * rough);
+    float high = smoothstep(u_shape.z - 0.12, u_shape.z + 0.12, land + 0.12 * (rough - 0.5));
+    vec3 lowland = u_c0.rgb * (0.55 + 0.9 * rough) * (0.8 + 0.5 * crest);
+    vec3 upland = mix(u_c1.rgb, u_c2.rgb, smoothstep(0.55, 0.8, land)) * (0.75 + 0.5 * rough);
     vec3 col = mix(lowland, upland, high);
     float peaks = smoothstep(0.74, 0.9, crest) * high;
-    col = mix(col, vec3(0.86, 0.70, 0.52), 0.45 * peaks);
+    col = mix(col, u_c3.rgb, 0.45 * peaks);
     float rift = fall(0.08, 0.0, abs(cloud(warp(D * 1.1, 1.2, 0.9) * 2.2, 5, 0.5) - 0.5)) * smoothstep(0.3, 0.6, land);
-    col = mix(col, vec3(0.05, 0.03, 0.03), 0.8 * rift);
-    vec2 pits = max(craters(D, 9.0), craters(D + 5.3, 23.0) * 0.7);
+    col = mix(col, u_c5.rgb, 0.8 * rift);
+    vec2 pits = max(craters(D, u_shape.y), craters(D + 5.3, u_shape.y * 2.5) * 0.7);
     col *= (1.0 - 0.3 * pits.x) * (1.0 + 0.35 * pits.y);
-    float cap = smoothstep(0.925, 0.975, abs(lat) + 0.05 * (rough - 0.5));
-    col = mix(col, vec3(0.90, 0.90, 0.92) * (0.85 + 0.3 * rough), cap);
+    float cap = smoothstep(u_spot.x, u_spot.x + 0.05, abs(lat) + 0.05 * (rough - 0.5));
+    col = mix(col, u_pole.rgb * (0.85 + 0.3 * rough), cap);
     float dust = smoothstep(0.56, 0.82, cloud(warp(D * vec3(2.0, 4.0, 2.0), 1.4, 1.1) * 2.6, 6, 0.55)) * (1.0 - cap);
-    col = mix(col, vec3(0.80, 0.56, 0.36), 0.55 * dust);
+    col = mix(col, u_c4.rgb, u_shape.w * dust);
+    float haze = smoothstep(0.55, 0.8, cloud(warp(D * vec3(3.0, 8.0, 3.0), 1.0, 1.0) * 1.7, 5, 0.5));
+    col = mix(col, u_accent.rgb, u_spot.y * 0.5 * haze);
     return clamp(col * 0.9, 0.0, 1.0);
+}
+
+vec3 lava(vec3 D, out vec3 glow) {
+    vec3 w1 = warp(D * 1.5, 1.1, u_shape.x);
+    float land = cloud(w1 * 1.6, 7, 0.55);
+    float rough = cloud(w1 * 8.0, 6, 0.6);
+    float crest = ridge(warp(D * 2.0, 0.8, 1.3) * 3.0, 6);
+    vec3 col = mix(u_c0.rgb, u_c1.rgb, smoothstep(0.35, 0.7, land)) * (0.6 + 0.8 * rough);
+    col = mix(col, u_c2.rgb, 0.6 * smoothstep(0.7, 0.88, crest));
+    col = mix(col, u_c4.rgb, 0.5 * smoothstep(0.6, 0.85, cloud(D * vec3(3.0, 9.0, 3.0) + 31.0, 5, 0.55)));
+    float crack = fall(u_shape.y, 0.0, abs(cloud(warp(D * 1.3, 1.4, 1.1) * 2.6, 6, 0.5) - 0.5));
+    float fine = fall(u_shape.y * 0.6, 0.0, abs(cloud(warp(D * 3.0, 0.9, 1.7) * 5.0, 5, 0.5) - 0.5)) * 0.6;
+    float sea = 1.0 - smoothstep(u_shape.z - 0.06, u_shape.z + 0.06, land);
+    float heat = max(max(crack, fine * 0.7) * (0.5 + 0.5 * smoothstep(0.3, 0.6, land)), sea * (0.35 + 0.4 * rough));
+    heat *= 0.6 + 0.6 * cloud(D * 6.0 + 50.0, 4, 0.5);
+    col = mix(col, u_c3.rgb, 0.5 * sea);
+    vec2 pits = craters(D, 7.0);
+    col *= (1.0 - 0.25 * pits.x) * (1.0 + 0.25 * pits.y);
+    glow = u_glow.rgb * heat * heat * heat * u_shape.w + u_accent.rgb * pow(heat, 8.0) * 0.35;
+    return clamp(col, 0.0, 1.0);
+}
+
+vec3 ocean(vec3 D) {
+    float lat = D.y;
+    vec3 w1 = warp(D * 1.3, 1.0, u_shape.x);
+    float land = cloud(w1 * 1.5, 7, 0.55);
+    float rough = cloud(w1 * 7.5, 6, 0.6);
+    float crest = ridge(warp(D * 2.2, 0.7, 1.4) * 3.4, 6);
+    float coast = smoothstep(u_shape.w - 0.01, u_shape.w + 0.01, land + 0.04 * (rough - 0.5));
+    float depth = smoothstep(u_shape.w - 0.12, u_shape.w, land);
+    vec3 sea = mix(u_c0.rgb, u_c1.rgb, depth) * (0.9 + 0.2 * rough);
+    float dry = smoothstep(0.35, 0.65, cloud(D * vec3(1.5, 6.0, 1.5) + 17.0, 4, 0.5)) * (1.0 - smoothstep(0.35, 0.7, abs(lat)));
+    vec3 ground = mix(u_c2.rgb, u_c4.rgb, dry * u_shape.z) * (0.7 + 0.6 * rough);
+    ground = mix(ground, u_c3.rgb, smoothstep(0.62, 0.85, crest) * 0.7);
+    vec3 col = mix(sea, ground, coast);
+    float cap = smoothstep(0.82, 0.88, abs(lat) + 0.06 * (rough - 0.5));
+    col = mix(col, u_pole.rgb, cap);
+    vec3 drift = warp(D * vec3(2.2, 4.5, 2.2), 1.6, 1.0);
+    float clouds = smoothstep(0.52, 0.75, cloud(drift * 1.8 + 41.0, 6, 0.55)) * u_spot.x;
+    clouds += smoothstep(0.62, 0.82, cloud(vec3(D.x * 3.0, lat * 16.0, D.z * 3.0) + drift + 73.0, 5, 0.5)) * 0.5 * u_spot.x;
+    col = mix(col, u_c5.rgb, clamp(clouds, 0.0, 0.9));
+    return clamp(col, 0.0, 1.0);
+}
+
+vec3 frozen(vec3 D, out vec3 glow) {
+    float lat = D.y;
+    vec3 w1 = warp(D * 1.4, 0.8, u_shape.x);
+    float sheet = cloud(w1 * 1.8, 7, 0.55);
+    float rough = cloud(w1 * 9.0, 6, 0.6);
+    vec3 col = mix(u_c1.rgb, u_c2.rgb, smoothstep(0.35, 0.7, sheet)) * (0.86 + 0.28 * rough);
+    float old = smoothstep(0.56, 0.7, cloud(warp(D * 1.1, 1.0, 1.0) * 1.6 + 23.0, 6, 0.55));
+    col = mix(col, u_c0.rgb * (0.8 + 0.4 * rough), old * 0.75);
+    float lines = smoothstep(0.93, 0.985, ridge(warp(D * 2.0, 0.5, 1.2) * u_shape.y, 5));
+    float fine = smoothstep(0.95, 0.99, ridge(warp(D * 3.5 + 7.0, 0.4, 1.6) * u_shape.y * 1.7, 4)) * 0.6;
+    col = mix(col, u_c3.rgb, max(lines, fine) * u_shape.z);
+    vec2 pits = craters(D, 11.0);
+    col *= (1.0 - 0.12 * pits.x) * (1.0 + 0.2 * pits.y);
+    float cap = smoothstep(u_spot.x, u_spot.x + 0.08, abs(lat) + 0.04 * (rough - 0.5));
+    col = mix(col, u_c5.rgb, cap * 0.8);
+    vec2 around = normalize(D.xz + vec2(1e-5, 0.0));
+    float sway = cloud(vec3(around * 3.0, abs(lat) * 2.0) + 61.0, 4, 0.5) - 0.5;
+    float band = (abs(lat) - u_spot.z - 0.07 * sway) / u_spot.y;
+    float curtain = exp(-band * band) * smoothstep(-2.0, 0.0, band + 1.0);
+    float rays = 0.35 + 0.65 * smoothstep(0.3, 0.8, cloud(vec3(around * 46.0, abs(lat) * 5.0) + 7.0, 3, 0.5));
+    float pulse = 0.55 + 0.45 * cloud(vec3(around * 7.0, 1.0) + 19.0, 3, 0.5);
+    float rise = clamp(band * 0.5 + 0.5, 0.0, 1.0);
+    glow = mix(u_glow.rgb, u_accent.rgb, rise * rise) * curtain * rays * pulse * u_shape.w;
+    return clamp(col * 0.92, 0.0, 1.0);
+}
+
+vec3 terran(vec3 D, out vec3 glow) {
+    float lat = D.y;
+    vec3 w1 = warp(D * 1.3, 1.0, u_shape.x);
+    float land = cloud(w1 * 1.5, 7, 0.55);
+    float rough = cloud(w1 * 7.5, 6, 0.6);
+    float crest = ridge(warp(D * 2.2, 0.7, 1.4) * 3.4, 6);
+    float coast = smoothstep(u_shape.w - 0.008, u_shape.w + 0.008, land + 0.04 * (rough - 0.5));
+    float depth = smoothstep(u_shape.w - 0.1, u_shape.w, land);
+    vec3 sea = mix(u_c0.rgb, u_c1.rgb, depth * depth) * (0.92 + 0.16 * rough);
+    float belt = 1.0 - smoothstep(0.15, 0.45, abs(abs(lat) - 0.38));
+    float dry = smoothstep(0.42, 0.62, cloud(D * vec3(1.6, 5.0, 1.6) + 17.0, 4, 0.5)) * belt;
+    vec3 ground = mix(u_c2.rgb, u_c4.rgb, dry * u_shape.z) * (0.72 + 0.56 * rough);
+    ground = mix(ground, u_c3.rgb, smoothstep(0.6, 0.85, crest) * 0.75);
+    vec3 col = mix(sea, ground, coast);
+    float cap = smoothstep(0.8, 0.86, abs(lat) + 0.06 * (rough - 0.5));
+    col = mix(col, u_pole.rgb, cap);
+    vec3 drift = warp(D * vec3(2.2, 4.5, 2.2), 1.6, 1.0);
+    float clouds = smoothstep(0.5, 0.74, cloud(drift * 1.8 + 41.0, 6, 0.55)) * u_spot.x;
+    clouds += smoothstep(0.62, 0.82, cloud(vec3(D.x * 3.0, lat * 16.0, D.z * 3.0) + drift + 73.0, 5, 0.5)) * 0.45 * u_spot.x;
+    clouds = clamp(clouds, 0.0, 0.92);
+    col = mix(col, u_c5.rgb, clouds);
+    float shore = 1.0 - smoothstep(u_shape.w + 0.02, u_shape.w + 0.12, land);
+    float towns = smoothstep(0.5, 0.66, cloud(D * 9.0 + 91.0, 4, 0.5));
+    float sparks = smoothstep(0.62, 0.9, cloud(D * 70.0 + 5.0, 3, 0.5)) + 0.6 * smoothstep(0.7, 0.95, cloud(D * 160.0 + 9.0, 2, 0.5));
+    float cities = coast * (1.0 - cap) * (1.0 - 0.7 * dry) * mix(towns, 1.0, 0.35 * shore) * sparks;
+    glow = u_glow.rgb * cities * u_spot.y * (1.0 - 0.85 * clouds);
+    return clamp(col, 0.0, 1.0);
 }
 
 void main() {
@@ -189,8 +303,12 @@ void main() {
 #ifdef MESH_LOCAL_POSITION
     D = normalize(v_localPos);
 #endif
-    vec3 col = u_kind < 0.5 ? giant(D) : u_kind < 1.5 ? ice(D) : rust(D);
-    float day = smoothstep(-0.08, 0.3, dot(N, normalize(u_sun))) * max(dot(N, normalize(u_sun)) * 0.9 + 0.1, 0.0);
-    fragColor = vec4(col * (u_sunColor.rgb * (u_power * day) + u_night), 1.0);
+    vec3 glow = vec3(0.0);
+    vec3 col = u_kind < 0.5 ? giant(D) : u_kind < 1.5 ? ice(D) : u_kind < 2.5 ? desert(D) : u_kind < 3.5 ? lava(D, glow) : u_kind < 4.5 ? ocean(D) : u_kind < 5.5 ? frozen(D, glow) : terran(D, glow);
+    float lit = dot(N, normalize(u_sun));
+    float day = smoothstep(-0.08, 0.3, lit) * max(lit * 0.9 + 0.1, 0.0);
+    float night = 1.0 - smoothstep(-0.14, 0.08, lit);
+    if (u_kind > 4.5) glow *= u_kind < 5.5 ? mix(0.25, 1.0, night) : night;
+    fragColor = vec4(col * (u_sunColor.rgb * (u_power * day) + u_night) + glow, 1.0);
 }
 #pragma end

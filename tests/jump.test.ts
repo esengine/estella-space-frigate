@@ -1,5 +1,5 @@
 import { JUMP, jumpAt, nextSystem } from '../src/jump';
-import { SYSTEMS } from '../src/systems';
+import { makeSystem } from '../src/worlds';
 
 describe('the jump through a gate', () => {
     it('is nothing before it starts and nothing once it is over', () => {
@@ -35,15 +35,14 @@ describe('the jump through a gate', () => {
         }
     });
 
-    it('goes round every system in turn', () => {
-        const seen = [0];
-        while (seen.length < SYSTEMS.length) seen.push(nextSystem(seen[seen.length - 1]!, SYSTEMS.length));
-        expect([...seen].sort()).toEqual(SYSTEMS.map((_, i) => i));
-        expect(nextSystem(seen[seen.length - 1]!, SYSTEMS.length)).toBe(0);
+    it('goes on to a new system at every gate, without end', () => {
+        expect(nextSystem(0)).toBe(1);
+        expect(nextSystem(41)).toBe(42);
     });
 
     it('lights every system from a sun that is a direction, and keeps each planet clear of the ship', () => {
-        for (const system of SYSTEMS) {
+        for (let index = 0; index < 50; index++) {
+            const system = makeSystem(7, index);
             expect(Math.hypot(system.sun.x, system.sun.y, system.sun.z)).toBeCloseTo(1, 3);
             expect(Math.hypot(system.at.x, system.at.y, system.at.z) - system.radius).toBeGreaterThan(1600);
         }

@@ -21,19 +21,11 @@ CLI = REPO / 'pipeline/bin/estella.mjs'
 MAP = int(sys.argv[sys.argv.index('--size') + 1]) if '--size' in sys.argv else 4096
 ONLY = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else ['grain', 'fx', 'models', 'materials', 'scene']
 MODELS_ONLY = sys.argv[sys.argv.index('--models') + 1].split(',') if '--models' in sys.argv else None
-SYSTEMS = [
-    dict(key='karis', name='KARIS', body='KARIS IV', kind=0, at=(-6000, -5760, -3500), radius=4300, air=1.022,
-         sun=(0.62, -0.5, -0.6), sunColor=(1.0, 0.94, 0.86), sunPower=1.5, shineColor=(1.0, 0.72, 0.45), shinePower=0.4,
-         rim=(0.45, 0.68, 1.0), rimPower=5.0, rimStrength=1.6, skyTurn=0, skyTint=(1.0, 1.0, 1.0), bandTurn=40),
-    dict(key='vela', name='VELA', body='VELA II', kind=1, at=(5200, 3400, 6400), radius=3000, air=1.03,
-         sun=(-0.5, -0.35, 0.8), sunColor=(0.82, 0.92, 1.0), sunPower=1.7, shineColor=(0.45, 0.75, 1.0), shinePower=0.35,
-         rim=(0.4, 0.85, 1.0), rimPower=4.0, rimStrength=2.0, skyTurn=140, skyTint=(0.75, 0.95, 1.15), bandTurn=170, skyVeil=(0.3, 1.2, 1.7),
-         ring=dict(normal=(0.34, 0.9, -0.28), outer=2.25, inner=1.28)),
-    dict(key='morn', name='MORN', body='MORN PRIME', kind=2, at=(3800, -4200, -5200), radius=3300, air=1.014,
-         sun=(0.75, -0.3, 0.58), sunColor=(1.0, 0.86, 0.7), sunPower=1.6, shineColor=(1.0, 0.55, 0.35), shinePower=0.3,
-         rim=(1.0, 0.5, 0.3), rimPower=6.0, rimStrength=1.1, skyTurn=255, skyTint=(1.06, 0.96, 0.88), bandTurn=290, skyVeil=(1.4, 0.75, 0.45)),
-]
-SUN = SYSTEMS[0]['sun']
+HOME = dict(at=(-6000, -5760, -3500), radius=4300, air=1.022,
+            sun=(0.62, -0.5, -0.6), sunColor=(1.0, 0.94, 0.86), sunPower=1.5, shineColor=(1.0, 0.72, 0.45), shinePower=0.4,
+            rim=(0.45, 0.68, 1.0), rimPower=5.0, rimStrength=1.6, skyTurn=0, skyVeil=(1, 1, 1), bandTurn=40,
+            ring=dict(normal=(0.34, 0.9, -0.28), outer=2.25, inner=1.28))
+SUN = HOME['sun']
 WARP = dict(radius=300.0, half=2600.0)
 LAYERS = dict(far=0, tunnel=1, fx=2)
 SHIELD = dict(at=(0, 5, 0), scale=(1.25, 1, 1),
@@ -661,16 +653,13 @@ def make_models():
 
 def make_materials():
     docs = {
-        **{f"atmosphere-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'atmosphere.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 1,
-                                        'properties': {'u_rim': dict(zip('rgb', sys['rim']), a=1), 'u_power': sys['rimPower'], 'u_strength': sys['rimStrength'], 'u_sun': [-c for c in sys['sun']]}}
-           for sys in SYSTEMS},
-        **{f"ring-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'ring.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
-                                  'properties': {'u_bright': {'r': 0.84, 'g': 0.9, 'b': 0.95, 'a': 1}, 'u_dim': {'r': 0.42, 'g': 0.5, 'b': 0.6, 'a': 1}, 'u_strength': 0.9, 'u_inner': sys['ring']['inner'] / sys['ring']['outer'],
-                                                 'u_planet': 1 / sys['ring']['outer'], 'u_sun': ring_sun(sys)}}
-           for sys in SYSTEMS if 'ring' in sys},
-        **{f"planet-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'planet.esshader', 'blendMode': 9, 'depthTest': True, 'depthWrite': True, 'cull': 1,
-                                    'properties': {'u_kind': sys['kind'], 'u_sun': [-c for c in sys['sun']], 'u_sunColor': dict(zip('rgb', sys['sunColor']), a=1), 'u_power': sys['sunPower'], 'u_night': 0.012}}
-           for sys in SYSTEMS},
+        'world-air': {'version': '1.0', 'type': 'material', 'shader': 'atmosphere.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 1,
+                      'properties': {'u_rim': dict(zip('rgb', HOME['rim']), a=1), 'u_power': HOME['rimPower'], 'u_strength': HOME['rimStrength'], 'u_sun': [-c for c in HOME['sun']]}},
+        'world-ring': {'version': '1.0', 'type': 'material', 'shader': 'ring.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                       'properties': {'u_bright': {'r': 0.84, 'g': 0.9, 'b': 0.95, 'a': 1}, 'u_dim': {'r': 0.42, 'g': 0.5, 'b': 0.6, 'a': 1}, 'u_strength': 0.9, 'u_inner': HOME['ring']['inner'] / HOME['ring']['outer'],
+                                      'u_planet': 1 / HOME['ring']['outer'], 'u_sun': ring_sun(HOME)}},
+        'world-planet': {'version': '1.0', 'type': 'material', 'shader': 'planet.esshader', 'blendMode': 9, 'depthTest': True, 'depthWrite': True, 'cull': 1,
+                         'properties': {'u_kind': 0, 'u_sun': [-c for c in HOME['sun']], 'u_sunColor': dict(zip('rgb', HOME['sunColor']), a=1), 'u_power': HOME['sunPower'], 'u_night': 0.012}},
         'shield': {'version': '1.0', 'type': 'material', 'shader': 'shield.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                    'properties': {'u_tint': {'r': 0.35, 'g': 0.7, 'b': 1.0, 'a': 1}, 'u_hot': {'r': 0.85, 'g': 0.95, 'b': 1.0, 'a': 1}, 'u_strength': 1.7, 'u_glow': 0, 'u_hit': [0, 0, 1]}},
         'plume-raider': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
@@ -791,7 +780,7 @@ def make_scene():
         return {'type': 'MeshRenderer', 'data': data}
 
     eye, target = (70, 14, 80), (0, 1, -6)
-    home = SYSTEMS[0]
+    home = HOME
     effects = [
         {'type': 'nebula', 'enabled': True, 'uniforms': {'u_turn': home['skyTurn'], 'u_gain': 1.0, 'u_intensity': 1.0, 'u_lightScene': 1}, 'colors': {'u_tint': dict(zip('rgb', home.get('skyVeil', (1, 1, 1))), a=1)}},
         {'type': 'starfield', 'enabled': True, 'uniforms': {'u_intensity': 1.0, 'u_density': 0.7, 'u_size': 1.0, 'u_band': 0.6, 'u_bandTilt': 25, 'u_bandTurn': 40, 'u_sunSize': 1.3, 'u_sunGlow': 1.0}},
@@ -885,12 +874,10 @@ def make_scene():
         gate = add(name, [transform(at), mesh('gate', 'assets/models/gate.esmaterial', 'assets/models/gate_color.png', True, True, True, False)])
         add(name + 'Strobe', [transform((0, GATE_RADIUS + 96.5, 0), None, (2.6,) * 3), mesh('flare', 'assets/materials/flare-white.esmaterial', None, False, False, True, False)], gate)
         add(name + 'Field', [transform((0, 0, 0), None, (GATE_RADIUS - 13,) * 3), mesh('gate-field', 'assets/materials/gatefield.esmaterial', None, False, False, False, False)], gate)
-    for i, sys in enumerate(SYSTEMS):
-        add(f'Planet{i}', [transform(sys['at'], None, (sys['radius'],) * 3), mesh('planet', f"assets/materials/planet-{sys['key']}.esmaterial", None, False, True, True, False)])
-        add(f'Atmosphere{i}', [transform(sys['at'], None, (sys['radius'] * sys['air'],) * 3), mesh('shell', f"assets/materials/atmosphere-{sys['key']}.esmaterial", None, False, False, True, False, LAYERS['far'])])
-        if 'ring' in sys:
-            add(f'Ring{i}', [transform(sys['at'], look((0, 0, 0), sys['ring']['normal']), (sys['radius'] * sys['ring']['outer'],) * 3),
-                             mesh('gate-field', f"assets/materials/ring-{sys['key']}.esmaterial", None, False, False, False, False, LAYERS['far'])])
+    add('Planet', [transform(HOME['at'], None, (HOME['radius'],) * 3), mesh('planet', 'assets/materials/world-planet.esmaterial', None, False, True, True, False)])
+    add('Atmosphere', [transform(HOME['at'], None, (HOME['radius'] * HOME['air'],) * 3), mesh('shell', 'assets/materials/world-air.esmaterial', None, False, False, True, False, LAYERS['far'])])
+    add('Ring', [transform(HOME['at'], look((0, 0, 0), HOME['ring']['normal']), (HOME['radius'] * HOME['ring']['outer'],) * 3),
+                 mesh('gate-field', 'assets/materials/world-ring.esmaterial', None, False, False, False, False, LAYERS['far'])])
     SCENE.write_text(json.dumps({'version': 4, 'name': 'SpaceFrigate', 'entities': entities}, indent=1) + '\n')
     stamp(SCENE, 'scene')
     boot = [{'id': 0, 'name': 'BootCamera', 'parent': None, 'children': [], 'visible': True, 'components': [
@@ -900,16 +887,8 @@ def make_scene():
     ]}]
     BOOT.write_text(json.dumps({'version': 4, 'name': 'Boot', 'entities': boot}, indent=1) + '\n')
     stamp(BOOT, 'scene')
-    unit = lambda v: [c / math.sqrt(sum(x * x for x in v)) for c in v]
     vec = lambda v: '{ x: %s, y: %s, z: %s }' % tuple(round(c, 5) for c in v)
-    tone = lambda v: '{ r: %s, g: %s, b: %s, a: 1 }' % tuple(v)
-    rows = []
-    for i, sys in enumerate(SYSTEMS):
-        parts = [f'Planet{i}', f'Atmosphere{i}'] + [f'{part.capitalize()}{i}' for part in ('ring',) if part in sys]
-        rows.append(f"    {{ name: '{sys['name']}', body: '{sys['body']}', at: {vec(sys['at'])}, radius: {sys['radius']}, parts: {json.dumps(parts)}, sun: {vec(unit(sys['sun']))}, sunColor: {tone(sys['sunColor'])}, sunPower: {sys['sunPower']},\n"
-                    f"      shine: {vec(unit([-c for c in sys['at']]))}, shineColor: {tone(sys['shineColor'])}, shinePower: {sys['shinePower']}, skyTurn: {sys['skyTurn']}, skyTint: {tone(sys['skyTint'])}, skyVeil: {tone(sys.get('skyVeil', (1, 1, 1)))}, bandTurn: {sys['bandTurn']} }},")
     (ROOT / 'src/shieldShape.ts').write_text('export const SHIELD = {\n    at: %s,\n    scale: %s,\n    profile: %s,\n} as const;\n' % (vec(SHIELD['at']), vec(SHIELD['scale']), json.dumps(SHIELD['profile'])))
-    (ROOT / 'src/systems.ts').write_text('export const SYSTEMS = [\n' + '\n'.join(rows) + '\n] as const;\n\nexport type StarSystem = (typeof SYSTEMS)[number];\n')
 
 
 for part, make in (('grain', make_grain), ('fx', make_fx), ('models', make_models), ('materials', make_materials), ('scene', make_scene)):

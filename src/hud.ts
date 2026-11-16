@@ -21,7 +21,7 @@ import { buildTargets } from './hudTargets';
 import { JUMP } from './jump';
 import { foes } from './raiders';
 import { MAJOR_FROM, ROCKS, ship } from './shipState';
-import { SYSTEMS } from './systems';
+import { systemAt } from './worlds';
 
 const GAUGE = { box: 320, sweep: 0.75, fullScale: 440, redline: 400, labels: 114, command: 106 };
 const BAR_CELLS = 24;
@@ -262,7 +262,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         const test = clamp((age - 0.6) / 1.6, 0, 1), sweep = Math.sin(Math.PI * test), settle = test * test * (3 - 2 * test);
         const shown = (actual: number): number => sweep * (1 - settle) + actual * settle;
 
-        say(clock, `${SYSTEMS[ship.system]!.name} SYSTEM   T+ ${stamp(ship.time)}`);
+        say(clock, `${systemAt(ship.system).name} SYSTEM   T+ ${stamp(ship.time)}`);
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
         const lean = Math.round((helm.lean * 180) / Math.PI);
         say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? 'ALIGNING TO GATE' : helm.mode === 'level' ? 'COMING LEVEL' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
@@ -273,7 +273,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
             mining.hold = 0;
         }
 
-        const bound = SYSTEMS[ship.bound]!;
+        const bound = systemAt(ship.bound);
         if (ship.jumps !== jumps) {
             jumps = ship.jumps;
             landed = false;
