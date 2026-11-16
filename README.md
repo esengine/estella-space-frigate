@@ -43,10 +43,6 @@ node ../../sdk/node_modules/vitest/vitest.mjs run
 
 Assets are regenerated from their recipes with `python3 tools/generate.py`.
 
-## More
-
-[Design notes](docs/design-notes.zh.md) (in Chinese): how the recipes, turrets, helm and HUD work.
-
 ## License
 
 [Apache-2.0](LICENSE). The piano samples are CC0 and the Chakra Petch font is under the SIL Open Font License; each carries its own licence file.
