@@ -21,7 +21,7 @@ try {
         if (/^\[model-bake\] \d+ model\(s\) at /.test(m.text())) baked = true;
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 300000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 120000 }).catch(() => {});
     await page.evaluate(() => window.__estellaCooked.setPaused(true));

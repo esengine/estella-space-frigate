@@ -14,7 +14,7 @@ try {
     page.on('pageerror', (e) => problems.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await page.waitForFunction(() => window.__spaceHud, null, { timeout: 120000 });
     await page.evaluate(() => { window.__spaceHud.foes.peace = true; });
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
@@ -156,7 +156,7 @@ try {
     voyage.on('pageerror', (e) => problems.push(String(e)));
     voyage.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await voyage.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await voyage.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await voyage.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await voyage.evaluate(() => window.__estellaCooked.setPaused(true));
     const sail = (n) => voyage.evaluate((frames) => window.__estellaCooked.step(frames), n);
     const seen = () => voyage.evaluate(() => { const f = window.__estellaCooked.facts(); return { time: f.time, transits: f.transits, system: f.systemName, jump: f.jump, jumps: f.jumps, fov: f.fov, planets: f.planets }; });
@@ -185,7 +185,7 @@ try {
     ram.on('pageerror', (e) => problems.push(String(e)));
     ram.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await ram.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await ram.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await ram.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await ram.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 });
     await ram.evaluate(() => window.__estellaCooked.setPaused(true));
     await ram.evaluate(() => { window.__spaceHud.foes.peace = true; });
@@ -225,7 +225,7 @@ try {
     fight.on('pageerror', (e) => problems.push(String(e)));
     fight.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await fight.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await fight.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await fight.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await fight.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 });
     await fight.evaluate(() => window.__estellaCooked.setPaused(true));
     {

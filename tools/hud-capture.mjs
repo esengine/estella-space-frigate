@@ -25,7 +25,7 @@ try {
     });
     const began = Date.now();
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 300000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     const sceneMs = Date.now() - began;
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     const state = await page.evaluate(() => window.__spaceHud ?? null);
