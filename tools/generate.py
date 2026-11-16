@@ -18,7 +18,7 @@ MAT = ROOT / 'assets/materials'
 SCENE = ROOT / 'assets/scenes/main.esscene'
 CLI = REPO / 'pipeline/bin/estella.mjs'
 MAP = int(sys.argv[sys.argv.index('--size') + 1]) if '--size' in sys.argv else 4096
-ONLY = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else ['sky', 'planet', 'grain', 'models', 'materials', 'scene']
+ONLY = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else ['sky', 'planet', 'grain', 'fx', 'models', 'materials', 'scene']
 MODELS_ONLY = sys.argv[sys.argv.index('--models') + 1].split(',') if '--models' in sys.argv else None
 SUN = (0.62, -0.5, -0.6)
 PLANET_AT = (-6000, -5760, -3500)
@@ -202,6 +202,23 @@ def make_grain():
     stamp(path, 'texture', {'sRGB': False, 'maxSize': 1024, 'filterMode': 'linear', 'wrapMode': 'repeat'})
 
 
+def make_fx():
+    n = 128
+    u = (np.arange(n) + 0.5) / n * 2 - 1
+    x, y = np.meshgrid(u, u)
+    r = np.sqrt(x * x + y * y)
+    for name, seed, ragged in (('cloud', 7, 0.55), ('flame', 23, 0.85)):
+        p = np.stack([x * 2.2, y * 2.2, np.full_like(x, seed * 0.71)], -1).astype(np.float32)
+        billow = fbm(warp(p, seed + 1, 0.5, 1.4), seed, 5, 0.55)
+        edge = np.clip(1 - r * (1.05 + 0.3 * ragged) - (0.5 - billow) * ragged, 0, 1)
+        alpha = np.clip(sm(0.0, 0.42, edge) * (0.55 + 0.45 * billow), 0, 1)
+        shade = np.clip(0.72 + 0.28 * billow, 0, 1)
+        rgba = np.stack([shade, shade, shade, alpha], -1)
+        path = ROOT / 'assets/fx' / f'{name}.png'
+        Image.fromarray((rgba * 255).astype(np.uint8), 'RGBA').save(path, optimize=True)
+        stamp(path, 'texture', {'sRGB': True, 'maxSize': 128, 'filterMode': 'linear', 'wrapMode': 'clamp', 'alphaIsTransparency': True})
+
+
 STROKES = {
     '2': [[(0,5),(1,6),(3,6),(4,5),(4,3.7),(0,0),(4,0)]],
     '7': [[(0,6),(4,6),(1.6,0)]],
@@ -256,7 +273,7 @@ def aim_y(way):
 def emitter(**over):
     base = {'enabled': True, 'looping': True, 'playOnStart': True, 'simulationSpace': 0, 'rate': 0, 'burstCount': 0, 'duration': 1000, 'shape': 4, 'shapeRadius': 0.3,
             'speedMin': 0, 'speedMax': 1, 'gravity': {'x': 0, 'y': 0, 'z': 0}, 'damping': 0, 'rotationMin': 0, 'rotationMax': 360, 'angularVelocityMin': -40, 'angularVelocityMax': 40,
-            'startColor': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'endColor': {'r': 1, 'g': 1, 'b': 1, 'a': 0}, 'blendMode': 1, 'texture': 'assets/fx/puff.esimage',
+            'startColor': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'endColor': {'r': 1, 'g': 1, 'b': 1, 'a': 0}, 'blendMode': 1, 'texture': 'assets/fx/cloud.png',
             'lifetimeMin': 0.3, 'lifetimeMax': 0.6, 'maxParticles': 200, 'startSizeMin': 1, 'startSizeMax': 1, 'endSizeMin': 1, 'endSizeMax': 1, 'renderMode': 0, 'intensity': 1, 'collisionEnabled': False,
             'material': 'assets/materials/particle-soft.esmaterial'}
     return {'type': 'ParticleEmitter', 'data': {**base, **over}}
@@ -266,10 +283,25 @@ GAS = dict(shape=3, shapeAngle=30, shapeRadius=0.22, speedMin=20, speedMax=42, d
            startSizeMin=0.5, startSizeMax=0.9, endSizeMin=3.2, endSizeMax=5.6, intensity=1.1, noiseStrength=5, noiseFrequency=0.35, noiseScrollSpeed=1.5,
            colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 0.95}}, {'t': 0.25, 'color': {'r': 0.86, 'g': 0.92, 'b': 1, 'a': 0.55}},
                                     {'t': 0.7, 'color': {'r': 0.7, 'g': 0.8, 'b': 0.95, 'a': 0.2}}, {'t': 1, 'color': {'r': 0.6, 'g': 0.7, 'b': 0.9, 'a': 0}}]})
-SPARKS = dict(material='assets/materials/particle-hard.esmaterial', shape=4, shapeRadius=0.4, speedMin=14, speedMax=85, damping=1.6, lifetimeMin=0.18, lifetimeMax=0.7, maxParticles=600, texture='assets/fx/spark.esimage',
-              startSizeMin=0.5, startSizeMax=1.3, endSizeMin=0.1, endSizeMax=0.3, renderMode=1, velocityScale=0.05, lengthScale=2.2, intensity=7, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
+SPARKS = dict(material='assets/materials/particle-hard.esmaterial', shape=4, shapeRadius=0.3, speedMin=30, speedMax=170, damping=2.4, lifetimeMin=0.12, lifetimeMax=0.55, maxParticles=900, texture='assets/fx/spark.esimage',
+              startSizeMin=0.1, startSizeMax=0.26, endSizeMin=0.03, endSizeMax=0.08, renderMode=1, velocityScale=0.012, lengthScale=5, intensity=6, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
               colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.95, 'b': 0.8, 'a': 1}}, {'t': 0.3, 'color': {'r': 1, 'g': 0.62, 'b': 0.2, 'a': 1}},
                                        {'t': 0.75, 'color': {'r': 1, 'g': 0.28, 'b': 0.06, 'a': 0.8}}, {'t': 1, 'color': {'r': 0.5, 'g': 0.06, 'b': 0, 'a': 0}}]})
+MUZZLE_FIRE = dict(material='assets/materials/particle-fire.esmaterial', texture='assets/fx/flame.png', shape=3, shapeAngle=11, shapeRadius=0.2, speedMin=50, speedMax=260, damping=7, lifetimeMin=0.1, lifetimeMax=0.38, maxParticles=900,
+                   startSizeMin=0.9, startSizeMax=1.9, endSizeMin=4, endSizeMax=9, intensity=3.2, noiseStrength=8, noiseFrequency=0.3, noiseScrollSpeed=2,
+                   colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.97, 'b': 0.85, 'a': 1}}, {'t': 0.2, 'color': {'r': 1, 'g': 0.72, 'b': 0.28, 'a': 0.95}},
+                                            {'t': 0.6, 'color': {'r': 0.95, 'g': 0.32, 'b': 0.07, 'a': 0.6}}, {'t': 1, 'color': {'r': 0.35, 'g': 0.08, 'b': 0.02, 'a': 0}}]})
+MUZZLE_SMOKE = dict(material='assets/materials/particle-smoke.esmaterial', blendMode=0, shape=3, shapeAngle=30, shapeRadius=0.5, speedMin=10, speedMax=90, damping=3.0, lifetimeMin=1.8, lifetimeMax=4.6, maxParticles=1200,
+                    startSizeMin=2.0, startSizeMax=3.8, endSizeMin=12, endSizeMax=24, intensity=1, noiseStrength=4, noiseFrequency=0.22, noiseScrollSpeed=0.8,
+                    colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.74, 'b': 0.42, 'a': 0.9}}, {'t': 0.07, 'color': {'r': 0.66, 'g': 0.58, 'b': 0.5, 'a': 0.72}},
+                                             {'t': 0.45, 'color': {'r': 0.36, 'g': 0.35, 'b': 0.36, 'a': 0.42}}, {'t': 1, 'color': {'r': 0.2, 'g': 0.2, 'b': 0.22, 'a': 0}}]})
+BLAST = dict(material='assets/materials/particle-blast.esmaterial', texture='assets/fx/puff.esimage', blendMode=0, shape=4, shapeRadius=0.05, speedMin=0, speedMax=0.5, lifetimeMin=0.2, lifetimeMax=0.26, maxParticles=40,
+             startSizeMin=3, startSizeMax=4, endSizeMin=26, endSizeMax=32, intensity=1, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
+             colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 0.9}}, {'t': 1, 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 0}}]})
+TRACER = dict(material='assets/materials/particle-hard.esmaterial', shape=4, shapeRadius=0.12, speedMin=0, speedMax=1.5, damping=1, lifetimeMin=0.35, lifetimeMax=0.75, maxParticles=4000, texture='assets/fx/spark.esimage',
+              startSizeMin=1.0, startSizeMax=1.5, endSizeMin=0.15, endSizeMax=0.3, intensity=5, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
+              colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.9, 'b': 0.65, 'a': 1}}, {'t': 0.3, 'color': {'r': 1, 'g': 0.55, 'b': 0.18, 'a': 0.8}}, {'t': 1, 'color': {'r': 0.7, 'g': 0.16, 'b': 0.03, 'a': 0}}]})
+IMPACT_FIRE = {**MUZZLE_FIRE, 'shape': 4, 'shapeRadius': 1.2, 'speedMin': 8, 'speedMax': 70, 'lifetimeMax': 0.55, 'endSizeMin': 7, 'endSizeMax': 14}
 SMOKE = dict(shape=4, shapeRadius=0.5, speedMin=2, speedMax=11, damping=1.8, lifetimeMin=0.5, lifetimeMax=1.3, maxParticles=260,
              startSizeMin=0.8, startSizeMax=1.6, endSizeMin=3.5, endSizeMax=6.5, intensity=0.9, noiseStrength=3, noiseFrequency=0.3, noiseScrollSpeed=1,
              colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.8, 'b': 0.5, 'a': 0.8}}, {'t': 0.2, 'color': {'r': 0.7, 'g': 0.62, 'b': 0.58, 'a': 0.4}},
@@ -644,6 +676,9 @@ def make_materials():
         'jet': {'version': '1.0', 'type': 'material', 'shader': 'jet.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                 'properties': {'u_tint': {'r': 0.92, 'g': 0.95, 'b': 1.0, 'a': 1}, 'u_strength': 3.2, 'u_length': 5, 'u_fade': 1.6, 'u_streaks': 7, 'u_rush': 9}},
         'particle-soft': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 1.5}},
+        'particle-smoke': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 2.5}},
+        'particle-blast': {'version': '1.0', 'type': 'material', 'shader': 'builtin:distortion', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_strength': 0.03, 'u_radial': 1, 'u_dispersion': 0.2}},
+        'particle-fire': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 1.0, 'u_erosion': 0.75, 'u_erosionEdge': 0.25}},
         'particle-hard': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 0.3}},
         'plume-core': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                        'properties': {'u_core': {'r': 0.9, 'g': 0.97, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.2, 'g': 0.55, 'b': 1.0, 'a': 1}, 'u_strength': 5, 'u_length': 11,
@@ -758,18 +793,23 @@ def make_scene():
         add(f'Jet{name}Gas', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), aim_y(way)), emitter(**GAS)], ship)
     add('GunSparks', [transform(), emitter(**SPARKS)])
     add('GunSmoke', [transform(), emitter(**SMOKE)])
+    add('GunBlast', [transform(), emitter(**BLAST)])
+    add('GunTracer', [transform(), emitter(**TRACER)])
+    add('GunImpact', [transform(), emitter(**IMPACT_FIRE)])
     flip = {'x': 0, 'y': 0, 'z': 1, 'w': 0}
     for key, x, z, side in TURRETS:
         seat = (x, mount_height(x, z, side) + TURRET_SEAT * side, z)
         turret = add(f'Turret{key}', [transform(seat, flip if side < 0 else None, (TURRET_SCALE,) * 3), mesh('turret', 'assets/models/turret.esmaterial', 'assets/models/turret_color.png')], ship)
         guns = add(f'Guns{key}', [transform(TRUNNION), mesh('guns', 'assets/models/guns.esmaterial', 'assets/models/guns_color.png')], turret)
         flash = add(f'Muzzle{key}', [transform((0, 0, MUZZLE + 0.5), None, (0.001,) * 3), mesh('flare', 'assets/materials/flare-bolt.esmaterial', None, False, False, True, False)], guns)
-        add(f'Muzzle{key}Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES['bolt']), a=1), 'intensity': 0, 'radius': 22, 'enabled': True, 'meshShadows': False}}], flash)
+        add(f'Muzzle{key}Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES['bolt']), a=1), 'intensity': 0, 'radius': 80, 'enabled': True, 'meshShadows': False}}], flash)
+        add(f'Muzzle{key}Fire', [transform((0, 0, MUZZLE), aim_y((0, 0, 1))), emitter(**MUZZLE_FIRE)], guns)
+        add(f'Muzzle{key}Smoke', [transform((0, 0, MUZZLE), aim_y((0, 0, 1))), emitter(**MUZZLE_SMOKE)], guns)
     for i in range(SHELLS):
         add(f'Shell{i}', [transform((0, -50000, 0), None, (0.001,) * 3), mesh('flare', 'assets/materials/flare-bolt.esmaterial', None, False, False, True, False)])
     for i in range(IMPACTS):
         burst = add(f'Impact{i}', [transform((0, -50000, 0), None, (0.001,) * 3), mesh('flare', 'assets/materials/flare-bolt.esmaterial', None, False, False, True, False)])
-        add(f'Impact{i}Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES['bolt']), a=1), 'intensity': 0, 'radius': 120, 'enabled': True, 'meshShadows': False}}], burst)
+        add(f'Impact{i}Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES['bolt']), a=1), 'intensity': 0, 'radius': 180, 'enabled': True, 'meshShadows': False}}], burst)
     for name, at, tint, size in STROBES:
         lamp = add(name, [transform(at, None, (size,) * 3), mesh('flare', f'assets/materials/flare-{tint}.esmaterial', None, False, False, True, False)], ship)
         add(name + 'Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES[tint]), a=1), 'intensity': 0.5, 'radius': 9, 'enabled': True, 'meshShadows': False}}], lamp)
@@ -810,7 +850,7 @@ def make_scene():
     stamp(SCENE, 'scene')
 
 
-for part, make in (('sky', make_sky), ('planet', make_planet), ('grain', make_grain), ('models', make_models), ('materials', make_materials), ('scene', make_scene)):
+for part, make in (('sky', make_sky), ('planet', make_planet), ('grain', make_grain), ('fx', make_fx), ('models', make_models), ('materials', make_materials), ('scene', make_scene)):
     if part in ONLY:
         make()
         print(part, 'done')

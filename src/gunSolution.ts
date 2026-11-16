@@ -5,7 +5,7 @@ const RAD = Math.PI / 180;
 
 export const GUNNERY = {
     traverse: 38 * RAD, elevate: 26 * RAD, low: -8 * RAD, high: 68 * RAD, tolerance: 1.4 * RAD,
-    reload: 2.6, boltSpeed: 1400, reach: 2600, convergence: 1500, recoil: 0.6, damage: 0.36,
+    reload: 3.4, boltSpeed: 620, reach: 3200, convergence: 1500, recoil: 1.4, recoilSeconds: 1.2, damage: 0.36,
     doubleTap: 0.32, rippleAfter: 0.4, rippleEvery: 0.22, barrels: 0.5,
     autoEvery: 0.4, settle: 6, laid: 0.2 * RAD, loose: 0.25 * RAD, perKilo: 0.55 * RAD, perSpeed: 0.6 * RAD, settled: 0.25,
 } as const;

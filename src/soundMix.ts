@@ -54,6 +54,6 @@ export function cuesBetween(before: ShipSound, now: ShipSound): Cue[] {
     if (now.arrivals > before.arrivals) cues.push({ sound: 'arrival', volume: 0.35, pitch: 1 });
     if (now.overheated && !before.overheated) cues.push({ sound: 'alarm', volume: 0.3, pitch: 1 });
     if (now.broken > before.broken) cues.push({ sound: 'rockBreak', volume: 0.45, pitch: 1 });
-    if (now.shots > before.shots) cues.push({ sound: 'gun', volume: 0.5, pitch: 0.94 + 0.03 * (now.shots % 5) });
+    if (now.shots > before.shots) cues.push({ sound: 'gun', volume: 0.85, pitch: 0.92 + 0.03 * (now.shots % 5) });
     return cues;
 }

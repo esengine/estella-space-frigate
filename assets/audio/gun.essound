@@ -1,72 +1,96 @@
 {
   "version": 1,
-  "duration": 0.9,
-  "gain": 0.8,
-  "lowpass": 5200,
+  "duration": 2.6,
+  "gain": 0.9,
+  "lowpass": 4800,
   "reverb": {
-    "size": 0.3,
-    "mix": 0.15,
+    "size": 0.6,
+    "mix": 0.28,
     "kind": "room"
   },
   "layers": [
+    {
+      "id": "crack",
+      "source": "noise",
+      "band": [
+        700,
+        5200
+      ],
+      "seed": 71,
+      "attack": 0.001,
+      "decay": 0.035,
+      "gain": 0.9
+    },
     {
       "id": "thump",
       "source": "sine",
       "freq": [
         [
           0,
-          170
+          150
         ],
         [
-          0.12,
-          48
+          0.08,
+          62
+        ],
+        [
+          0.5,
+          34
         ]
       ],
       "attack": 0.001,
-      "decay": 0.11,
+      "decay": 0.32,
       "gain": 1
     },
     {
-      "id": "crack",
-      "source": "noise",
-      "band": [
-        900,
-        5000
+      "id": "sub",
+      "source": "sine",
+      "freq": [
+        [
+          0,
+          58
+        ],
+        [
+          0.9,
+          30
+        ]
       ],
-      "seed": 71,
-      "attack": 0.001,
-      "decay": 0.03,
-      "gain": 0.7
+      "attack": 0.004,
+      "decay": 0.7,
+      "gain": 0.8
     },
     {
       "id": "body",
       "source": "noise",
       "color": "pink",
       "band": [
-        120,
+        90,
         900
       ],
       "seed": 72,
-      "decay": 0.14,
-      "gain": 0.6,
+      "attack": 0.002,
+      "decay": 0.22,
+      "gain": 0.8,
       "filters": [
         {
           "type": "lowpass",
-          "freq": 1400
+          "freq": 1300
         }
       ]
     },
     {
-      "id": "tail",
+      "id": "roll",
       "source": "noise",
       "color": "brown",
       "seed": 73,
-      "decay": 0.35,
-      "gain": 0.35,
+      "start": 0.05,
+      "attack": 0.05,
+      "decay": 1.1,
+      "gain": 0.5,
       "filters": [
         {
           "type": "lowpass",
-          "freq": 220
+          "freq": 240
         }
       ]
     }

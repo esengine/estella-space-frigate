@@ -117,7 +117,7 @@ try {
     await tap('Space');
     const salvo = await facts();
     expect('pressed twice at once it fires every gun that is ready', salvo.gunShots === one.gunShots + laid.gunReady - 1 && salvo.gunReady === 0, guns(salvo));
-    await step(200);
+    await step(280);
     const loaded = await facts();
     expect('and they load again', loaded.gunReady >= 3, guns(loaded));
     const spots = await page.evaluate(() => window.__spaceHud.guns.spots);

@@ -1,8 +1,9 @@
-import { Light, Particle, Transform } from 'esengine';
+import { Light, Particle, ParticleEmitter, Transform } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { clamp, lookRotation } from './flight';
 import { BATTERIES, GUNNERY, boreOf, crossing, dispersion, intercept, limit, muzzleOf, rayToSphere, scatter, slew, solve, wrap, type Mount, type Turret } from './gunSolution';
 import { helm, mulQuat, turnBack, turnBy, type Quat, type Vec } from './helm';
+import { FIELD_DRIFT, ship as vessel } from './shipState';
 
 export { GUNNERY } from './gunSolution';
 
@@ -27,6 +28,7 @@ export const guns = {
     ready: 0,
     shots: 0,
     hits: 0,
+    shake: 0,
     note: '',
     turrets: [] as Turret[],
     strike: null as ((rock: number, amount: number) => void) | null,
@@ -34,7 +36,7 @@ export const guns = {
 
 interface Bolt { entity: Entity; at: Vec; way: Vec; flown: number; live: boolean }
 interface Burst { entity: Entity; light: Entity; age: number; size: number; live: boolean }
-interface Rig { turret: Entity; guns: Entity; muzzle: Entity; light: Entity; base: Quat; pivot: Vec; scale: number }
+interface Rig { turret: Entity; guns: Entity; muzzle: Entity; light: Entity; fire: Entity | null; smoke: Entity | null; base: Quat; pivot: Vec; scale: number }
 
 const about = (axis: 'x' | 'y', angle: number): Quat => ({ x: 0, y: 0, z: 0, w: Math.cos(angle / 2), [axis]: Math.sin(angle / 2) });
 
@@ -44,7 +46,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
     let bolts: Bolt[] = [];
     let bursts: Burst[] = [];
     let ship: Entity | null = null;
-    let sparks: Entity | null = null, smoke: Entity | null = null;
+    let sparks: Entity | null = null, smoke: Entity | null = null, blast: Entity | null = null, tracer: Entity | null = null, impact: Entity | null = null;
     const puff = (emitter: Entity | null, count: number, at: Vec): void => { if (emitter !== null) app.getResource(Particle).emitAt(emitter, count, at); };
     let clock = 0, pressed = false, pressAt = -1, tapAt = -1, rippleAt = -1, autoAt = -1, nextBolt = 0, nextBurst = 0, seed = 20261115;
     let seen: Vec | null = null, drift: Vec = { x: 0, y: 0, z: 0 }, said = '';
@@ -61,11 +63,14 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
         ship = need(world, 'Ship');
         sparks = world.findEntityByName('GunSparks');
         smoke = world.findEntityByName('GunSmoke');
+        blast = world.findEntityByName('GunBlast');
+        tracer = world.findEntityByName('GunTracer');
+        impact = world.findEntityByName('GunImpact');
         for (let i = 0; ; i++) { const e = world.findEntityByName(`Rock${i}`); if (e === null) break; rocks.push(e); }
         for (let i = 0; ; i++) { const e = world.findEntityByName(`Shell${i}`); if (e === null) break; bolts.push({ entity: e, at: { x: 0, y: 0, z: 0 }, way: { x: 0, y: 0, z: 1 }, flown: 0, live: false }); }
         for (let i = 0; ; i++) { const e = world.findEntityByName(`Impact${i}`); if (e === null) break; bursts.push({ entity: e, light: need(world, `Impact${i}Light`), age: 0, size: 1, live: false }); }
         return BATTERIES.map((battery) => {
-            const rig: Rig = { turret: need(world, `Turret${battery.key}`), guns: need(world, `Guns${battery.key}`), muzzle: need(world, `Muzzle${battery.key}`), light: need(world, `Muzzle${battery.key}Light`), base: { x: 0, y: 0, z: 0, w: 1 }, pivot: { x: 0, y: 0, z: 0 }, scale: 1 };
+            const rig: Rig = { turret: need(world, `Turret${battery.key}`), guns: need(world, `Guns${battery.key}`), muzzle: need(world, `Muzzle${battery.key}`), light: need(world, `Muzzle${battery.key}Light`), fire: world.findEntityByName(`Muzzle${battery.key}Fire`), smoke: world.findEntityByName(`Muzzle${battery.key}Smoke`), base: { x: 0, y: 0, z: 0, w: 1 }, pivot: { x: 0, y: 0, z: 0 }, scale: 1 };
             const seat = world.get(rig.turret, Transform);
             rig.base = { ...seat.rotation };
             rig.pivot = { ...world.get(rig.guns, Transform).position };
@@ -81,11 +86,15 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
         });
     };
 
-    const loose = (turret: Turret, hull: { position: Vec; rotation: Quat }, wide: number): void => {
+    const loose = (world: World, turret: Turret, hull: { position: Vec; rotation: Quat }, wide: number): void => {
         turret.loaded = 0;
         turret.kick = 1;
         turret.flash = 1;
         guns.shots++;
+        guns.shake = Math.min(1.2, guns.shake + 0.5);
+        const rig = rigs![guns.turrets.indexOf(turret)]!;
+        const astern = { x: -helm.forward.x * vessel.speed * FIELD_DRIFT, y: -helm.forward.y * vessel.speed * FIELD_DRIFT, z: -helm.forward.z * vessel.speed * FIELD_DRIFT };
+        if (rig.smoke !== null) world.update(rig.smoke, ParticleEmitter, (p) => { p.addedVelocityMin = astern; p.addedVelocityMax = astern; });
         const way = turnBy(hull.rotation, turret.bore);
         for (const side of [turret.spread, -turret.spread]) {
             const bolt = bolts[nextBolt++ % Math.max(1, bolts.length)];
@@ -95,15 +104,17 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
             bolt.way = scatter(way, wide, chance(), chance());
             bolt.flown = 0;
             bolt.live = true;
-            puff(sparks, 9, bolt.at);
-            puff(smoke, 5, bolt.at);
+            puff(rig.fire, 30, bolt.at);
+            puff(rig.smoke, 26, bolt.at);
+            puff(sparks, 22, bolt.at);
+            puff(blast, 1, bolt.at);
         }
     };
 
-    const fireOne = (hull: { position: Vec; rotation: Quat }, wide: number): boolean => {
+    const fireOne = (world: World, hull: { position: Vec; rotation: Quat }, wide: number): boolean => {
         const turret = guns.turrets.find((t) => t.onTarget && t.loaded >= 1);
         if (!turret) return false;
-        loose(turret, hull, wide);
+        loose(world, turret, hull, wide);
         return true;
     };
 
@@ -165,21 +176,21 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
             turret.bears = want.bears;
             turret.onTarget = want.bears && Math.abs(wrap(want.yaw - now.yaw)) < GUNNERY.tolerance && Math.abs(want.pitch - now.pitch) < GUNNERY.tolerance;
             turret.loaded = Math.min(1, turret.loaded + dt / GUNNERY.reload);
-            turret.kick = Math.max(0, turret.kick - dt / 0.5);
-            turret.flash = Math.max(0, turret.flash - dt / 0.09);
+            turret.kick = Math.max(0, turret.kick - dt / GUNNERY.recoilSeconds);
+            turret.flash = Math.max(0, turret.flash - dt / 0.22);
             turret.bore = boreOf(turret, turret);
             turret.mouth = muzzleOf(turret, turret, 0);
             if (turret.bears) guns.bearing++;
             if (turret.onTarget && turret.loaded >= 1) guns.ready++;
-            const back = GUNNERY.recoil * turret.kick * turret.kick;
+            const back = GUNNERY.recoil * (turret.kick > 0.92 ? (1 - turret.kick) / 0.08 : Math.pow(turret.kick / 0.92, 1.6));
             world.update(rig.turret, Transform, (t) => { t.rotation = mulQuat(rig.base, about('y', turret.yaw)); });
             world.update(rig.guns, Transform, (t) => {
                 t.rotation = about('x', -turret.pitch);
                 t.position = { x: rig.pivot.x, y: rig.pivot.y - Math.sin(turret.pitch) * back, z: rig.pivot.z - Math.cos(turret.pitch) * back };
             });
-            const glare = 0.001 + 1.5 * turret.flash;
-            world.update(rig.muzzle, Transform, (t) => { t.scale = { x: glare, y: glare, z: glare * 1.6 }; });
-            world.update(rig.light, Light, (l) => { l.intensity = 3 * turret.flash; });
+            const glint = Math.max(0, (turret.flash - 0.7) / 0.3), glare = 0.001 + 1.6 * glint;
+            world.update(rig.muzzle, Transform, (t) => { t.scale = { x: glare, y: glare, z: glare * 2.6 }; });
+            world.update(rig.light, Light, (l) => { l.intensity = 11 * turret.flash * turret.flash; });
         });
 
         const taps = guns.clicks + (held && !pressed ? 1 : 0);
@@ -191,7 +202,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
             else if (guns.range > GUNNERY.reach) note('TARGET OUT OF RANGE');
             else {
                 note('AUTO FIRE');
-                if (clock - autoAt > GUNNERY.autoEvery && fireOne(hull, guns.spread)) autoAt = clock;
+                if (clock - autoAt > GUNNERY.autoEvery && fireOne(world, hull, guns.spread)) autoAt = clock;
             }
         } else if (guns.source === 'view') {
             said = '';
@@ -199,10 +210,10 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 const again = clock - tapAt < GUNNERY.doubleTap;
                 tapAt = clock;
                 let loosed = 0;
-                while (fireOne(hull, GUNNERY.laid)) { loosed++; if (!again) break; }
+                while (fireOne(world, hull, GUNNERY.laid)) { loosed++; if (!again) break; }
                 if (loosed === 0) guns.note = guns.bearing === 0 ? 'NO GUN BEARS' : guns.turrets.some((t) => t.bears && t.loaded < 1) ? 'GUNS RELOADING' : 'GUNS TRAINING';
             }
-            if (held && clock - pressAt > GUNNERY.rippleAfter && clock - rippleAt > GUNNERY.rippleEvery && fireOne(hull, GUNNERY.laid)) rippleAt = clock;
+            if (held && clock - pressAt > GUNNERY.rippleAfter && clock - rippleAt > GUNNERY.rippleEvery && fireOne(world, hull, GUNNERY.laid)) rippleAt = clock;
         } else {
             said = '';
         }
@@ -217,6 +228,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 if (hit <= near) { near = hit; struck = i; }
             });
             const step = struck >= 0 ? Math.max(0, near) : stride;
+            for (let k = 1; k <= 3; k++) puff(tracer, 1, { x: bolt.at.x + (bolt.way.x * step * k) / 3, y: bolt.at.y + (bolt.way.y * step * k) / 3, z: bolt.at.z + (bolt.way.z * step * k) / 3 });
             bolt.at = { x: bolt.at.x + bolt.way.x * step, y: bolt.at.y + bolt.way.y * step, z: bolt.at.z + bolt.way.z * step };
             bolt.flown += step;
             if (struck >= 0) {
@@ -228,8 +240,11 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                     world.update(burst.entity, Transform, (t) => { t.position = { ...bolt.at }; });
                 }
                 guns.hits++;
-                puff(sparks, 70, bolt.at);
-                puff(smoke, 16, bolt.at);
+                puff(impact, 26, bolt.at);
+                puff(sparks, 110, bolt.at);
+                puff(smoke, 22, bolt.at);
+                puff(blast, 1, bolt.at);
+                guns.shake = Math.min(1.2, guns.shake + 0.12);
                 guns.strike?.(struck, GUNNERY.damage);
             }
             bolt.live = struck < 0 && bolt.flown < GUNNERY.reach;
@@ -237,7 +252,7 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
             world.update(bolt.entity, Transform, (t) => {
                 t.position = { ...bolt.at };
                 t.rotation = lookRotation([bolt.at.x, bolt.at.y, bolt.at.z], ahead);
-                t.scale = bolt.live ? { x: 0.45, y: 0.45, z: 7 } : { x: 0.001, y: 0.001, z: 0.001 };
+                t.scale = bolt.live ? { x: 0.6, y: 0.6, z: 5.5 } : { x: 0.001, y: 0.001, z: 0.001 };
             });
         }
 

@@ -34,7 +34,7 @@ const JETS = [
     { name: 'JetPortDown', turn: 'roll', sign: 1 }, { name: 'JetStarboardUp', turn: 'roll', sign: 1 }, { name: 'JetPortUp', turn: 'roll', sign: -1 }, { name: 'JetStarboardDown', turn: 'roll', sign: -1 },
 ] as const;
 const WAVE_SECONDS = 0.9;
-const SIGHT = { height: 27, yaw: Math.PI + 0.1, pitch: 0, distance: 112, low: -0.6, high: 0.9 };
+const SIGHT = { height: 15, yaw: Math.PI + 0.45, pitch: 0.02, distance: 100, low: -0.6, high: 0.9 };
 
 function strobe(time: number, every: number, flashes: number): number {
     const phase = (time % every) / 0.16;
@@ -146,7 +146,9 @@ addPlugin({
             const { eye, target } = eyeOf(orbit);
             const camera = get(world, 'Camera');
             const cam = world.get(camera, Transform);
-            cam.position = turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] });
+            guns.shake *= Math.exp(-dt * 5.5);
+            const jolt = guns.shake * guns.shake * (0.5 + orbit.distance * 0.012);
+            cam.position = turnBy(helm.frame, { x: eye[0] + Math.sin(clock * 83) * jolt, y: eye[1] + Math.sin(clock * 97 + 1.3) * jolt, z: eye[2] + Math.sin(clock * 71 + 2.1) * jolt * 0.6 });
             cam.rotation = mulQuat(helm.frame, lookRotation(eye, target));
             world.insert(camera, Transform, cam);
 
