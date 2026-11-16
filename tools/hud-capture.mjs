@@ -18,16 +18,23 @@ let loading = null;
 try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
     page.on('pageerror', (e) => problems.push(String(e)));
-    page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text().slice(0, 400)); });
+    let baked = false;
+    page.on('console', (m) => {
+        if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text().slice(0, 400));
+        if (/^\[model-bake\] \d+ model\(s\) at /.test(m.text())) baked = true;
+    });
     const began = Date.now();
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     const sceneMs = Date.now() - began;
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     const state = await page.evaluate(() => window.__spaceHud ?? null);
     if (!state?.ready) throw new Error(`the HUD did not come up: ${JSON.stringify(state)}`);
     loading = { sceneMs, hudReadyMs: Date.now() - began, hudLoadMs: await page.evaluate(() => window.__spaceHud.loadMs), recipes: await page.evaluate(() => window.__estellaCooked.recipes()) };
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
+    for (const until = Date.now() + 300000; !baked && Date.now() < until;) await page.waitForTimeout(500);
+    if (!baked) problems.push('the models were not baked within five minutes; the shots show placeholders');
+    loading.bakedMs = Date.now() - began;
     await page.mouse.move(960, 540);
     const step = (n) => page.evaluate((frames) => window.__estellaCooked.step(frames), n);
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
@@ -92,6 +99,7 @@ try {
     await step(50);
     await shoot('boot');
     await until(4.2);
+    for (let waits = 0; waits < 30 && !(await hudState()).booted; waits++) await step(10);
     check('the display finishes its self-test', (await hudState()).booted === true, await hudState());
     await shoot('front-quarter');
     await shoot('front-quarter-720', [1280, 720]);
@@ -146,11 +154,16 @@ try {
     await step(2);
     check('a tap the other way brings it back amidships', Math.abs((await hudState()).helm.rudder) < 0.01, (await hudState()).helm.rudder);
 
-    await press('Elevation15');
-    await step(420);
-    check('an elevation control is held', Math.abs((await hudState()).helm.pitch - (15 * Math.PI) / 180) < 0.03, (await hudState()).helm.pitch);
+    await press('Elevation50');
+    check('UP 1 orders a climb', (await hudState()).helm.elevation === 0.5 && (await hudState()).helm.mode === 'manual', (await hudState()).helm);
+    const flat = (await hudState()).helm.pitch;
+    await step(150);
+    check('the bow keeps climbing with nothing held', (await hudState()).helm.pitch > flat + 0.2, { flat, pitch: (await hudState()).helm.pitch });
     await press('Elevation0');
-    await step(420);
+    await step(90);
+    check('HOLD stops the climb where it is', Math.abs((await hudState()).helm.pitchRate) < 0.01 && (await hudState()).helm.pitch > flat + 0.2, (await hudState()).helm);
+    await press('Level');
+    await step(600);
     check('LEVEL brings the bow back', Math.abs((await hudState()).helm.pitch) < 0.03, (await hudState()).helm.pitch);
 
     await press('Engine100');

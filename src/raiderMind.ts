@@ -4,12 +4,14 @@ export type V = { x: number; y: number; z: number };
 
 export const RAIDER = {
     speed: 85, turn: 0.8, near: 330, far: 1050, range: 1450, cone: 0.07, burst: 3, every: 0.2, rest: 2.6,
-    boltSpeed: 560, reach: 2400, hull: 9, radius: 19, scatter: 0.03, berth: 110, shieldCost: 0.035, hullCost: 0.03,
+    boltSpeed: 560, reach: 2400, hull: 9, radius: 19, scatter: 0.03, shieldCost: 0.035, hullCost: 0.03,
     first: 25, gap: 40, arrive: 2400, most: 3,
 } as const;
 
 export interface Mind { at: V; way: V; mode: 'run' | 'break'; aside: V; shots: number; wait: number; cool: number; passes: number }
 export interface Hazard { at: V; radius: number }
+
+export const BERTH = RAIDER.speed / RAIDER.turn + RAIDER.radius;
 
 const add = (a: V, b: V, k = 1): V => ({ x: a.x + b.x * k, y: a.y + b.y * k, z: a.z + b.z * k });
 const dot = (a: V, b: V): number => a.x * b.x + a.y * b.y + a.z * b.z;
@@ -32,9 +34,9 @@ export function wanted(mind: Mind, shipVelocity: V, hazards: readonly Hazard[]):
     const home = unit({ x: -mind.at.x, y: -mind.at.y, z: -mind.at.z });
     let want = mind.mode === 'run' ? aimAt(mind, shipVelocity) : unit(add({ x: -home.x * 0.5, y: -home.y * 0.5, z: -home.z * 0.5 }, mind.aside, 0.9));
     for (const hazard of hazards) {
-        const off = add(mind.at, hazard.at, -1), gap = size(off) - hazard.radius;
-        if (gap >= RAIDER.berth || dot(mind.way, off) > 0) continue;
-        want = unit(add(want, unit(off), (1 - Math.max(0, gap) / RAIDER.berth) * 2.4));
+        const off = add(mind.at, hazard.at, -1), gap = size(off) - hazard.radius - RAIDER.radius;
+        if (gap >= BERTH || dot(mind.way, off) > 0) continue;
+        want = unit(add(want, unit(off), (1 - Math.max(0, gap) / BERTH) * 2.4));
     }
     return want;
 }

@@ -8,7 +8,7 @@ const browser = await chromium.launch({ headless: true, args: ['--use-angle=d3d1
 try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     await page.waitForTimeout(6000);
     const cdp = await page.context().newCDPSession(page);

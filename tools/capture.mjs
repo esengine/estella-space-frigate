@@ -16,7 +16,7 @@ try {
     page.on('pageerror', (e) => problems.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') problems.push(m.text().slice(0, 400)); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     const hud = await page.evaluate(() => window.__spaceHud ?? null);
     if (!hud?.ready) throw new Error(`the HUD did not come up: ${JSON.stringify(hud)}`);

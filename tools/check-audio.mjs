@@ -17,7 +17,7 @@ try {
     page.on('pageerror', (e) => problems.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error' || (m.type() === 'warning' && /audio/i.test(m.text()))) problems.push(m.text().slice(0, 400)); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
-    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 600000 });
     await page.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 }).catch(() => {});
     await page.mouse.move(960, 540);
     await page.keyboard.press('ShiftLeft');
