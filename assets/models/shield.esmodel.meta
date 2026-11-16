@@ -2,5 +2,7 @@
   "uuid": "b33d5ee9-8a97-57cd-a746-94a3cf115331",
   "version": "2.0",
   "type": "modeling",
-  "importer": {}
+  "importer": {
+    "bake": "load"
+  }
 }

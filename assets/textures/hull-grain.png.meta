@@ -3,7 +3,7 @@
   "type": "texture",
   "importer": {
     "sRGB": false,
-    "maxSize": 1024,
+    "maxSize": 512,
     "filterMode": "linear",
     "wrapMode": "repeat"
   },

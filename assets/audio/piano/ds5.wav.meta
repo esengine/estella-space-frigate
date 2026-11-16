@@ -4,7 +4,7 @@
   "type": "audio",
   "importer": {
     "loadType": "auto",
-    "compress": false,
-    "bitrateKbps": 128
+    "compress": true,
+    "bitrateKbps": 96
   }
 }

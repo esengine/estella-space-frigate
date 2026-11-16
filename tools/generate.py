@@ -112,7 +112,7 @@ def directions(W, H, sky):
 
 
 def make_grain():
-    n = 1024
+    n = 512
     rng = np.random.default_rng(31)
     def tile(freq, seed):
         u = (np.arange(n) + 0.5) / n
@@ -132,8 +132,8 @@ def make_grain():
     grey = grey - (speck > 0.9985) * 0.35
     grey = np.clip(grey, 0, 1)
     path = TEX / 'hull-grain.png'
-    Image.fromarray((np.stack([grey] * 3, -1) * 255).astype(np.uint8)).save(path, optimize=True)
-    stamp(path, 'texture', {'sRGB': False, 'maxSize': 1024, 'filterMode': 'linear', 'wrapMode': 'repeat'})
+    Image.fromarray((grey * 255).astype(np.uint8), 'L').save(path, optimize=True)
+    stamp(path, 'texture', {'sRGB': False, 'maxSize': 512, 'filterMode': 'linear', 'wrapMode': 'repeat'})
 
 
 def make_fx():
@@ -651,7 +651,7 @@ def make_models():
         run('bake-model', path)
     for path in sorted(MODELS.iterdir()):
         if path.suffix != '.meta':
-            stamp(path, None, {'compress': 'off'} if path.name.endswith('_emissive.png') else {'bake': 'load'} if path.suffix == '.esmodel' and 'normalBake' in json.loads(path.read_text()) else None)
+            stamp(path, None, {'compress': 'off'} if path.name.endswith('_emissive.png') else {'bake': 'load'} if path.suffix == '.esmodel' else None)
 
 
 def make_materials():
