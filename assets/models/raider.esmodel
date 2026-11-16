@@ -1408,13 +1408,13 @@
  ],
  "normalBake": {
   "from": "dense",
-  "size": 2048,
+  "size": 1024,
   "distance": 0.3,
   "color": true,
   "surface": true,
   "occlusion": {
    "samples": 24,
-   "size": 512,
+   "size": 256,
    "reach": 2.0
   }
  }

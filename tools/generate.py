@@ -16,6 +16,7 @@ ENV = ROOT / 'assets/env'
 TEX = ROOT / 'assets/textures'
 MAT = ROOT / 'assets/materials'
 SCENE = ROOT / 'assets/scenes/main.esscene'
+BOOT = ROOT / 'assets/scenes/boot.esscene'
 CLI = REPO / 'pipeline/bin/estella.mjs'
 MAP = int(sys.argv[sys.argv.index('--size') + 1]) if '--size' in sys.argv else 4096
 ONLY = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else ['grain', 'fx', 'models', 'materials', 'scene']
@@ -338,7 +339,7 @@ def raider_source():
     for side in (1, -1):
         step(**T, faces={'not': {'tag': ['burn', 'lens', 'lamp']}}, near={'at': [side * 6.0, 0.5, -24], 'radius': 4.5}, color=[1.0, 0.4, 0.1], glow=0.06, amount=0.7)
     step(op='decimate', **{'from': 'blockout'}, ratio=1)
-    src['normalBake'] = {'from': 'dense', 'size': min(MAP, 2048), 'distance': 0.3, 'color': True, 'surface': True, 'occlusion': {'samples': 24, 'size': 512, 'reach': 2.0}}
+    src['normalBake'] = {'from': 'dense', 'size': min(MAP, 1024), 'distance': 0.3, 'color': True, 'surface': True, 'occlusion': {'samples': 24, 'size': 256, 'reach': 2.0}}
     return src
 
 
@@ -650,7 +651,7 @@ def make_models():
         run('bake-model', path)
     for path in sorted(MODELS.iterdir()):
         if path.suffix != '.meta':
-            stamp(path, None, {'compress': 'off'} if path.name.endswith('_emissive.png') else None)
+            stamp(path, None, {'compress': 'off'} if path.name.endswith('_emissive.png') else {'bake': 'load'} if path.suffix == '.esmodel' and 'normalBake' in json.loads(path.read_text()) else None)
 
 
 def make_materials():
@@ -895,6 +896,13 @@ def make_scene():
                              mesh('gate-field', f"assets/materials/ring-{sys['key']}.esmaterial", None, False, False, False, False, LAYERS['far'])])
     SCENE.write_text(json.dumps({'version': 4, 'name': 'SpaceFrigate', 'entities': entities}, indent=1) + '\n')
     stamp(SCENE, 'scene')
+    boot = [{'id': 0, 'name': 'BootCamera', 'parent': None, 'children': [], 'visible': True, 'components': [
+        transform((0, 0, 0), look((0, 0, 0), (-0.55, 0.12, -0.8))),
+        {'type': 'Camera', 'data': {'projectionType': 0, 'fov': 34, 'nearPlane': 1, 'farPlane': 30000, 'isActive': True, 'priority': 0, 'clearFlags': 3}},
+        {'type': 'PostProcessVolume', 'data': {'isGlobal': True, 'weight': 1, 'priority': 0, 'effects': [effect for effect in effects if effect['type'] in ('nebula', 'starfield', 'colorGrade', 'filmGrain', 'vignette')]}},
+    ]}]
+    BOOT.write_text(json.dumps({'version': 4, 'name': 'Boot', 'entities': boot}, indent=1) + '\n')
+    stamp(BOOT, 'scene')
     unit = lambda v: [c / math.sqrt(sum(x * x for x in v)) for c in v]
     vec = lambda v: '{ x: %s, y: %s, z: %s }' % tuple(round(c, 5) for c in v)
     tone = lambda v: '{ r: %s, g: %s, b: %s, a: 1 }' % tuple(v)

@@ -9,6 +9,7 @@ import { createImpacts } from './impacts';
 import { createRaiders, foes } from './raiders';
 import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
+import { installLoading, loading } from './loading';
 import { installSky } from './sky';
 import { SYSTEMS } from './systems';
 
@@ -55,6 +56,7 @@ addPlugin({
         const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
         app.insertResource(Playthrough, { facts });
         installSky();
+        installLoading(app);
         installHud(app);
         installAudio(app);
         const ids = new Map<string, Entity>();
@@ -132,6 +134,7 @@ addPlugin({
         };
 
         app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
+            if (world.findEntityByName('Ship') === null || loading.cover) return;
             if (world.findEntityByName('Camera') === null) return;
             const dt = Math.min(time.delta, 0.05);
             clock += dt;

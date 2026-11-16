@@ -2,6 +2,7 @@ import {
     Assets, Camera, FillMethod, FillOrigin, Input, ScreenOverlay, TextAlign, Transform, UIVisual, UIVisualType,
     defineSystem, GetWorld, Res, Time,
 } from 'esengine';
+import { loading as boot } from './loading';
 import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
 import { METRES, helm, stepHelm } from './helm';
@@ -49,7 +50,7 @@ export function installHud(app: App): void {
     }));
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
         if (update) { update(Math.min(time.delta, 0.05), input); return; }
-        if (world.findEntityByName('Camera') === null) return;
+        if (world.findEntityByName('Camera') === null || boot.cover) return;
         if (!loading) {
             const began = Date.now();
             (globalThis as { __spaceHud?: typeof state }).__spaceHud = state;

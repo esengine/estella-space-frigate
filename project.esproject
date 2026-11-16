@@ -4,10 +4,10 @@
   "description": "A frigate on patrol off a gas giant, built from a recipe: its hull, plating, worn paint, windows and engines are steps in a model source, and the nebula, planet and stars are generated.",
   "tag": "3D",
   "version": "0.1.0",
-  "defaultScene": "assets/scenes/main.esscene",
+  "defaultScene": "assets/scenes/boot.esscene",
   "designResolution": { "width": 1600, "height": 900 },
   "spineVersion": "none",
   "scripts": { "main": "src/main.ts" },
   "assetExclude": ["tools"],
-  "features": { "rendering": { "colorSpace": "linear", "outputTransform": "aces", "quality": { "mode": "high" } } }
+  "features": { "runtime": { "assetLoadTimeout": 180000 }, "rendering": { "colorSpace": "linear", "outputTransform": "aces", "quality": { "mode": "high", "asyncShaderCompile": true } } }
 }
