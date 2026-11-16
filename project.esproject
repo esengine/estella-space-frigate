@@ -9,5 +9,5 @@
   "spineVersion": "none",
   "scripts": { "main": "src/main.ts" },
   "assetExclude": ["tools"],
-  "features": { "runtime": { "assetLoadTimeout": 180000 }, "rendering": { "colorSpace": "linear", "outputTransform": "aces", "quality": { "mode": "high", "asyncShaderCompile": true } } }
+  "features": { "runtime": { "assetLoadTimeout": 180000 }, "rendering": { "colorSpace": "linear", "outputTransform": "aces", "quality": { "mode": "auto", "asyncShaderCompile": true, "deviceRules": [{"level": "medium", "gpuIncludes": "Adreno"}, {"level": "medium", "gpuIncludes": "Mali"}, {"level": "medium", "gpuIncludes": "PowerVR"}, {"level": "medium", "gpuIncludes": "Xclipse"}, {"level": "medium", "gpuIncludes": "Immortalis"}, {"level": "medium", "gpuIncludes": "Maleoon"}, {"level": "medium", "gpuIncludes": "Apple GPU"}, {"level": "high"}] } } }
 }

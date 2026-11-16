@@ -151,6 +151,7 @@ export function installSky(): void {
     defineSkyEffect({
         type: 'nebula',
         label: 'Nebula',
+        still: true,
         uniforms: [
             { name: 'u_turn', label: 'Turn', min: 0, max: 360, step: 1, defaultValue: 0 },
             { name: 'u_gain', label: 'Gain', min: 0, max: 8, step: 0.05, defaultValue: 1 },

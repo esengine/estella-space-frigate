@@ -25,6 +25,7 @@ const GATES = ['GateA', 'GateB'] as const;
 const GATE_RADIUS = 170;
 const MOTE_FIELD = { x: 170, y: 100, z: 240 };
 const MOTE_CLEAR = 34;
+const MOTE_FADE = 45;
 const STROBES = [
     { name: 'StrobeMast', size: 0.55, every: 1.7, flashes: 2 },
     { name: 'StrobeKeel', size: 0.5, every: 1.3, flashes: 1 },
@@ -76,6 +77,7 @@ addPlugin({
         let flash = 0;
         let since = 60;
         let motes = -1;
+        const moteSizes: number[] = [];
         const downs = new Map<string, boolean>();
         const jets = JETS.map(() => 0);
         let sight = 0;
@@ -357,7 +359,7 @@ addPlugin({
 
             if (motes < 0) {
                 motes = 0;
-                while (world.findEntityByName(`Mote${motes}`) !== null) motes++;
+                for (let e = world.findEntityByName('Mote0'); e !== null; e = world.findEntityByName(`Mote${++motes}`)) moteSizes.push(world.get(e, Transform).scale.x);
             }
             for (let i = 0; i < motes; i++) {
                 const e = get(world, `Mote${i}`);
@@ -373,6 +375,9 @@ addPlugin({
                     y *= out;
                 }
                 t.position = { x, y, z };
+                const edge = clamp(Math.min(MOTE_FIELD.x - Math.abs(x), MOTE_FIELD.y - Math.abs(y), MOTE_FIELD.z - Math.abs(z)) / MOTE_FADE, 0, 1);
+                const size = Math.max(0.001, moteSizes[i]! * edge * edge * (3 - 2 * edge));
+                t.scale = { x: size, y: size, z: size };
                 world.insert(e, Transform, t);
             }
             facts.motes = motes;

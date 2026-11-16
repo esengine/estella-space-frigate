@@ -535,7 +535,7 @@ GATE_RADIUS = 170.0
 FLARES = {'white': (1.0, 1.0, 1.0), 'red': (1.0, 0.08, 0.04), 'green': (0.08, 1.0, 0.25), 'bolt': (1.0, 0.6, 0.24)}
 STROBES = [('StrobeMast', (0, 23.1, -24.3), 'white', 0.55), ('StrobeKeel', (0, -10.95, -12), 'red', 0.5), ('NavPort', (17, 3.05, -20), 'red', 0.42), ('NavStarboard', (-17, 3.05, -20), 'green', 0.42),
            ('BowPort', (3.3, -0.1, 59.1), 'white', 0.34), ('BowStarboard', (-3.3, -0.1, 59.1), 'white', 0.34)]
-MOTES = 150
+MOTES = 60
 
 def gate_source():
     S=[]
