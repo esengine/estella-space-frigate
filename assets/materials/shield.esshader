@@ -50,7 +50,7 @@ void main() {
     vec2 spread = vec2(atan(at.x, at.z), asin(clamp(at.y, -1.0, 1.0))) * 24.0;
     float mesh = 0.2 + 0.8 * cells(spread);
     float rim = pow(1.0 - facing, 4.0) * 0.12;
-    float lit = (ring + core * 1.4 + wake) * mesh + rim * u_glow;
+    float lit = (ring + core * 1.4 + wake + 0.07) * mesh + rim * u_glow;
     vec3 tone = mix(u_tint.rgb, u_hot.rgb, clamp(ring + core, 0.0, 1.0));
     fragColor = vec4(tone * (lit * u_glow * u_strength), 1.0);
 }

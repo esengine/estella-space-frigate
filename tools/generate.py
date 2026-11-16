@@ -36,6 +36,8 @@ SUN = SYSTEMS[0]['sun']
 WARP = dict(radius=300.0, half=2600.0)
 SKY_VEIL = 26000
 LAYERS = dict(veil=-100, far=0, tunnel=1, fx=2)
+SHIELD = dict(at=(0, 5, 0), scale=(1.25, 1, 1),
+              profile=[[0.0, -62], [15, -60], [23, -54], [26.5, -42], [27, -22], [25.5, -8], [21, 6], [17, 20], [13.5, 34], [11.5, 46], [9.5, 56], [5.5, 64], [0.0, 67]])
 SHIP_COAT = (0.22, 0.24)
 SHIP_DETAIL = {'texture': 'assets/textures/hull-grain.png', 'size': 1.1, 'strength': 0.1, 'bump': 0.1}
 
@@ -714,6 +716,7 @@ SMALL = {
              'steps': [{'op': 'lathe', 'axis': 'z', 'sides': 48, 'curve': 3, 'tag': 'warp', 'color': [1, 1, 1],
                         'profile': [[0.0, -WARP['half']], [WARP['radius'] * 0.5, -WARP['half'] * 0.94], [WARP['radius'] * 0.86, -WARP['half'] * 0.78], [WARP['radius'], -WARP['half'] * 0.5],
                                     [WARP['radius'], WARP['half'] * 0.5], [WARP['radius'] * 0.86, WARP['half'] * 0.78], [WARP['radius'] * 0.5, WARP['half'] * 0.94], [0.0, WARP['half']]]}]},
+    'shield': {'version': 1, 'smoothAngle': 80, 'steps': [{'op': 'lathe', 'axis': 'z', 'sides': 48, 'tag': 'shield', 'color': [1, 1, 1], 'profile': SHIELD['profile']}]},
     'shell': {'version': 1, 'smoothAngle': 80, 'steps': [{'op': 'sphere', 'radius': 1, 'rings': 48, 'sides': 96, 'tag': 'shell', 'color': [1, 1, 1]}]},
     **{name: {'version': 1, 'smoothAngle': 60, 'material': {'roughness': 0.92, 'metallic': 0},
               'normalBake': {'from': 'dense', 'size': 1024, 'color': True, 'surface': True, 'occlusion': {'samples': 36, 'size': 512, 'reach': 0.35}},
@@ -909,7 +912,7 @@ def make_scene():
     for name, at, way in JETS:
         add(f'Jet{name}', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), look((0, 0, 0), way), (0.001,) * 3), mesh('jet', 'assets/materials/jet.esmaterial', None, False, False, False, False)], ship)
         add(f'Jet{name}Gas', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), aim_y(way)), emitter(**GAS)], ship)
-    add('Shield', [transform((0, 1, 2), None, (0.001,) * 3), mesh('shell', 'assets/materials/shield.esmaterial', None, False, False, False, False)], ship)
+    add('Shield', [transform(SHIELD['at'], None, (0.001,) * 3), mesh('shield', 'assets/materials/shield.esmaterial', None, False, False, False, False)], ship)
     add('HullSparks', [transform(), emitter(**SPARKS)])
     add('HullDust', [transform(), emitter(**SMOKE)])
     add('GunSparks', [transform(), emitter(**SPARKS)])
@@ -984,6 +987,7 @@ def make_scene():
         parts = [f'Planet{i}', f'Atmosphere{i}'] + [f'{part.capitalize()}{i}' for part in ('ring', 'veil') if part in sys]
         rows.append(f"    {{ name: '{sys['name']}', body: '{sys['body']}', at: {vec(sys['at'])}, radius: {sys['radius']}, parts: {json.dumps(parts)}, sun: {vec(unit(sys['sun']))}, sunColor: {tone(sys['sunColor'])}, sunPower: {sys['sunPower']},\n"
                     f"      shine: {vec(unit([-c for c in sys['at']]))}, shineColor: {tone(sys['shineColor'])}, shinePower: {sys['shinePower']}, skyTurn: {sys['skyTurn']}, skyTint: {tone(sys['skyTint'])}, bandTurn: {sys['bandTurn']} }},")
+    (ROOT / 'src/shieldShape.ts').write_text('export const SHIELD = {\n    at: %s,\n    scale: %s,\n    profile: %s,\n} as const;\n' % (vec(SHIELD['at']), vec(SHIELD['scale']), json.dumps(SHIELD['profile'])))
     (ROOT / 'src/systems.ts').write_text('export const SYSTEMS = [\n' + '\n'.join(rows) + '\n] as const;\n\nexport type StarSystem = (typeof SYSTEMS)[number];\n')
 
 

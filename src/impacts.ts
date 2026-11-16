@@ -2,10 +2,10 @@ import { Material, MeshRenderer, Particle, Transform } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { IMPACT, absorb, clearance, rockMass, spinFrom, strike, touch } from './collision';
 import { helm, setEngine, turnBack, turnBy, type Vec } from './helm';
+import { SHIELD } from './shieldShape';
 import { DRIFTING_ROCKS, FIELD_DRIFT, FIELD_HALF_LENGTH, TOP_SPEED, ship } from './shipState';
 
 const REACH = 70;
-const SHIELD_SIZE = { x: 27, y: 19, z: 62 };
 
 export function createImpacts(app: App): (world: World, dt: number, cruise: number, past: number, leaving: boolean) => void {
     let rocks: Entity[] | null = null;
@@ -80,8 +80,9 @@ export function createImpacts(app: App): (world: World, dt: number, cruise: numb
                             if (dust !== null) flash.emitAt(dust, Math.round(8 + 20 * weight), point);
                             if (had > 0 && shield !== null) {
                                 glow = Math.min(1, 0.45 + 0.55 * weight);
-                                const reach = Math.hypot(contact.point.x / SHIELD_SIZE.x, contact.point.y / SHIELD_SIZE.y, contact.point.z / SHIELD_SIZE.z) || 1;
-                                Material.setUniform(world.get(shield, MeshRenderer).material, 'u_hit', { x: contact.point.x / SHIELD_SIZE.x / reach, y: contact.point.y / SHIELD_SIZE.y / reach, z: contact.point.z / SHIELD_SIZE.z / reach });
+                                const from = { x: (contact.point.x - SHIELD.at.x) / SHIELD.scale.x, y: (contact.point.y - SHIELD.at.y) / SHIELD.scale.y, z: (contact.point.z - SHIELD.at.z) / SHIELD.scale.z };
+                                const reach = Math.hypot(from.x, from.y, from.z) || 1;
+                                Material.setUniform(world.get(shield, MeshRenderer).material, 'u_hit', { x: from.x / reach, y: from.y / reach, z: from.z / reach });
                             }
                         }
                     }
@@ -108,7 +109,7 @@ export function createImpacts(app: App): (world: World, dt: number, cruise: numb
             const lit = glow > 0.01;
             if (lit !== shown) {
                 shown = lit;
-                world.update(shield, Transform, (t) => { t.scale = lit ? { ...SHIELD_SIZE } : { x: 0.001, y: 0.001, z: 0.001 }; });
+                world.update(shield, Transform, (t) => { t.scale = lit ? { ...SHIELD.scale } : { x: 0.001, y: 0.001, z: 0.001 }; });
             }
             if (lit) Material.setUniform(world.get(shield, MeshRenderer).material, 'u_glow', glow);
         }
