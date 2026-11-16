@@ -1,6 +1,7 @@
 import { Assets, GetWorld, Name, Res, SceneManager, Time, defineSystem, loadWork } from 'esengine';
 import type { App, Entity } from 'esengine';
 import { AMBER, DESIGN, FONTS, HAZE, ICE, createKit, rgb, type Textures } from './hudKit';
+import { applyStoredGraphics } from './hudSettings';
 
 const BAR = { width: 560, height: 2 };
 const NAMES: Record<string, string> = { stage: 'CLEARING MOORINGS', frigate: 'HULL PLATING', gate: 'JUMP GATE', raider: 'CONTACT PROFILES', turret: 'TURRETS', guns: 'BATTERIES' };
@@ -28,6 +29,7 @@ export function installLoading(app: App): void {
         if (!asked) {
             asked = true;
             loading.cover = true;
+            applyStoredGraphics(app);
             const assets = app.getResource(Assets);
             void Promise.all([assets.loadFont(FONTS.regular), assets.loadFont(FONTS.strong)]).then(([regular, strong]) => { fonts = { regular: regular.handle, strong: strong.handle }; });
             loadWork().run((progress) => {

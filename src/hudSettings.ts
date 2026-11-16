@@ -1,5 +1,5 @@
-import { Device, Quality, TextAlign, UIVisual } from 'esengine';
-import type { App, QualityLevel, QualityMode, QualityPreferences } from 'esengine';
+import { Device, Material, MeshRenderer, Quality, TextAlign, UIVisual } from 'esengine';
+import type { App, QualityController, QualityLevel, QualityMode, QualityPreferences } from 'esengine';
 import { AMBER, EDGE, HAZE, ICE, rgb, type Frame, type Kit } from './hudKit';
 
 const STORE = 'space-frigate:graphics';
@@ -40,6 +40,51 @@ const keep = (c: Choices): void => {
     }
 };
 
+const applyChoices = (q: QualityController, c: Choices): void => {
+    q.setMode(c.mode);
+    q.setPreferences({
+        ...(c.renderScale !== undefined ? { renderScale: c.renderScale } : {}),
+        ...(c.antialiasing !== undefined ? { antialiasing: c.antialiasing } : {}),
+        ...(c.ssao !== undefined ? { ssao: c.ssao } : {}),
+        skipEffects: [...c.off],
+    });
+};
+
+export function applyStoredGraphics(app: App): void {
+    const q = app.getResource(Quality);
+    if (q) applyChoices(q, read());
+}
+
+const FINISH = ['u_clearcoat', 'u_detailSize'] as const;
+
+const RESCAN_FRAMES = 30;
+
+const finisher = (app: App): ((plain: boolean) => number) => {
+    const authored = new Map<number, [string, number][]>();
+    let current: boolean | null = null, trimmed = 0, since = RESCAN_FRAMES;
+    const set = (material: number, plain: boolean): void => {
+        for (const [name, value] of authored.get(material) ?? []) Material.setUniform(material, name, plain ? 0 : value);
+    };
+    return (plain) => {
+        const changed = plain !== current;
+        if (!changed && (!plain || ++since < RESCAN_FRAMES)) return trimmed;
+        since = 0;
+        for (const e of app.world.getEntitiesWithComponents([MeshRenderer])) {
+            const material = app.world.get(e, MeshRenderer).material;
+            if (!material || authored.has(material)) continue;
+            authored.set(material, FINISH.flatMap((name) => {
+                const value = Material.getUniform(material, name);
+                return typeof value === 'number' && value > 0 ? [[name, value] as [string, number]] : [];
+            }));
+            if (!changed && plain) set(material, true);
+        }
+        if (changed) for (const material of authored.keys()) set(material, plain);
+        current = plain;
+        trimmed = plain ? [...authored.values()].reduce((sum, layers) => sum + layers.length, 0) : 0;
+        return trimmed;
+    };
+};
+
 const look = (name: Look): Option[] => [
     { caption: 'ON', pick: (c) => { c.off = c.off.filter((l) => l !== name); }, on: (c) => !c.off.includes(name) },
     { caption: 'OFF', pick: (c) => { if (!c.off.includes(name)) c.off.push(name); }, on: (c) => c.off.includes(name) },
@@ -68,7 +113,7 @@ const ROWS: Row[] = [
     { title: 'VIGNETTE', options: look('vignette') },
 ];
 
-export const graphics = { open: false, level: '', scale: 1, msaa: 1, antialiasing: '', ssao: false, skipped: [] as readonly string[] };
+export const graphics = { open: false, level: '', scale: 1, msaa: 1, antialiasing: '', ssao: false, skipped: [] as readonly string[], trimmed: 0 };
 (globalThis as { __spaceGraphics?: typeof graphics }).__spaceGraphics = graphics;
 
 const LEVEL_NAMES: Record<QualityLevel, string> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH' };
@@ -78,16 +123,10 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
     const textures = kit.textures;
     const choices = read();
     const quality = () => app.getResource(Quality);
+    const finish = finisher(app);
     const apply = (): void => {
         const q = quality();
-        if (!q) return;
-        q.setMode(choices.mode);
-        q.setPreferences({
-            ...(choices.renderScale !== undefined ? { renderScale: choices.renderScale } : {}),
-            ...(choices.antialiasing !== undefined ? { antialiasing: choices.antialiasing } : {}),
-            ...(choices.ssao !== undefined ? { ssao: choices.ssao } : {}),
-            skipEffects: [...choices.off],
-        });
+        if (q) applyChoices(q, choices);
     };
     apply();
 
@@ -137,6 +176,7 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
             graphics.antialiasing = p.antialiasing;
             graphics.ssao = p.ssao;
             graphics.skipped = p.skipEffects;
+            graphics.trimmed = finish(graphics.level === 'low');
         }
         const openerX = frame.across - OPENER.right - BUTTON.w;
         const overOpener = inside(frame.pointer, openerX, OPENER.top, BUTTON.w, BUTTON.h);
