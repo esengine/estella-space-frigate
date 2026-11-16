@@ -1,4 +1,4 @@
-import { addPlugin, defineSystem, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
+import { addPlugin, defineSystem, Particle, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
@@ -24,9 +24,8 @@ const PLUMES = [
 const GLOWS = ['EngineGlowL', 'EngineGlowR', 'EngineGlowNL', 'EngineGlowNR'] as const;
 const GATES = ['GateA', 'GateB'] as const;
 const GATE_RADIUS = 170;
-const MOTE_FIELD = { x: 170, y: 100, z: 240 };
-const MOTE_CLEAR = 34;
-const MOTE_FADE = 45;
+const DUST = { from: 0.2, full: 0.95, rate: 700, glow: 4.5 } as const;
+const SPEED_WIDEN = 4;
 const STROBES = [
     { name: 'StrobeMast', size: 0.55, every: 1.7, flashes: 2 },
     { name: 'StrobeKeel', size: 0.5, every: 1.3, flashes: 1 },
@@ -56,7 +55,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0 };
         app.insertResource(Playthrough, { facts });
         installSky();
         installLoading(app);
@@ -77,8 +76,7 @@ addPlugin({
         let passedSide = 0;
         let flash = 0;
         let since = 60;
-        let motes = -1;
-        const moteSizes: number[] = [];
+        let pace = 0;
         const downs = new Map<string, boolean>();
         const jets = JETS.map(() => 0);
         let sight = 0;
@@ -115,7 +113,6 @@ addPlugin({
                 }
                 if (!hidden) parked.clear();
                 for (const name of GATES) world.update(get(world, name), Transform, (t) => { const size = hidden ? 0.0001 : 1; t.scale = { x: size, y: size, z: size }; });
-                for (let i = 0; i < motes; i++) world.update(get(world, `Mote${i}`), MeshRenderer, (m) => { m.enabled = !hidden; });
             },
         });
 
@@ -296,8 +293,9 @@ addPlugin({
                 travel = (travel + dt * JUMP.travel * (0.2 + leap.rush)) % 100000;
                 if (leap.over) ship.jump = -1;
             }
-            const tunnel = leap.tunnel, fov = FOV + JUMP.widen * leap.stretch;
-            if (fov !== wide) {
+            pace += (clamp(ship.speed / TOP_SPEED, 0, 1) - pace) * Math.min(1, dt * 1.5);
+            const tunnel = leap.tunnel, fov = FOV + SPEED_WIDEN * pace * pace + JUMP.widen * leap.stretch;
+            if (Math.abs(fov - wide) > 0.01) {
                 wide = fov;
                 world.update(camera, Camera, (c) => { c.fov = fov; });
             }
@@ -389,30 +387,18 @@ addPlugin({
             facts.flash = flash;
             facts.wave = front;
 
-            if (motes < 0) {
-                motes = 0;
-                for (let e = world.findEntityByName('Mote0'); e !== null; e = world.findEntityByName(`Mote${++motes}`)) moteSizes.push(world.get(e, Transform).scale.x);
-            }
-            for (let i = 0; i < (ship.away ? 0 : motes); i++) {
-                const e = get(world, `Mote${i}`);
-                const t = world.get(e, Transform);
-                const wrap = (v: number, half: number): number => (leavingField ? v : v < -half ? v + half * 2 * Math.ceil((-half - v) / (half * 2)) : v > half ? v - half * 2 * Math.ceil((v - half) / (half * 2)) : v);
-                let x = wrap(t.position.x - helm.forward.x * past, MOTE_FIELD.x);
-                let y = wrap(t.position.y - helm.forward.y * past, MOTE_FIELD.y);
-                const z = wrap(t.position.z - helm.forward.z * past, MOTE_FIELD.z);
-                const off = Math.hypot(x, y);
-                if (!leavingField && off < MOTE_CLEAR && Math.abs(z) < 80) {
-                    const out = MOTE_CLEAR / (off || 1);
-                    x = off ? x * out : MOTE_CLEAR;
-                    y *= out;
-                }
-                t.position = { x, y, z };
-                const edge = clamp(Math.min(MOTE_FIELD.x - Math.abs(x), MOTE_FIELD.y - Math.abs(y), MOTE_FIELD.z - Math.abs(z)) / MOTE_FADE, 0, 1);
-                const size = Math.max(0.001, moteSizes[i]! * edge * edge * (3 - 2 * edge));
-                t.scale = { x: size, y: size, z: size };
-                world.insert(e, Transform, t);
-            }
-            facts.motes = motes;
+            const lift = clamp((ship.speed / TOP_SPEED - DUST.from) / (DUST.full - DUST.from), 0, 1), show = lift * lift * (3 - 2 * lift);
+            const flow = dt > 0 ? past / dt : 0, stream = { x: -helm.forward.x * flow, y: -helm.forward.y * flow, z: -helm.forward.z * flow };
+            const dust = get(world, 'SpeedDust');
+            world.update(dust, Transform, (t) => { t.position = { ...hull.position }; t.rotation = { ...hull.rotation }; });
+            world.update(dust, ParticleEmitter, (p) => {
+                p.rate = DUST.rate * show;
+                p.intensity = DUST.glow * show;
+                p.addedVelocityMin = stream;
+                p.addedVelocityMax = stream;
+            });
+            facts.dust = show;
+            facts.dustAlive = app.getResource(Particle).getAliveCount(dust);
 
             for (const lamp of STROBES) {
                 const lit = strobe(clock, lamp.every, lamp.flashes);

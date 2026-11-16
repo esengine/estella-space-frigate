@@ -1,0 +1,34 @@
+#pragma shader "Speed Streak"
+#pragma version 300 es
+#pragma domain Unlit
+#pragma feature PARTICLE_WORLD
+#pragma param u_near float default(14) range(0,200)
+#pragma param u_clear float default(30) range(0,400)
+#pragma param u_far float default(900) range(1,20000)
+
+#pragma fragment
+precision highp float;
+
+in vec4 v_color;
+in vec2 v_texCoord;
+#ifdef PARTICLE
+in highp vec4 v_particle;
+#endif
+#ifdef MESH_NORMALS
+in highp vec3 v_worldXYZ;
+#endif
+
+uniform sampler2D u_textures[8];
+
+out vec4 fragColor;
+
+void main() {
+    vec4 tex = texture(u_textures[0], v_texCoord);
+    float alpha = tex.a * v_color.a;
+#ifdef MESH_NORMALS
+    highp float away = distanceToEye(v_worldXYZ);
+    alpha *= smoothstep(u_near, u_clear, away) * (1.0 - smoothstep(u_far * 0.5, u_far, away));
+#endif
+    fragColor = vec4(tex.rgb * v_color.rgb, alpha);
+}
+#pragma end

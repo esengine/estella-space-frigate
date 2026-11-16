@@ -9757,7 +9757,7 @@
   },
   {
    "id": 168,
-   "name": "Mote0",
+   "name": "SpeedDust",
    "parent": null,
    "children": [],
    "visible": true,
@@ -9766,2937 +9766,115 @@
      "type": "Transform",
      "data": {
       "position": {
-       "x": -59.923862420939685,
-       "y": 24.00589704310893,
-       "z": -235.92960024500746
-      },
-      "rotation": {
-       "x": 0.9164083497098758,
-       "y": -0.09908770193470663,
-       "z": 0.38777784870474863,
-       "w": -0.002388296723131499
-      },
-      "scale": {
-       "x": 0.1958059279694278,
-       "y": 0.1958059279694278,
-       "z": 0.1958059279694278
+       "x": 0,
+       "y": 0,
+       "z": 0
       }
      }
     },
     {
-     "type": "MeshRenderer",
+     "type": "ParticleEmitter",
      "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
+      "enabled": true,
+      "looping": true,
+      "playOnStart": true,
+      "simulationSpace": 0,
+      "rate": 0,
+      "burstCount": 0,
+      "duration": 1000,
+      "shape": 2,
+      "shapeRadius": 0.3,
+      "speedMin": 0,
+      "speedMax": 0,
+      "gravity": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "damping": 0,
+      "rotationMin": 0,
+      "rotationMax": 0,
+      "angularVelocityMin": 0,
+      "angularVelocityMax": 0,
+      "startColor": {
        "r": 1,
        "g": 1,
        "b": 1,
        "a": 1
       },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
+      "endColor": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 0
+      },
+      "blendMode": 1,
+      "texture": "assets/fx/spark.esimage",
+      "lifetimeMin": 1.2,
+      "lifetimeMax": 2.2,
+      "maxParticles": 1500,
+      "startSizeMin": 0.14,
+      "startSizeMax": 0.3,
+      "endSizeMin": 0.14,
+      "endSizeMax": 0.3,
+      "renderMode": 1,
+      "intensity": 0,
+      "collisionEnabled": false,
+      "material": "assets/materials/particle-streak.esmaterial",
+      "layer": 2,
+      "shapeSize": {
+       "x": 340,
+       "y": 200,
+       "z": 480
+      },
+      "velocityScale": 0.4,
+      "lengthScale": 4,
+      "colorGradient": {
+       "stops": [
+        {
+         "t": 0,
+         "color": {
+          "r": 0.72,
+          "g": 0.84,
+          "b": 1,
+          "a": 0
+         }
+        },
+        {
+         "t": 0.2,
+         "color": {
+          "r": 0.8,
+          "g": 0.9,
+          "b": 1,
+          "a": 0.85
+         }
+        },
+        {
+         "t": 0.7,
+         "color": {
+          "r": 0.8,
+          "g": 0.9,
+          "b": 1,
+          "a": 0.85
+         }
+        },
+        {
+         "t": 1,
+         "color": {
+          "r": 0.72,
+          "g": 0.84,
+          "b": 1,
+          "a": 0
+         }
+        }
+       ]
+      }
      }
     }
    ]
   },
   {
    "id": 169,
-   "name": "Mote1",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -104.10719237017524,
-       "y": -95.1628553680506,
-       "z": 92.03425357365398
-      },
-      "rotation": {
-       "x": -0.5933124727956105,
-       "y": 0.6672993894230642,
-       "z": 0.030166115078354632,
-       "w": -0.4492013357079909
-      },
-      "scale": {
-       "x": 0.18571286848993276,
-       "y": 0.18571286848993276,
-       "z": 0.18571286848993276
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 170,
-   "name": "Mote2",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -159.69964092906918,
-       "y": 29.6651744592574,
-       "z": -148.90044105430064
-      },
-      "rotation": {
-       "x": 0.38915294824094526,
-       "y": 0.5267514354660787,
-       "z": -0.6973400704210849,
-       "w": 0.2912211089445994
-      },
-      "scale": {
-       "x": 0.6513864631816281,
-       "y": 0.6513864631816281,
-       "z": 0.6513864631816281
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 171,
-   "name": "Mote3",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -85.09326066548319,
-       "y": -70.45813477638507,
-       "z": -121.63699218821804
-      },
-      "rotation": {
-       "x": -0.0829040208515054,
-       "y": -0.9844746206421139,
-       "z": -0.045865135344600315,
-       "w": 0.14776005548875645
-      },
-      "scale": {
-       "x": 0.25932900905558426,
-       "y": 0.25932900905558426,
-       "z": 0.25932900905558426
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 172,
-   "name": "Mote4",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -146.42920335253348,
-       "y": -50.1017375317178,
-       "z": -98.1823212893386
-      },
-      "rotation": {
-       "x": -0.44425205780464444,
-       "y": 0.25904667470612736,
-       "z": -0.7857417570082239,
-       "w": -0.34372201086585363
-      },
-      "scale": {
-       "x": 0.23207766337807606,
-       "y": 0.23207766337807606,
-       "z": 0.23207766337807606
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 173,
-   "name": "Mote5",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -66.92474073688061,
-       "y": -56.797702371135195,
-       "z": 36.30343595035288
-      },
-      "rotation": {
-       "x": -0.46153327327970683,
-       "y": 0.06939806567918992,
-       "z": 0.7321695045904665,
-       "w": 0.49608342310891335
-      },
-      "scale": {
-       "x": 0.44105443927558496,
-       "y": 0.44105443927558496,
-       "z": 0.44105443927558496
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 174,
-   "name": "Mote6",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 68.99945314052673,
-       "y": 70.98116878367225,
-       "z": -223.16014106672117
-      },
-      "rotation": {
-       "x": 0.2590269083404731,
-       "y": 0.639698687029787,
-       "z": -0.2195036289419021,
-       "w": -0.6895714665277837
-      },
-      "scale": {
-       "x": 0.31406761575683956,
-       "y": 0.31406761575683956,
-       "z": 0.31406761575683956
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 175,
-   "name": "Mote7",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -87.11301019946507,
-       "y": 74.79300520149093,
-       "z": 231.74960751620074
-      },
-      "rotation": {
-       "x": -0.6376885534394132,
-       "y": 0.0011411213107841449,
-       "z": 0.532837632304664,
-       "w": 0.5562697765063841
-      },
-      "scale": {
-       "x": 0.24846778362498734,
-       "y": 0.24846778362498734,
-       "z": 0.24846778362498734
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 176,
-   "name": "Mote8",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -75.31165272382104,
-       "y": -6.544994674206791,
-       "z": 175.31525108358358
-      },
-      "rotation": {
-       "x": -0.27681189688139457,
-       "y": 0.6772072160526595,
-       "z": -0.2849583245031148,
-       "w": 0.6193256926428194
-      },
-      "scale": {
-       "x": 0.48211228232461695,
-       "y": 0.48211228232461695,
-       "z": 0.48211228232461695
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 177,
-   "name": "Mote9",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 157.97152719184402,
-       "y": -18.42720923414693,
-       "z": -22.04792868030242
-      },
-      "rotation": {
-       "x": -0.5015753546699782,
-       "y": -0.6464525034550848,
-       "z": -0.27079033219165677,
-       "w": -0.5071428993448209
-      },
-      "scale": {
-       "x": 0.12937190380714292,
-       "y": 0.12937190380714292,
-       "z": 0.12937190380714292
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 178,
-   "name": "Mote10",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -148.11278097452458,
-       "y": -50.37161209946284,
-       "z": 46.99055256063326
-      },
-      "rotation": {
-       "x": -0.31685727536121316,
-       "y": -0.8047927521874507,
-       "z": -0.21809133446510007,
-       "w": -0.4520467485874095
-      },
-      "scale": {
-       "x": 0.2663206742233488,
-       "y": 0.2663206742233488,
-       "z": 0.2663206742233488
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 179,
-   "name": "Mote11",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -72.03469448126259,
-       "y": -79.49562286207177,
-       "z": 16.712732555799846
-      },
-      "rotation": {
-       "x": -0.3893443736981375,
-       "y": -0.4192199901938941,
-       "z": -0.05301527377487202,
-       "w": -0.818446662427071
-      },
-      "scale": {
-       "x": 0.5031227114659403,
-       "y": 0.5031227114659403,
-       "z": 0.5031227114659403
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 180,
-   "name": "Mote12",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -162.4892803869733,
-       "y": -46.24934438296011,
-       "z": -85.9284624753079
-      },
-      "rotation": {
-       "x": -0.3968644241429385,
-       "y": -0.7525666489785866,
-       "z": 0.5222611347108761,
-       "w": -0.058183974299997776
-      },
-      "scale": {
-       "x": 0.30763077510846604,
-       "y": 0.30763077510846604,
-       "z": 0.30763077510846604
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 181,
-   "name": "Mote13",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 83.09732781974839,
-       "y": -49.155629429830405,
-       "z": -162.11416310675935
-      },
-      "rotation": {
-       "x": -0.023275137258714836,
-       "y": -0.6310059415281266,
-       "z": -0.6904596827967419,
-       "w": -0.35292378238652744
-      },
-      "scale": {
-       "x": 0.28241800540700857,
-       "y": 0.28241800540700857,
-       "z": 0.28241800540700857
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 182,
-   "name": "Mote14",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -0.47038828322780546,
-       "y": -74.60141090297762,
-       "z": 157.36429498809593
-      },
-      "rotation": {
-       "x": 0.31789190252075494,
-       "y": 0.1299745177658134,
-       "z": 0.7942022963903387,
-       "w": -0.5012924051405445
-      },
-      "scale": {
-       "x": 0.41723438755810044,
-       "y": 0.41723438755810044,
-       "z": 0.41723438755810044
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 183,
-   "name": "Mote15",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -105.50706644923446,
-       "y": -9.333798661673697,
-       "z": -233.04532040963815
-      },
-      "rotation": {
-       "x": 0.5649147829161192,
-       "y": 0.7119792439056468,
-       "z": -0.12675124451361644,
-       "w": -0.39735496260223896
-      },
-      "scale": {
-       "x": 0.5231571872790819,
-       "y": 0.5231571872790819,
-       "z": 0.5231571872790819
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 184,
-   "name": "Mote16",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 58.710074596163736,
-       "y": 93.0339201945308,
-       "z": -9.39646302271106
-      },
-      "rotation": {
-       "x": 0.5786130340088649,
-       "y": 0.017557056706725183,
-       "z": 0.5623508778360322,
-       "w": -0.590474552230574
-      },
-      "scale": {
-       "x": 0.2903231763258409,
-       "y": 0.2903231763258409,
-       "z": 0.2903231763258409
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 185,
-   "name": "Mote17",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 80.60969269385822,
-       "y": 50.78866371889413,
-       "z": 28.46294736778441
-      },
-      "rotation": {
-       "x": -0.4370264485087204,
-       "y": 0.8337786240572688,
-       "z": 0.3351077400785129,
-       "w": 0.03903705814344053
-      },
-      "scale": {
-       "x": 0.49537060197424754,
-       "y": 0.49537060197424754,
-       "z": 0.49537060197424754
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 186,
-   "name": "Mote18",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 116.14248486640832,
-       "y": 20.331595490327786,
-       "z": 63.423124087466874
-      },
-      "rotation": {
-       "x": -0.6384704941910104,
-       "y": -0.7064845037557868,
-       "z": 0.16446453859873034,
-       "w": -0.257267350326335
-      },
-      "scale": {
-       "x": 0.38460703416305625,
-       "y": 0.38460703416305625,
-       "z": 0.38460703416305625
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 187,
-   "name": "Mote19",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 80.77662199272817,
-       "y": 28.325195131936994,
-       "z": 91.0645815868844
-      },
-      "rotation": {
-       "x": -0.16080356997244924,
-       "y": 0.5720064539729414,
-       "z": -0.7276805424862469,
-       "w": -0.34268331821718184
-      },
-      "scale": {
-       "x": 0.2082518375276367,
-       "y": 0.2082518375276367,
-       "z": 0.2082518375276367
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 188,
-   "name": "Mote20",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -60.938846735252696,
-       "y": -58.70088438251586,
-       "z": 109.52783916870226
-      },
-      "rotation": {
-       "x": -0.29351405811834047,
-       "y": 0.016042805601571543,
-       "z": 0.745958481220399,
-       "w": -0.5976102997528485
-      },
-      "scale": {
-       "x": 0.6801430191851022,
-       "y": 0.6801430191851022,
-       "z": 0.6801430191851022
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 189,
-   "name": "Mote21",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -34.64433813601454,
-       "y": -35.9084276690198,
-       "z": 23.58638867693037
-      },
-      "rotation": {
-       "x": 0.7539394683821884,
-       "y": -0.2957926076022273,
-       "z": 0.5655931970913424,
-       "w": -0.15551960232540363
-      },
-      "scale": {
-       "x": 0.3290803656166199,
-       "y": 0.3290803656166199,
-       "z": 0.3290803656166199
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 190,
-   "name": "Mote22",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 114.82542399880134,
-       "y": 80.23976641670023,
-       "z": -118.51377269732606
-      },
-      "rotation": {
-       "x": -0.15833169060895216,
-       "y": -0.2093322893645497,
-       "z": -0.18634280808423637,
-       "w": 0.946777390020267
-      },
-      "scale": {
-       "x": 0.2649164773871824,
-       "y": 0.2649164773871824,
-       "z": 0.2649164773871824
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 191,
-   "name": "Mote23",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 13.265491210438569,
-       "y": -52.18861831297099,
-       "z": -37.5648667838569
-      },
-      "rotation": {
-       "x": 0.004581169755560646,
-       "y": -0.2864545652615555,
-       "z": 0.8135227455892249,
-       "w": -0.5060667320951389
-      },
-      "scale": {
-       "x": 0.3211690831787476,
-       "y": 0.3211690831787476,
-       "z": 0.3211690831787476
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 192,
-   "name": "Mote24",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 42.591586746089945,
-       "y": -55.59554008626708,
-       "z": -206.6267852914288
-      },
-      "rotation": {
-       "x": 0.3753160975835316,
-       "y": -0.5036108896212886,
-       "z": 0.1011304828523862,
-       "w": -0.7715481347184804
-      },
-      "scale": {
-       "x": 0.3411481663655245,
-       "y": 0.3411481663655245,
-       "z": 0.3411481663655245
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 193,
-   "name": "Mote25",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 108.62474605923904,
-       "y": 56.01940960137301,
-       "z": -53.67899813537062
-      },
-      "rotation": {
-       "x": -0.5495508229628923,
-       "y": -0.20630869724263792,
-       "z": 0.6843845367197479,
-       "w": -0.43249094825412177
-      },
-      "scale": {
-       "x": 0.403059238419925,
-       "y": 0.403059238419925,
-       "z": 0.403059238419925
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 194,
-   "name": "Mote26",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -136.65604645149511,
-       "y": -33.371149517989295,
-       "z": 133.3378393643206
-      },
-      "rotation": {
-       "x": -0.2960686238605527,
-       "y": -0.18541959358134436,
-       "z": 0.4748842043738258,
-       "w": 0.8077424940645911
-      },
-      "scale": {
-       "x": 1.0092999981306676,
-       "y": 1.0092999981306676,
-       "z": 1.0092999981306676
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 195,
-   "name": "Mote27",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -109.87515265438611,
-       "y": 9.734143805672545,
-       "z": -29.736343078652226
-      },
-      "rotation": {
-       "x": -0.5244063650127053,
-       "y": 0.2644110013470318,
-       "z": -0.5123976944188294,
-       "w": -0.6265248514265729
-      },
-      "scale": {
-       "x": 0.1479002518280443,
-       "y": 0.1479002518280443,
-       "z": 0.1479002518280443
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 196,
-   "name": "Mote28",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -109.85144632535517,
-       "y": 62.06464807888031,
-       "z": 173.26613661954275
-      },
-      "rotation": {
-       "x": -0.2644586332881875,
-       "y": -0.4891144258383535,
-       "z": -0.8146447331614612,
-       "w": -0.16487167266833153
-      },
-      "scale": {
-       "x": 0.5625761430265073,
-       "y": 0.5625761430265073,
-       "z": 0.5625761430265073
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 197,
-   "name": "Mote29",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 141.89057838842064,
-       "y": -92.92115012299793,
-       "z": -117.6430320461308
-      },
-      "rotation": {
-       "x": -0.09833139096391218,
-       "y": 0.6296832660893793,
-       "z": 0.6478946922054825,
-       "w": -0.4172078496026618
-      },
-      "scale": {
-       "x": 0.3163403840450412,
-       "y": 0.3163403840450412,
-       "z": 0.3163403840450412
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 198,
-   "name": "Mote30",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -102.89201500869974,
-       "y": -94.01305177169218,
-       "z": 66.11877624493206
-      },
-      "rotation": {
-       "x": -0.8171789924648328,
-       "y": -0.2512775736157913,
-       "z": 0.4578644013444362,
-       "w": -0.24379964161873258
-      },
-      "scale": {
-       "x": 0.16246571955398925,
-       "y": 0.16246571955398925,
-       "z": 0.16246571955398925
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 199,
-   "name": "Mote31",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 146.638455728235,
-       "y": -4.9130028566848125,
-       "z": 69.5916688508176
-      },
-      "rotation": {
-       "x": -0.8285052656063107,
-       "y": -0.0726209453747059,
-       "z": -0.48915289717853694,
-       "w": 0.2627444886907133
-      },
-      "scale": {
-       "x": 0.5221853388985737,
-       "y": 0.5221853388985737,
-       "z": 0.5221853388985737
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 200,
-   "name": "Mote32",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 81.84377244658896,
-       "y": -93.7100658924646,
-       "z": -135.9698403453511
-      },
-      "rotation": {
-       "x": 0.23548522168167815,
-       "y": 0.11495278923694391,
-       "z": 0.9634752200895051,
-       "w": 0.0552093007532012
-      },
-      "scale": {
-       "x": 0.259527489742217,
-       "y": 0.259527489742217,
-       "z": 0.259527489742217
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 201,
-   "name": "Mote33",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 112.51069064340868,
-       "y": -69.00943379548625,
-       "z": -121.68921816686911
-      },
-      "rotation": {
-       "x": 0.18647363498796404,
-       "y": 0.16892636846574924,
-       "z": 0.9613786291960223,
-       "w": -0.11154638863058998
-      },
-      "scale": {
-       "x": 0.4889316423499545,
-       "y": 0.4889316423499545,
-       "z": 0.4889316423499545
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 202,
-   "name": "Mote34",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 49.9567826300258,
-       "y": 74.74345115172761,
-       "z": 205.2553048811003
-      },
-      "rotation": {
-       "x": 0.5178249585211864,
-       "y": -0.58634324677646,
-       "z": 0.1967884472886739,
-       "w": -0.591044174580787
-      },
-      "scale": {
-       "x": 0.29529880981955214,
-       "y": 0.29529880981955214,
-       "z": 0.29529880981955214
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 203,
-   "name": "Mote35",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -137.51972245415507,
-       "y": -83.99375866209844,
-       "z": -68.97073168967961
-      },
-      "rotation": {
-       "x": -0.03295008801937758,
-       "y": -0.8392429634938511,
-       "z": 0.26953757537991513,
-       "w": 0.4710998146718915
-      },
-      "scale": {
-       "x": 0.2578629451484289,
-       "y": 0.2578629451484289,
-       "z": 0.2578629451484289
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 204,
-   "name": "Mote36",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -114.66910952888057,
-       "y": 89.3301908941499,
-       "z": 135.00979101869035
-      },
-      "rotation": {
-       "x": -0.09980381694164021,
-       "y": -0.21873029466133403,
-       "z": -0.9686837746749213,
-       "w": -0.06203225775990986
-      },
-      "scale": {
-       "x": 0.4324215812677976,
-       "y": 0.4324215812677976,
-       "z": 0.4324215812677976
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 205,
-   "name": "Mote37",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -41.18917920329474,
-       "y": 22.04372512516477,
-       "z": -167.59609607162767
-      },
-      "rotation": {
-       "x": -0.39006196367313406,
-       "y": -0.29277852493131756,
-       "z": 0.35250878872206237,
-       "w": -0.7986676115307324
-      },
-      "scale": {
-       "x": 0.36707529767561137,
-       "y": 0.36707529767561137,
-       "z": 0.36707529767561137
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 206,
-   "name": "Mote38",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 33.51431609208848,
-       "y": 97.74220339072875,
-       "z": 76.87656241241285
-      },
-      "rotation": {
-       "x": -0.03044989166309486,
-       "y": 0.32215768007047885,
-       "z": 0.16686919823915958,
-       "w": -0.9313656123930779
-      },
-      "scale": {
-       "x": 0.37203773850010596,
-       "y": 0.37203773850010596,
-       "z": 0.37203773850010596
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 207,
-   "name": "Mote39",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -41.49005110943625,
-       "y": -63.65466604889281,
-       "z": -167.025344261357
-      },
-      "rotation": {
-       "x": -0.8438579635445,
-       "y": 0.3140828795553869,
-       "z": -0.4310078685352737,
-       "w": -0.05905844049249919
-      },
-      "scale": {
-       "x": 0.36429607666414837,
-       "y": 0.36429607666414837,
-       "z": 0.36429607666414837
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 208,
-   "name": "Mote40",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 79.54414494425802,
-       "y": 36.87607849359091,
-       "z": -20.319126556881002
-      },
-      "rotation": {
-       "x": 0.3676064800687165,
-       "y": 0.16454677836079382,
-       "z": 0.7517919912396301,
-       "w": -0.5221097925250243
-      },
-      "scale": {
-       "x": 0.5854271946199555,
-       "y": 0.5854271946199555,
-       "z": 0.5854271946199555
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 209,
-   "name": "Mote41",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 163.974618286882,
-       "y": -45.813950374674064,
-       "z": 182.10079879026358
-      },
-      "rotation": {
-       "x": 0.6844539994139158,
-       "y": -0.40674566577489246,
-       "z": 0.06598825894427568,
-       "w": 0.6014368094331589
-      },
-      "scale": {
-       "x": 0.1323077599501924,
-       "y": 0.1323077599501924,
-       "z": 0.1323077599501924
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 210,
-   "name": "Mote42",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 114.82487327073005,
-       "y": -71.13938800995894,
-       "z": 69.5938236160195
-      },
-      "rotation": {
-       "x": 0.2321790378131943,
-       "y": 0.677003402580132,
-       "z": 0.6371770919593132,
-       "w": -0.2859451709285119
-      },
-      "scale": {
-       "x": 1.1960349216912747,
-       "y": 1.1960349216912747,
-       "z": 1.1960349216912747
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 211,
-   "name": "Mote43",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -117.90034323304029,
-       "y": 16.18185175331783,
-       "z": -191.20517875491595
-      },
-      "rotation": {
-       "x": -0.7014117493199754,
-       "y": -0.4980916245477233,
-       "z": -0.05798602753987825,
-       "w": -0.5065213836369067
-      },
-      "scale": {
-       "x": 1.0391415475644437,
-       "y": 1.0391415475644437,
-       "z": 1.0391415475644437
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 212,
-   "name": "Mote44",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 39.01445267427721,
-       "y": 54.68770780881164,
-       "z": -165.4413520881297
-      },
-      "rotation": {
-       "x": -0.00021501834643296059,
-       "y": 0.8454335017514096,
-       "z": -0.0839046739740882,
-       "w": -0.527448721269435
-      },
-      "scale": {
-       "x": 0.30130467791270726,
-       "y": 0.30130467791270726,
-       "z": 0.30130467791270726
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 213,
-   "name": "Mote45",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 100.47202314980859,
-       "y": -10.352705154952275,
-       "z": -81.93165833749666
-      },
-      "rotation": {
-       "x": 0.14300874566465008,
-       "y": 0.8161541594027529,
-       "z": 0.41887649332170396,
-       "w": -0.3714611286467559
-      },
-      "scale": {
-       "x": 0.13493597929739562,
-       "y": 0.13493597929739562,
-       "z": 0.13493597929739562
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 214,
-   "name": "Mote46",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -49.196486908265896,
-       "y": 79.7283084923784,
-       "z": 16.88801014338901
-      },
-      "rotation": {
-       "x": -0.5218439137877466,
-       "y": -0.24172338512762773,
-       "z": -0.6761679065450272,
-       "w": 0.4604841982996191
-      },
-      "scale": {
-       "x": 0.3258597574972916,
-       "y": 0.3258597574972916,
-       "z": 0.3258597574972916
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 215,
-   "name": "Mote47",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 157.64610364567403,
-       "y": 19.473320969317058,
-       "z": -71.24220024781988
-      },
-      "rotation": {
-       "x": -0.056042063237412454,
-       "y": -0.49030868083957607,
-       "z": 0.6538956233297268,
-       "w": 0.5734781586352496
-      },
-      "scale": {
-       "x": 0.3981381374084426,
-       "y": 0.3981381374084426,
-       "z": 0.3981381374084426
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 216,
-   "name": "Mote48",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -130.88263713221025,
-       "y": 29.44286015081363,
-       "z": 208.18118417316776
-      },
-      "rotation": {
-       "x": 0.010419612157754065,
-       "y": 0.4919552144089901,
-       "z": -0.8692972560202381,
-       "w": -0.04683779856025695
-      },
-      "scale": {
-       "x": 0.568558792060094,
-       "y": 0.568558792060094,
-       "z": 0.568558792060094
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 217,
-   "name": "Mote49",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 22.055917675100375,
-       "y": -62.39390210427243,
-       "z": 10.758586757470653
-      },
-      "rotation": {
-       "x": 0.11656584231489557,
-       "y": 0.0644451080989434,
-       "z": 0.6695803463659962,
-       "w": 0.7306992488075562
-      },
-      "scale": {
-       "x": 0.22010314493361544,
-       "y": 0.22010314493361544,
-       "z": 0.22010314493361544
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 218,
-   "name": "Mote50",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 89.59041672106844,
-       "y": -12.773357211821718,
-       "z": -181.3091253724965
-      },
-      "rotation": {
-       "x": -0.4056461916410814,
-       "y": -0.5707304848402077,
-       "z": 0.7077170265501479,
-       "w": 0.09409830610678259
-      },
-      "scale": {
-       "x": 0.5186798179718621,
-       "y": 0.5186798179718621,
-       "z": 0.5186798179718621
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 219,
-   "name": "Mote51",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 36.274939433231964,
-       "y": -18.130104944848924,
-       "z": -72.89214093564667
-      },
-      "rotation": {
-       "x": -0.016496875902377507,
-       "y": -0.6324837031045081,
-       "z": -0.10039938796515702,
-       "w": -0.7678620848100861
-      },
-      "scale": {
-       "x": 0.45031069981396576,
-       "y": 0.45031069981396576,
-       "z": 0.45031069981396576
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 220,
-   "name": "Mote52",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -63.96185691522034,
-       "y": -25.049246566639653,
-       "z": 26.42865171968566
-      },
-      "rotation": {
-       "x": -0.09288140969593646,
-       "y": -0.38806855581883226,
-       "z": 0.8713811685103463,
-       "w": 0.28543072519111345
-      },
-      "scale": {
-       "x": 0.2856883048263269,
-       "y": 0.2856883048263269,
-       "z": 0.2856883048263269
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 221,
-   "name": "Mote53",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 94.50435844798028,
-       "y": -71.40219494939831,
-       "z": -237.59120857806397
-      },
-      "rotation": {
-       "x": 0.5904801742822787,
-       "y": -0.5167756480368436,
-       "z": -0.4734474370017177,
-       "w": -0.40015449238034884
-      },
-      "scale": {
-       "x": 0.4023683253259446,
-       "y": 0.4023683253259446,
-       "z": 0.4023683253259446
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 222,
-   "name": "Mote54",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -161.2993420773977,
-       "y": -25.557544538957046,
-       "z": 122.74333090493667
-      },
-      "rotation": {
-       "x": -0.21240482950344872,
-       "y": -0.5824347861484743,
-       "z": -0.5889412283012522,
-       "w": 0.5184613176455929
-      },
-      "scale": {
-       "x": 0.2440118992723254,
-       "y": 0.2440118992723254,
-       "z": 0.2440118992723254
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 223,
-   "name": "Mote55",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -136.6078259804718,
-       "y": 71.15380343922476,
-       "z": 168.1838964434623
-      },
-      "rotation": {
-       "x": -0.3851339306677668,
-       "y": 0.3060037895768715,
-       "z": 0.05236244774016432,
-       "w": -0.869075204041427
-      },
-      "scale": {
-       "x": 0.4993668707245041,
-       "y": 0.4993668707245041,
-       "z": 0.4993668707245041
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 224,
-   "name": "Mote56",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -21.904002635309666,
-       "y": 28.3113002190008,
-       "z": 131.66694785877365
-      },
-      "rotation": {
-       "x": 0.763842022110889,
-       "y": -0.11885271161603624,
-       "z": -0.6329730314620243,
-       "w": -0.04200642380444266
-      },
-      "scale": {
-       "x": 0.20330516720209463,
-       "y": 0.20330516720209463,
-       "z": 0.20330516720209463
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 225,
-   "name": "Mote57",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 75.24142114000264,
-       "y": -8.806738860340985,
-       "z": -70.07045080328072
-      },
-      "rotation": {
-       "x": -0.6207841810538988,
-       "y": 0.022729425530491613,
-       "z": 0.7165566465488674,
-       "w": 0.31726478855198476
-      },
-      "scale": {
-       "x": 0.331213414078771,
-       "y": 0.331213414078771,
-       "z": 0.331213414078771
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-a.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-a.esmaterial",
-      "texture": "assets/models/rock-a_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 226,
-   "name": "Mote58",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 98.59111379986155,
-       "y": -34.733919240327495,
-       "z": 84.47771875439292
-      },
-      "rotation": {
-       "x": -0.22009732848509259,
-       "y": 0.9079587062301808,
-       "z": -0.1372971179493543,
-       "w": -0.32911647661176546
-      },
-      "scale": {
-       "x": 0.30918044823712754,
-       "y": 0.30918044823712754,
-       "z": 0.30918044823712754
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-b.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-b.esmaterial",
-      "texture": "assets/models/rock-b_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 227,
-   "name": "Mote59",
-   "parent": null,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": -113.99257411210581,
-       "y": 31.38912673565875,
-       "z": 190.41925048818888
-      },
-      "rotation": {
-       "x": 0.15861217811427603,
-       "y": -0.6463876068131404,
-       "z": -0.3728054456776487,
-       "w": -0.6465611636847017
-      },
-      "scale": {
-       "x": 0.43862546027395344,
-       "y": 0.43862546027395344,
-       "z": 0.43862546027395344
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/rock-c.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/rock-c.esmaterial",
-      "texture": "assets/models/rock-c_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 228,
    "name": "Rock0",
    "parent": null,
    "children": [],
@@ -12745,7 +9923,7 @@
    ]
   },
   {
-   "id": 229,
+   "id": 170,
    "name": "Rock1",
    "parent": null,
    "children": [],
@@ -12794,7 +9972,7 @@
    ]
   },
   {
-   "id": 230,
+   "id": 171,
    "name": "Rock2",
    "parent": null,
    "children": [],
@@ -12843,7 +10021,7 @@
    ]
   },
   {
-   "id": 231,
+   "id": 172,
    "name": "Rock3",
    "parent": null,
    "children": [],
@@ -12892,7 +10070,7 @@
    ]
   },
   {
-   "id": 232,
+   "id": 173,
    "name": "Rock4",
    "parent": null,
    "children": [],
@@ -12941,7 +10119,7 @@
    ]
   },
   {
-   "id": 233,
+   "id": 174,
    "name": "Rock5",
    "parent": null,
    "children": [],
@@ -12990,7 +10168,7 @@
    ]
   },
   {
-   "id": 234,
+   "id": 175,
    "name": "Rock6",
    "parent": null,
    "children": [],
@@ -13039,7 +10217,7 @@
    ]
   },
   {
-   "id": 235,
+   "id": 176,
    "name": "Rock7",
    "parent": null,
    "children": [],
@@ -13088,7 +10266,7 @@
    ]
   },
   {
-   "id": 236,
+   "id": 177,
    "name": "Rock8",
    "parent": null,
    "children": [],
@@ -13137,7 +10315,7 @@
    ]
   },
   {
-   "id": 237,
+   "id": 178,
    "name": "Rock9",
    "parent": null,
    "children": [],
@@ -13186,7 +10364,7 @@
    ]
   },
   {
-   "id": 238,
+   "id": 179,
    "name": "Rock10",
    "parent": null,
    "children": [],
@@ -13235,7 +10413,7 @@
    ]
   },
   {
-   "id": 239,
+   "id": 180,
    "name": "Rock11",
    "parent": null,
    "children": [],
@@ -13284,7 +10462,7 @@
    ]
   },
   {
-   "id": 240,
+   "id": 181,
    "name": "Rock12",
    "parent": null,
    "children": [],
@@ -13333,7 +10511,7 @@
    ]
   },
   {
-   "id": 241,
+   "id": 182,
    "name": "Rock13",
    "parent": null,
    "children": [],
@@ -13382,7 +10560,7 @@
    ]
   },
   {
-   "id": 242,
+   "id": 183,
    "name": "Rock14",
    "parent": null,
    "children": [],
@@ -13431,7 +10609,7 @@
    ]
   },
   {
-   "id": 243,
+   "id": 184,
    "name": "Rock15",
    "parent": null,
    "children": [],
@@ -13480,7 +10658,7 @@
    ]
   },
   {
-   "id": 244,
+   "id": 185,
    "name": "Rock16",
    "parent": null,
    "children": [],
@@ -13529,7 +10707,7 @@
    ]
   },
   {
-   "id": 245,
+   "id": 186,
    "name": "Rock17",
    "parent": null,
    "children": [],
@@ -13578,7 +10756,7 @@
    ]
   },
   {
-   "id": 246,
+   "id": 187,
    "name": "Rock18",
    "parent": null,
    "children": [],
@@ -13627,7 +10805,7 @@
    ]
   },
   {
-   "id": 247,
+   "id": 188,
    "name": "Rock19",
    "parent": null,
    "children": [],
@@ -13676,7 +10854,7 @@
    ]
   },
   {
-   "id": 248,
+   "id": 189,
    "name": "Rock20",
    "parent": null,
    "children": [],
@@ -13725,7 +10903,7 @@
    ]
   },
   {
-   "id": 249,
+   "id": 190,
    "name": "Rock21",
    "parent": null,
    "children": [],
@@ -13774,7 +10952,7 @@
    ]
   },
   {
-   "id": 250,
+   "id": 191,
    "name": "Rock22",
    "parent": null,
    "children": [],
@@ -13823,7 +11001,7 @@
    ]
   },
   {
-   "id": 251,
+   "id": 192,
    "name": "Rock23",
    "parent": null,
    "children": [],
@@ -13872,7 +11050,7 @@
    ]
   },
   {
-   "id": 252,
+   "id": 193,
    "name": "Rock24",
    "parent": null,
    "children": [],
@@ -13921,7 +11099,7 @@
    ]
   },
   {
-   "id": 253,
+   "id": 194,
    "name": "Rock25",
    "parent": null,
    "children": [],
@@ -13970,7 +11148,7 @@
    ]
   },
   {
-   "id": 254,
+   "id": 195,
    "name": "Rock26",
    "parent": null,
    "children": [],
@@ -14019,7 +11197,7 @@
    ]
   },
   {
-   "id": 255,
+   "id": 196,
    "name": "Rock27",
    "parent": null,
    "children": [],
@@ -14068,7 +11246,7 @@
    ]
   },
   {
-   "id": 256,
+   "id": 197,
    "name": "Rock28",
    "parent": null,
    "children": [],
@@ -14117,7 +11295,7 @@
    ]
   },
   {
-   "id": 257,
+   "id": 198,
    "name": "Rock29",
    "parent": null,
    "children": [],
@@ -14166,7 +11344,7 @@
    ]
   },
   {
-   "id": 258,
+   "id": 199,
    "name": "Rock30",
    "parent": null,
    "children": [],
@@ -14215,7 +11393,7 @@
    ]
   },
   {
-   "id": 259,
+   "id": 200,
    "name": "Rock31",
    "parent": null,
    "children": [],
@@ -14264,7 +11442,7 @@
    ]
   },
   {
-   "id": 260,
+   "id": 201,
    "name": "Rock32",
    "parent": null,
    "children": [],
@@ -14313,7 +11491,7 @@
    ]
   },
   {
-   "id": 261,
+   "id": 202,
    "name": "Rock33",
    "parent": null,
    "children": [],
@@ -14362,7 +11540,7 @@
    ]
   },
   {
-   "id": 262,
+   "id": 203,
    "name": "Rock34",
    "parent": null,
    "children": [],
@@ -14411,7 +11589,7 @@
    ]
   },
   {
-   "id": 263,
+   "id": 204,
    "name": "Rock35",
    "parent": null,
    "children": [],
@@ -14460,7 +11638,7 @@
    ]
   },
   {
-   "id": 264,
+   "id": 205,
    "name": "Rock36",
    "parent": null,
    "children": [],
@@ -14509,7 +11687,7 @@
    ]
   },
   {
-   "id": 265,
+   "id": 206,
    "name": "Rock37",
    "parent": null,
    "children": [],
@@ -14558,7 +11736,7 @@
    ]
   },
   {
-   "id": 266,
+   "id": 207,
    "name": "Rock38",
    "parent": null,
    "children": [],
@@ -14607,7 +11785,7 @@
    ]
   },
   {
-   "id": 267,
+   "id": 208,
    "name": "Rock39",
    "parent": null,
    "children": [],
@@ -14656,7 +11834,7 @@
    ]
   },
   {
-   "id": 268,
+   "id": 209,
    "name": "Rock40",
    "parent": null,
    "children": [],
@@ -14705,7 +11883,7 @@
    ]
   },
   {
-   "id": 269,
+   "id": 210,
    "name": "Rock41",
    "parent": null,
    "children": [],
@@ -14754,7 +11932,7 @@
    ]
   },
   {
-   "id": 270,
+   "id": 211,
    "name": "Rock42",
    "parent": null,
    "children": [],
@@ -14803,7 +11981,7 @@
    ]
   },
   {
-   "id": 271,
+   "id": 212,
    "name": "Rock43",
    "parent": null,
    "children": [],
@@ -14852,7 +12030,7 @@
    ]
   },
   {
-   "id": 272,
+   "id": 213,
    "name": "Rock44",
    "parent": null,
    "children": [],
@@ -14901,7 +12079,7 @@
    ]
   },
   {
-   "id": 273,
+   "id": 214,
    "name": "Rock45",
    "parent": null,
    "children": [],
@@ -14950,12 +12128,12 @@
    ]
   },
   {
-   "id": 274,
+   "id": 215,
    "name": "GateA",
    "parent": null,
    "children": [
-    275,
-    276
+    216,
+    217
    ],
    "visible": true,
    "components": [
@@ -14991,9 +12169,9 @@
    ]
   },
   {
-   "id": 275,
+   "id": 216,
    "name": "GateAStrobe",
-   "parent": 274,
+   "parent": 215,
    "children": [],
    "visible": true,
    "components": [
@@ -15034,9 +12212,9 @@
    ]
   },
   {
-   "id": 276,
+   "id": 217,
    "name": "GateAField",
-   "parent": 274,
+   "parent": 215,
    "children": [],
    "visible": true,
    "components": [
@@ -15077,12 +12255,12 @@
    ]
   },
   {
-   "id": 277,
+   "id": 218,
    "name": "GateB",
    "parent": null,
    "children": [
-    278,
-    279
+    219,
+    220
    ],
    "visible": true,
    "components": [
@@ -15118,9 +12296,9 @@
    ]
   },
   {
-   "id": 278,
+   "id": 219,
    "name": "GateBStrobe",
-   "parent": 277,
+   "parent": 218,
    "children": [],
    "visible": true,
    "components": [
@@ -15161,9 +12339,9 @@
    ]
   },
   {
-   "id": 279,
+   "id": 220,
    "name": "GateBField",
-   "parent": 277,
+   "parent": 218,
    "children": [],
    "visible": true,
    "components": [
@@ -15204,7 +12382,7 @@
    ]
   },
   {
-   "id": 280,
+   "id": 221,
    "name": "Planet0",
    "parent": null,
    "children": [],
@@ -15246,7 +12424,7 @@
    ]
   },
   {
-   "id": 281,
+   "id": 222,
    "name": "Atmosphere0",
    "parent": null,
    "children": [],
@@ -15288,7 +12466,7 @@
    ]
   },
   {
-   "id": 282,
+   "id": 223,
    "name": "Planet1",
    "parent": null,
    "children": [],
@@ -15330,7 +12508,7 @@
    ]
   },
   {
-   "id": 283,
+   "id": 224,
    "name": "Atmosphere1",
    "parent": null,
    "children": [],
@@ -15372,7 +12550,7 @@
    ]
   },
   {
-   "id": 284,
+   "id": 225,
    "name": "Ring1",
    "parent": null,
    "children": [],
@@ -15420,7 +12598,7 @@
    ]
   },
   {
-   "id": 285,
+   "id": 226,
    "name": "Planet2",
    "parent": null,
    "children": [],
@@ -15462,7 +12640,7 @@
    ]
   },
   {
-   "id": 286,
+   "id": 227,
    "name": "Atmosphere2",
    "parent": null,
    "children": [],
