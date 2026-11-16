@@ -8,15 +8,16 @@ const SHADE_SECONDS = 0.25;
 const LIFT_SECONDS = 0.5;
 const SETTLED_FRAMES = 12;
 const STAGED_SHARE = 0.96;
+const EASE_SECONDS = 8;
 
-export const loading = { share: 0, done: false, cover: false, error: '' };
+export const loading = { share: 0, done: false, cover: false, fitted: false, error: '' };
 
 type Phase = 'working' | 'shading' | 'switching' | 'settling' | 'lifting' | 'gone';
 
 export function installLoading(app: App): void {
     const pendingShaders = (): number => (app as unknown as { wasmModule?: { renderer_getPendingShaders?: () => number } }).wasmModule?.renderer_getPendingShaders?.() ?? 0;
     let fonts: { regular: number; strong: number } | null = null;
-    let asked = false, baked = false, staged = false, target = 0, subject = '';
+    let asked = false, staged = false, target = 0, subject = '', waited = 0;
     let phase: Phase = 'working', clock = 0, quiet = 0;
     let screen: { canvas: Entity; update(dt: number): void; shade(amount: number): void; lift(amount: number): void } | null = null;
 
@@ -30,10 +31,7 @@ export function installLoading(app: App): void {
             loading.cover = true;
             const assets = app.getResource(Assets);
             void Promise.all([assets.loadFont(FONTS.regular), assets.loadFont(FONTS.strong)]).then(([regular, strong]) => { fonts = { regular: regular.handle, strong: strong.handle }; });
-            loadWork().run((progress) => {
-                target = progress.total > 0 ? STAGED_SHARE * progress.done / progress.total : STAGED_SHARE;
-                subject = progress.label;
-            }).then(() => { baked = true; }, (error: unknown) => { loading.error = error instanceof Error ? error.message : String(error); });
+            loadWork().run((progress) => { subject = progress.label; }).then(() => { loading.fitted = true; }, (error: unknown) => { loading.error = error instanceof Error ? error.message : String(error); });
             void scenes.prepare('main').then(() => scenes.readyRenderPrograms('main')).then(() => { staged = true; }, () => { staged = true; });
         }
         if (fonts && !screen) {
@@ -69,7 +67,9 @@ export function installLoading(app: App): void {
         }
         if (!screen) return;
         clock += dt;
-        if (phase === 'working' && baked && staged) { phase = 'shading'; clock = 0; subject = 'stage'; }
+        waited += dt;
+        if (phase === 'working') target = staged ? STAGED_SHARE : STAGED_SHARE * (1 - Math.exp(-waited / EASE_SECONDS));
+        if (phase === 'working' && staged) { phase = 'shading'; clock = 0; subject = 'stage'; }
         if (phase === 'shading') {
             screen.shade(clock / SHADE_SECONDS);
             if (clock >= SHADE_SECONDS) {
@@ -90,6 +90,7 @@ export function installLoading(app: App): void {
                 phase = 'gone';
                 loading.done = true;
                 loading.cover = false;
+                loadWork().yieldToGame();
             }
         }
     }));
