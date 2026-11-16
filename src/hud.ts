@@ -14,6 +14,7 @@ import { guns } from './gunnery';
 import { buildGunnery } from './hudGunnery';
 import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
+import { buildSettings } from './hudSettings';
 import { buildScope } from './hudScope';
 import { installHudEffects } from './hudEffects';
 import { buildTargets } from './hudTargets';
@@ -200,6 +201,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     const mine = installMining(app, world, rocks, targets.probe, log);
     const scope = buildScope(kit, rocks, targets.probe);
     const desk = buildHelm(kit, targets.probe);
+    const settings = buildSettings(app, kit);
     const battery = buildGunnery(kit, log, targets.probe);
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
@@ -371,6 +373,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         if (fast && !hot) log.say('VELOCITY PAST 400 M/S', AMBER);
         hot = fast;
 
+        settings(frame);
         desk.update(frame);
         battery(frame);
         targets.update(frame);

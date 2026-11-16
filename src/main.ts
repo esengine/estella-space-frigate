@@ -12,6 +12,7 @@ import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { installLoading, loading } from './loading';
 import { installSky } from './sky';
 import { SYSTEMS } from './systems';
+import { graphics } from './hudSettings';
 
 const PLUMES = [
     { name: 'PlumeL', width: 4.0, length: 2.3 },
@@ -166,10 +167,10 @@ addPlugin({
             const pointer = input.getMousePosition();
             const looking = Device.state().pointerLocked;
             const moved = input.getMouseDelta();
-            const drag = looking ? { x: moved.x * LOOK, y: moved.y * LOOK } : held && grabbed && !guns.holding ? { x: pointer.x - last.x, y: pointer.y - last.y } : { x: 0, y: 0 };
+            const drag = looking ? { x: moved.x * LOOK, y: moved.y * LOOK } : held && grabbed && !guns.holding && !graphics.open ? { x: pointer.x - last.x, y: pointer.y - last.y } : { x: 0, y: 0 };
             grabbed = held;
             last = { x: pointer.x, y: pointer.y };
-            const wheel = input.getScrollDelta().y;
+            const wheel = graphics.open ? 0 : input.getScrollDelta().y;
             const live = tour ? tourOrbit(clock) : hand;
             if (drag.x !== 0 || drag.y !== 0 || wheel !== 0) {
                 if (tour) hand = { ...live };
