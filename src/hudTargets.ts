@@ -175,7 +175,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             if (selected >= 0) {
                 const done = lock >= 1;
                 if (done && !announced) { announced = true; log.say(`${name}  LOCKED  ${reach(s.range)}`); }
-                place(card, aside ? -228 : 74, -18);
+                place(card, aside ? -228 : 74, guns.view ? -136 : -18);
                 const working = mining.firing && mining.target === selected;
                 say(cardState, working ? 'MINING' : done ? 'LOCKED' : 'ACQUIRING');
                 fade(cardState, done && !working ? 1 : 0.55 + 0.45 * Math.sin(frame.time * 14));
