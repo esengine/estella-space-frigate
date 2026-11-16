@@ -4,7 +4,7 @@ import {
 } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
-import { helm, stepHelm } from './helm';
+import { METRES, helm, stepHelm } from './helm';
 import {
     ALERT, AMBER, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
@@ -119,7 +119,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     const systemsState = label(systems, 'SystemsState', { right: 34, top: 14, width: 160, height: 16 }, { size: 11, color: rgb(HAZE), spacing: 1.8, align: TextAlign.Right });
     node(systems, 'SystemsScan', { left: 3, top: 3, width: 342, height: 184 }, { visualType: UIVisualType.Tiled, texture: textures.scan, tileSize: { x: 4, y: 3 }, color: rgb(ICE) });
     solid(systems, 'SystemsRule', { left: 20, right: 20, top: 38, height: 1 }, rgb(ICE, 0.16));
-    const ROWS = ['DRIVE', 'REACTOR', 'CAPACITOR', 'EMITTER'] as const;
+    const ROWS = ['SHIELD', 'HULL', 'CAPACITOR', 'EMITTER'] as const;
     const rows = ROWS.map((title, i) => {
         const top = 52 + i * 32;
         label(systems, `${title}Label`, { left: 20, top, width: 100, height: 18 }, { size: 11, color: rgb(HAZE), spacing: 1.8, content: title, strong: false });
@@ -192,13 +192,12 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
     const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
-    let jumps = ship.jumps, landed = true;
+    let jumps = ship.jumps, landed = true, impacts = ship.impacts, breaches = ship.breaches, mended = ship.hull;
     const press = { down: false, at: 0, left: 0, top: 0, travel: 0 };
     const groups: readonly (readonly [Entity, number, number])[] = [[identity, 0, 1], [view, 0.15, 1], [systems, 0.35, 1], [gauge, 0.5, 1], [desk.root, 0.9, 1]];
     const leans: readonly (readonly [Entity, number, number])[] = [[identityAt, 0.1, 0.26], [viewAt, 0.1, -0.26], [systemsAt, -0.12, 0.3], [gaugeAt, -0.12, -0.3]];
     const sway = { x: 0, y: 0, yaw: 0, pitch: 0, primed: false };
 
-    const model = { reactor: 0.18, primed: false };
     const began = ship.time;
     let full = false, hot = false, combat = 0;
 
@@ -245,10 +244,6 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         if (boot >= 1 && !state.booted) { state.booted = true; log.say('HELM DISPLAY ONLINE'); }
         const test = clamp((age - 0.6) / 1.6, 0, 1), sweep = Math.sin(Math.PI * test), settle = test * test * (3 - 2 * test);
         const shown = (actual: number): number => sweep * (1 - settle) + actual * settle;
-
-        const load = 0.18 + 0.62 * ship.throttle * ship.throttle + (mining.firing ? 0.2 : 0);
-        if (!model.primed) { model.reactor = load; model.primed = true; }
-        model.reactor += (load - model.reactor) * Math.min(1, dt * 1.6);
 
         say(clock, `${SYSTEMS[ship.system]!.name} SYSTEM   T+ ${stamp(ship.time)}`);
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
@@ -298,12 +293,21 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
             ink(pip, rgb(ICE, (here ? 0.55 + 0.45 * (1 - within) : ship.tour ? 0.2 : 0.1) * (1 - combat)), UIVisual);
         });
 
-        const strained = model.reactor > 0.82;
-        say(systemsState, mining.firing ? 'MINING' : strained ? 'HIGH LOAD' : 'NOMINAL');
-        ink(systemsState, mining.firing || strained ? rgb(AMBER) : rgb(HAZE));
+        if (ship.impacts !== impacts) {
+            impacts = ship.impacts;
+            const blow = ship.blow!;
+            log.say(`COLLISION  ROCK ${pad(blow.rock + 1, 2)}  ${Math.round(blow.closing * METRES)} M/S   ${ship.shield > 0 ? `SHIELD ${Math.round(ship.shield * 100)} %` : `HULL ${Math.round(ship.hull * 100)} %`}`, AMBER);
+            if (blow.shielded && ship.shield <= 0) log.say('SHIELD DOWN', ALERT);
+        }
+        if (ship.breaches !== breaches) { breaches = ship.breaches; log.say('HULL BREACHED   DRIVES OFFLINE FOR REPAIRS', ALERT); }
+        if (helm.arrived && mended < 1) log.say('HULL REPAIRED AT THE GATE', AMBER);
+        mended = ship.hull;
+        const breached = ship.hull <= 0, bare = ship.shield <= 0, holed = ship.hull < 0.999;
+        say(systemsState, breached ? 'DRIVES OFFLINE' : bare ? 'SHIELD DOWN' : holed ? 'HULL DAMAGE' : mining.firing ? 'MINING' : 'NOMINAL');
+        ink(systemsState, breached || bare ? rgb(ALERT) : holed || mining.firing ? rgb(AMBER) : rgb(HAZE));
         const readings: readonly (readonly [number, string, Rgba])[] = [
-            [ship.throttle, `${Math.round(ship.throttle * 100)} %`, rgb(ICE)],
-            [model.reactor, `${Math.round(model.reactor * 100)} %`, strained ? rgb(AMBER) : rgb(ICE)],
+            [ship.shield, `${Math.round(ship.shield * 100)} %`, ship.shield < 0.25 ? rgb(ALERT) : ship.shield < 0.6 ? rgb(AMBER) : rgb(ICE)],
+            [ship.hull, `${Math.round(ship.hull * 100)} %`, ship.hull < 0.35 ? rgb(ALERT) : ship.hull < 0.999 ? rgb(AMBER) : rgb(ICE)],
             [mining.capacitor, `${Math.round(mining.capacitor * 100)} %`, mining.capacitor < 0.2 ? rgb(ALERT) : mining.capacitor < 0.45 ? rgb(AMBER) : rgb(ICE)],
             [mining.heat, `${Math.round(mining.heat * 100)} %`, mining.overheated ? rgb(ALERT) : mining.heat > 0.6 ? rgb(AMBER) : rgb(ICE)],
         ];

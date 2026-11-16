@@ -313,18 +313,19 @@
     40,
     41,
     42,
-    48,
-    54,
-    60,
-    66,
-    72,
-    110,
-    112,
-    114,
-    116,
-    118,
-    120,
-    122
+    43,
+    51,
+    57,
+    63,
+    69,
+    75,
+    113,
+    115,
+    117,
+    119,
+    121,
+    123,
+    125
    ],
    "visible": true,
    "components": [
@@ -2888,6 +2889,267 @@
   },
   {
    "id": 43,
+   "name": "Shield",
+   "parent": 5,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 1,
+       "z": 2
+      },
+      "scale": {
+       "x": 0.001,
+       "y": 0.001,
+       "z": 0.001
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/shell.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "layer": 2,
+      "material": "assets/materials/shield.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 44,
+   "name": "HullSparks",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "ParticleEmitter",
+     "data": {
+      "enabled": true,
+      "looping": true,
+      "playOnStart": true,
+      "simulationSpace": 0,
+      "rate": 0,
+      "burstCount": 0,
+      "duration": 1000,
+      "shape": 4,
+      "shapeRadius": 0.3,
+      "speedMin": 30,
+      "speedMax": 170,
+      "gravity": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "damping": 2.4,
+      "rotationMin": 0,
+      "rotationMax": 0,
+      "angularVelocityMin": 0,
+      "angularVelocityMax": 0,
+      "startColor": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "endColor": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 0
+      },
+      "blendMode": 1,
+      "texture": "assets/fx/spark.esimage",
+      "lifetimeMin": 0.12,
+      "lifetimeMax": 0.55,
+      "maxParticles": 900,
+      "startSizeMin": 0.1,
+      "startSizeMax": 0.26,
+      "endSizeMin": 0.03,
+      "endSizeMax": 0.08,
+      "renderMode": 1,
+      "intensity": 6,
+      "collisionEnabled": false,
+      "material": "assets/materials/particle-hard.esmaterial",
+      "layer": 2,
+      "velocityScale": 0.012,
+      "lengthScale": 5,
+      "colorGradient": {
+       "stops": [
+        {
+         "t": 0,
+         "color": {
+          "r": 1,
+          "g": 0.95,
+          "b": 0.8,
+          "a": 1
+         }
+        },
+        {
+         "t": 0.3,
+         "color": {
+          "r": 1,
+          "g": 0.62,
+          "b": 0.2,
+          "a": 1
+         }
+        },
+        {
+         "t": 0.75,
+         "color": {
+          "r": 1,
+          "g": 0.28,
+          "b": 0.06,
+          "a": 0.8
+         }
+        },
+        {
+         "t": 1,
+         "color": {
+          "r": 0.5,
+          "g": 0.06,
+          "b": 0,
+          "a": 0
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 45,
+   "name": "HullDust",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "ParticleEmitter",
+     "data": {
+      "enabled": true,
+      "looping": true,
+      "playOnStart": true,
+      "simulationSpace": 0,
+      "rate": 0,
+      "burstCount": 0,
+      "duration": 1000,
+      "shape": 4,
+      "shapeRadius": 0.5,
+      "speedMin": 2,
+      "speedMax": 11,
+      "gravity": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "damping": 1.8,
+      "rotationMin": 0,
+      "rotationMax": 360,
+      "angularVelocityMin": -40,
+      "angularVelocityMax": 40,
+      "startColor": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "endColor": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 0
+      },
+      "blendMode": 1,
+      "texture": "assets/fx/cloud.png",
+      "lifetimeMin": 0.5,
+      "lifetimeMax": 1.3,
+      "maxParticles": 260,
+      "startSizeMin": 0.8,
+      "startSizeMax": 1.6,
+      "endSizeMin": 3.5,
+      "endSizeMax": 6.5,
+      "renderMode": 0,
+      "intensity": 0.9,
+      "collisionEnabled": false,
+      "material": "assets/materials/particle-soft.esmaterial",
+      "layer": 2,
+      "noiseStrength": 3,
+      "noiseFrequency": 0.3,
+      "noiseScrollSpeed": 1,
+      "colorGradient": {
+       "stops": [
+        {
+         "t": 0,
+         "color": {
+          "r": 1,
+          "g": 0.8,
+          "b": 0.5,
+          "a": 0.8
+         }
+        },
+        {
+         "t": 0.2,
+         "color": {
+          "r": 0.7,
+          "g": 0.62,
+          "b": 0.58,
+          "a": 0.4
+         }
+        },
+        {
+         "t": 1,
+         "color": {
+          "r": 0.4,
+          "g": 0.42,
+          "b": 0.48,
+          "a": 0
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 46,
    "name": "GunSparks",
    "parent": null,
    "children": [],
@@ -3000,7 +3262,7 @@
    ]
   },
   {
-   "id": 44,
+   "id": 47,
    "name": "GunSmoke",
    "parent": null,
    "children": [],
@@ -3105,7 +3367,7 @@
    ]
   },
   {
-   "id": 45,
+   "id": 48,
    "name": "GunBlast",
    "parent": null,
    "children": [],
@@ -3198,7 +3460,7 @@
    ]
   },
   {
-   "id": 46,
+   "id": 49,
    "name": "GunTracer",
    "parent": null,
    "children": [],
@@ -3300,7 +3562,7 @@
    ]
   },
   {
-   "id": 47,
+   "id": 50,
    "name": "GunImpact",
    "parent": null,
    "children": [],
@@ -3415,11 +3677,11 @@
    ]
   },
   {
-   "id": 48,
+   "id": 51,
    "name": "TurretA",
    "parent": 5,
    "children": [
-    49
+    52
    ],
    "visible": true,
    "components": [
@@ -3460,13 +3722,13 @@
    ]
   },
   {
-   "id": 49,
+   "id": 52,
    "name": "GunsA",
-   "parent": 48,
+   "parent": 51,
    "children": [
-    50,
-    52,
-    53
+    53,
+    55,
+    56
    ],
    "visible": true,
    "components": [
@@ -3502,11 +3764,11 @@
    ]
   },
   {
-   "id": 50,
+   "id": 53,
    "name": "MuzzleA",
-   "parent": 49,
+   "parent": 52,
    "children": [
-    51
+    54
    ],
    "visible": true,
    "components": [
@@ -3547,9 +3809,9 @@
    ]
   },
   {
-   "id": 51,
+   "id": 54,
    "name": "MuzzleALight",
-   "parent": 50,
+   "parent": 53,
    "children": [],
    "visible": true,
    "components": [
@@ -3582,9 +3844,9 @@
    ]
   },
   {
-   "id": 52,
+   "id": 55,
    "name": "MuzzleAFire",
-   "parent": 49,
+   "parent": 52,
    "children": [],
    "visible": true,
    "components": [
@@ -3703,9 +3965,9 @@
    ]
   },
   {
-   "id": 53,
+   "id": 56,
    "name": "MuzzleASmoke",
-   "parent": 49,
+   "parent": 52,
    "children": [],
    "visible": true,
    "components": [
@@ -3824,11 +4086,11 @@
    ]
   },
   {
-   "id": 54,
+   "id": 57,
    "name": "TurretB",
    "parent": 5,
    "children": [
-    55
+    58
    ],
    "visible": true,
    "components": [
@@ -3869,13 +4131,13 @@
    ]
   },
   {
-   "id": 55,
+   "id": 58,
    "name": "GunsB",
-   "parent": 54,
+   "parent": 57,
    "children": [
-    56,
-    58,
-    59
+    59,
+    61,
+    62
    ],
    "visible": true,
    "components": [
@@ -3911,11 +4173,11 @@
    ]
   },
   {
-   "id": 56,
+   "id": 59,
    "name": "MuzzleB",
-   "parent": 55,
+   "parent": 58,
    "children": [
-    57
+    60
    ],
    "visible": true,
    "components": [
@@ -3956,9 +4218,9 @@
    ]
   },
   {
-   "id": 57,
+   "id": 60,
    "name": "MuzzleBLight",
-   "parent": 56,
+   "parent": 59,
    "children": [],
    "visible": true,
    "components": [
@@ -3991,9 +4253,9 @@
    ]
   },
   {
-   "id": 58,
+   "id": 61,
    "name": "MuzzleBFire",
-   "parent": 55,
+   "parent": 58,
    "children": [],
    "visible": true,
    "components": [
@@ -4112,9 +4374,9 @@
    ]
   },
   {
-   "id": 59,
+   "id": 62,
    "name": "MuzzleBSmoke",
-   "parent": 55,
+   "parent": 58,
    "children": [],
    "visible": true,
    "components": [
@@ -4233,11 +4495,11 @@
    ]
   },
   {
-   "id": 60,
+   "id": 63,
    "name": "TurretP",
    "parent": 5,
    "children": [
-    61
+    64
    ],
    "visible": true,
    "components": [
@@ -4278,13 +4540,13 @@
    ]
   },
   {
-   "id": 61,
+   "id": 64,
    "name": "GunsP",
-   "parent": 60,
+   "parent": 63,
    "children": [
-    62,
-    64,
-    65
+    65,
+    67,
+    68
    ],
    "visible": true,
    "components": [
@@ -4320,11 +4582,11 @@
    ]
   },
   {
-   "id": 62,
+   "id": 65,
    "name": "MuzzleP",
-   "parent": 61,
+   "parent": 64,
    "children": [
-    63
+    66
    ],
    "visible": true,
    "components": [
@@ -4365,9 +4627,9 @@
    ]
   },
   {
-   "id": 63,
+   "id": 66,
    "name": "MuzzlePLight",
-   "parent": 62,
+   "parent": 65,
    "children": [],
    "visible": true,
    "components": [
@@ -4400,9 +4662,9 @@
    ]
   },
   {
-   "id": 64,
+   "id": 67,
    "name": "MuzzlePFire",
-   "parent": 61,
+   "parent": 64,
    "children": [],
    "visible": true,
    "components": [
@@ -4521,9 +4783,9 @@
    ]
   },
   {
-   "id": 65,
+   "id": 68,
    "name": "MuzzlePSmoke",
-   "parent": 61,
+   "parent": 64,
    "children": [],
    "visible": true,
    "components": [
@@ -4642,11 +4904,11 @@
    ]
   },
   {
-   "id": 66,
+   "id": 69,
    "name": "TurretS",
    "parent": 5,
    "children": [
-    67
+    70
    ],
    "visible": true,
    "components": [
@@ -4687,13 +4949,13 @@
    ]
   },
   {
-   "id": 67,
+   "id": 70,
    "name": "GunsS",
-   "parent": 66,
+   "parent": 69,
    "children": [
-    68,
-    70,
-    71
+    71,
+    73,
+    74
    ],
    "visible": true,
    "components": [
@@ -4729,11 +4991,11 @@
    ]
   },
   {
-   "id": 68,
+   "id": 71,
    "name": "MuzzleS",
-   "parent": 67,
+   "parent": 70,
    "children": [
-    69
+    72
    ],
    "visible": true,
    "components": [
@@ -4774,9 +5036,9 @@
    ]
   },
   {
-   "id": 69,
+   "id": 72,
    "name": "MuzzleSLight",
-   "parent": 68,
+   "parent": 71,
    "children": [],
    "visible": true,
    "components": [
@@ -4809,9 +5071,9 @@
    ]
   },
   {
-   "id": 70,
+   "id": 73,
    "name": "MuzzleSFire",
-   "parent": 67,
+   "parent": 70,
    "children": [],
    "visible": true,
    "components": [
@@ -4930,9 +5192,9 @@
    ]
   },
   {
-   "id": 71,
+   "id": 74,
    "name": "MuzzleSSmoke",
-   "parent": 67,
+   "parent": 70,
    "children": [],
    "visible": true,
    "components": [
@@ -5051,11 +5313,11 @@
    ]
   },
   {
-   "id": 72,
+   "id": 75,
    "name": "TurretV",
    "parent": 5,
    "children": [
-    73
+    76
    ],
    "visible": true,
    "components": [
@@ -5102,13 +5364,13 @@
    ]
   },
   {
-   "id": 73,
+   "id": 76,
    "name": "GunsV",
-   "parent": 72,
+   "parent": 75,
    "children": [
-    74,
-    76,
-    77
+    77,
+    79,
+    80
    ],
    "visible": true,
    "components": [
@@ -5144,11 +5406,11 @@
    ]
   },
   {
-   "id": 74,
+   "id": 77,
    "name": "MuzzleV",
-   "parent": 73,
+   "parent": 76,
    "children": [
-    75
+    78
    ],
    "visible": true,
    "components": [
@@ -5189,9 +5451,9 @@
    ]
   },
   {
-   "id": 75,
+   "id": 78,
    "name": "MuzzleVLight",
-   "parent": 74,
+   "parent": 77,
    "children": [],
    "visible": true,
    "components": [
@@ -5224,9 +5486,9 @@
    ]
   },
   {
-   "id": 76,
+   "id": 79,
    "name": "MuzzleVFire",
-   "parent": 73,
+   "parent": 76,
    "children": [],
    "visible": true,
    "components": [
@@ -5345,9 +5607,9 @@
    ]
   },
   {
-   "id": 77,
+   "id": 80,
    "name": "MuzzleVSmoke",
-   "parent": 73,
+   "parent": 76,
    "children": [],
    "visible": true,
    "components": [
@@ -5466,7 +5728,7 @@
    ]
   },
   {
-   "id": 78,
+   "id": 81,
    "name": "Shell0",
    "parent": null,
    "children": [],
@@ -5509,7 +5771,7 @@
    ]
   },
   {
-   "id": 79,
+   "id": 82,
    "name": "Shell1",
    "parent": null,
    "children": [],
@@ -5552,7 +5814,7 @@
    ]
   },
   {
-   "id": 80,
+   "id": 83,
    "name": "Shell2",
    "parent": null,
    "children": [],
@@ -5595,7 +5857,7 @@
    ]
   },
   {
-   "id": 81,
+   "id": 84,
    "name": "Shell3",
    "parent": null,
    "children": [],
@@ -5638,7 +5900,7 @@
    ]
   },
   {
-   "id": 82,
+   "id": 85,
    "name": "Shell4",
    "parent": null,
    "children": [],
@@ -5681,7 +5943,7 @@
    ]
   },
   {
-   "id": 83,
+   "id": 86,
    "name": "Shell5",
    "parent": null,
    "children": [],
@@ -5724,7 +5986,7 @@
    ]
   },
   {
-   "id": 84,
+   "id": 87,
    "name": "Shell6",
    "parent": null,
    "children": [],
@@ -5767,7 +6029,7 @@
    ]
   },
   {
-   "id": 85,
+   "id": 88,
    "name": "Shell7",
    "parent": null,
    "children": [],
@@ -5810,7 +6072,7 @@
    ]
   },
   {
-   "id": 86,
+   "id": 89,
    "name": "Shell8",
    "parent": null,
    "children": [],
@@ -5853,7 +6115,7 @@
    ]
   },
   {
-   "id": 87,
+   "id": 90,
    "name": "Shell9",
    "parent": null,
    "children": [],
@@ -5896,7 +6158,7 @@
    ]
   },
   {
-   "id": 88,
+   "id": 91,
    "name": "Shell10",
    "parent": null,
    "children": [],
@@ -5939,7 +6201,7 @@
    ]
   },
   {
-   "id": 89,
+   "id": 92,
    "name": "Shell11",
    "parent": null,
    "children": [],
@@ -5982,7 +6244,7 @@
    ]
   },
   {
-   "id": 90,
+   "id": 93,
    "name": "Shell12",
    "parent": null,
    "children": [],
@@ -6025,7 +6287,7 @@
    ]
   },
   {
-   "id": 91,
+   "id": 94,
    "name": "Shell13",
    "parent": null,
    "children": [],
@@ -6068,7 +6330,7 @@
    ]
   },
   {
-   "id": 92,
+   "id": 95,
    "name": "Shell14",
    "parent": null,
    "children": [],
@@ -6111,7 +6373,7 @@
    ]
   },
   {
-   "id": 93,
+   "id": 96,
    "name": "Shell15",
    "parent": null,
    "children": [],
@@ -6154,7 +6416,7 @@
    ]
   },
   {
-   "id": 94,
+   "id": 97,
    "name": "Shell16",
    "parent": null,
    "children": [],
@@ -6197,7 +6459,7 @@
    ]
   },
   {
-   "id": 95,
+   "id": 98,
    "name": "Shell17",
    "parent": null,
    "children": [],
@@ -6240,7 +6502,7 @@
    ]
   },
   {
-   "id": 96,
+   "id": 99,
    "name": "Shell18",
    "parent": null,
    "children": [],
@@ -6283,7 +6545,7 @@
    ]
   },
   {
-   "id": 97,
+   "id": 100,
    "name": "Shell19",
    "parent": null,
    "children": [],
@@ -6326,7 +6588,7 @@
    ]
   },
   {
-   "id": 98,
+   "id": 101,
    "name": "Shell20",
    "parent": null,
    "children": [],
@@ -6369,7 +6631,7 @@
    ]
   },
   {
-   "id": 99,
+   "id": 102,
    "name": "Shell21",
    "parent": null,
    "children": [],
@@ -6412,7 +6674,7 @@
    ]
   },
   {
-   "id": 100,
+   "id": 103,
    "name": "Shell22",
    "parent": null,
    "children": [],
@@ -6455,7 +6717,7 @@
    ]
   },
   {
-   "id": 101,
+   "id": 104,
    "name": "Shell23",
    "parent": null,
    "children": [],
@@ -6498,11 +6760,11 @@
    ]
   },
   {
-   "id": 102,
+   "id": 105,
    "name": "Impact0",
    "parent": null,
    "children": [
-    103
+    106
    ],
    "visible": true,
    "components": [
@@ -6538,132 +6800,15 @@
       "castShadows": false,
       "layer": 2,
       "material": "assets/materials/flare-bolt.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 103,
-   "name": "Impact0Light",
-   "parent": 102,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "Light",
-     "data": {
-      "type": 0,
-      "color": {
-       "r": 1.0,
-       "g": 0.6,
-       "b": 0.24,
-       "a": 1
-      },
-      "intensity": 0,
-      "radius": 180,
-      "enabled": true,
-      "meshShadows": false
-     }
-    }
-   ]
-  },
-  {
-   "id": 104,
-   "name": "Impact1",
-   "parent": null,
-   "children": [
-    105
-   ],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": -50000,
-       "z": 0
-      },
-      "scale": {
-       "x": 0.001,
-       "y": 0.001,
-       "z": 0.001
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/flare.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "layer": 2,
-      "material": "assets/materials/flare-bolt.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 105,
-   "name": "Impact1Light",
-   "parent": 104,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "Light",
-     "data": {
-      "type": 0,
-      "color": {
-       "r": 1.0,
-       "g": 0.6,
-       "b": 0.24,
-       "a": 1
-      },
-      "intensity": 0,
-      "radius": 180,
-      "enabled": true,
-      "meshShadows": false
      }
     }
    ]
   },
   {
    "id": 106,
-   "name": "Impact2",
-   "parent": null,
-   "children": [
-    107
-   ],
+   "name": "Impact0Light",
+   "parent": 105,
+   "children": [],
    "visible": true,
    "components": [
     {
@@ -6671,78 +6816,35 @@
      "data": {
       "position": {
        "x": 0,
-       "y": -50000,
+       "y": 0,
        "z": 0
-      },
-      "scale": {
-       "x": 0.001,
-       "y": 0.001,
-       "z": 0.001
       }
      }
     },
     {
-     "type": "MeshRenderer",
+     "type": "Light",
      "data": {
-      "mesh": "assets/models/flare.esmesh",
+      "type": 0,
       "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
+       "r": 1.0,
+       "g": 0.6,
+       "b": 0.24,
        "a": 1
       },
+      "intensity": 0,
+      "radius": 180,
       "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "layer": 2,
-      "material": "assets/materials/flare-bolt.esmaterial"
+      "meshShadows": false
      }
     }
    ]
   },
   {
    "id": 107,
-   "name": "Impact2Light",
-   "parent": 106,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "Light",
-     "data": {
-      "type": 0,
-      "color": {
-       "r": 1.0,
-       "g": 0.6,
-       "b": 0.24,
-       "a": 1
-      },
-      "intensity": 0,
-      "radius": 180,
-      "enabled": true,
-      "meshShadows": false
-     }
-    }
-   ]
-  },
-  {
-   "id": 108,
-   "name": "Impact3",
+   "name": "Impact1",
    "parent": null,
    "children": [
-    109
+    108
    ],
    "visible": true,
    "components": [
@@ -6783,9 +6885,9 @@
    ]
   },
   {
-   "id": 109,
-   "name": "Impact3Light",
-   "parent": 108,
+   "id": 108,
+   "name": "Impact1Light",
+   "parent": 107,
    "children": [],
    "visible": true,
    "components": [
@@ -6818,11 +6920,171 @@
    ]
   },
   {
+   "id": 109,
+   "name": "Impact2",
+   "parent": null,
+   "children": [
+    110
+   ],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": -50000,
+       "z": 0
+      },
+      "scale": {
+       "x": 0.001,
+       "y": 0.001,
+       "z": 0.001
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/flare.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "layer": 2,
+      "material": "assets/materials/flare-bolt.esmaterial"
+     }
+    }
+   ]
+  },
+  {
    "id": 110,
+   "name": "Impact2Light",
+   "parent": 109,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "Light",
+     "data": {
+      "type": 0,
+      "color": {
+       "r": 1.0,
+       "g": 0.6,
+       "b": 0.24,
+       "a": 1
+      },
+      "intensity": 0,
+      "radius": 180,
+      "enabled": true,
+      "meshShadows": false
+     }
+    }
+   ]
+  },
+  {
+   "id": 111,
+   "name": "Impact3",
+   "parent": null,
+   "children": [
+    112
+   ],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": -50000,
+       "z": 0
+      },
+      "scale": {
+       "x": 0.001,
+       "y": 0.001,
+       "z": 0.001
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/flare.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "layer": 2,
+      "material": "assets/materials/flare-bolt.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 112,
+   "name": "Impact3Light",
+   "parent": 111,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "Light",
+     "data": {
+      "type": 0,
+      "color": {
+       "r": 1.0,
+       "g": 0.6,
+       "b": 0.24,
+       "a": 1
+      },
+      "intensity": 0,
+      "radius": 180,
+      "enabled": true,
+      "meshShadows": false
+     }
+    }
+   ]
+  },
+  {
+   "id": 113,
    "name": "StrobeMast",
    "parent": 5,
    "children": [
-    111
+    114
    ],
    "visible": true,
    "components": [
@@ -6863,9 +7125,9 @@
    ]
   },
   {
-   "id": 111,
+   "id": 114,
    "name": "StrobeMastLight",
-   "parent": 110,
+   "parent": 113,
    "children": [],
    "visible": true,
    "components": [
@@ -6898,11 +7160,11 @@
    ]
   },
   {
-   "id": 112,
+   "id": 115,
    "name": "StrobeKeel",
    "parent": 5,
    "children": [
-    113
+    116
    ],
    "visible": true,
    "components": [
@@ -6943,9 +7205,9 @@
    ]
   },
   {
-   "id": 113,
+   "id": 116,
    "name": "StrobeKeelLight",
-   "parent": 112,
+   "parent": 115,
    "children": [],
    "visible": true,
    "components": [
@@ -6978,11 +7240,11 @@
    ]
   },
   {
-   "id": 114,
+   "id": 117,
    "name": "NavPort",
    "parent": 5,
    "children": [
-    115
+    118
    ],
    "visible": true,
    "components": [
@@ -7023,9 +7285,9 @@
    ]
   },
   {
-   "id": 115,
+   "id": 118,
    "name": "NavPortLight",
-   "parent": 114,
+   "parent": 117,
    "children": [],
    "visible": true,
    "components": [
@@ -7058,11 +7320,11 @@
    ]
   },
   {
-   "id": 116,
+   "id": 119,
    "name": "NavStarboard",
    "parent": 5,
    "children": [
-    117
+    120
    ],
    "visible": true,
    "components": [
@@ -7103,9 +7365,9 @@
    ]
   },
   {
-   "id": 117,
+   "id": 120,
    "name": "NavStarboardLight",
-   "parent": 116,
+   "parent": 119,
    "children": [],
    "visible": true,
    "components": [
@@ -7138,11 +7400,11 @@
    ]
   },
   {
-   "id": 118,
+   "id": 121,
    "name": "BowPort",
    "parent": 5,
    "children": [
-    119
+    122
    ],
    "visible": true,
    "components": [
@@ -7183,9 +7445,9 @@
    ]
   },
   {
-   "id": 119,
+   "id": 122,
    "name": "BowPortLight",
-   "parent": 118,
+   "parent": 121,
    "children": [],
    "visible": true,
    "components": [
@@ -7218,11 +7480,11 @@
    ]
   },
   {
-   "id": 120,
+   "id": 123,
    "name": "BowStarboard",
    "parent": 5,
    "children": [
-    121
+    124
    ],
    "visible": true,
    "components": [
@@ -7263,9 +7525,9 @@
    ]
   },
   {
-   "id": 121,
+   "id": 124,
    "name": "BowStarboardLight",
-   "parent": 120,
+   "parent": 123,
    "children": [],
    "visible": true,
    "components": [
@@ -7298,7 +7560,7 @@
    ]
   },
   {
-   "id": 122,
+   "id": 125,
    "name": "Warp",
    "parent": 5,
    "children": [],
@@ -7341,7 +7603,7 @@
    ]
   },
   {
-   "id": 123,
+   "id": 126,
    "name": "GateFlash",
    "parent": null,
    "children": [],
@@ -7376,7 +7638,7 @@
    ]
   },
   {
-   "id": 124,
+   "id": 127,
    "name": "Mote0",
    "parent": null,
    "children": [],
@@ -7425,7 +7687,7 @@
    ]
   },
   {
-   "id": 125,
+   "id": 128,
    "name": "Mote1",
    "parent": null,
    "children": [],
@@ -7474,7 +7736,7 @@
    ]
   },
   {
-   "id": 126,
+   "id": 129,
    "name": "Mote2",
    "parent": null,
    "children": [],
@@ -7523,7 +7785,7 @@
    ]
   },
   {
-   "id": 127,
+   "id": 130,
    "name": "Mote3",
    "parent": null,
    "children": [],
@@ -7572,7 +7834,7 @@
    ]
   },
   {
-   "id": 128,
+   "id": 131,
    "name": "Mote4",
    "parent": null,
    "children": [],
@@ -7621,7 +7883,7 @@
    ]
   },
   {
-   "id": 129,
+   "id": 132,
    "name": "Mote5",
    "parent": null,
    "children": [],
@@ -7670,7 +7932,7 @@
    ]
   },
   {
-   "id": 130,
+   "id": 133,
    "name": "Mote6",
    "parent": null,
    "children": [],
@@ -7719,7 +7981,7 @@
    ]
   },
   {
-   "id": 131,
+   "id": 134,
    "name": "Mote7",
    "parent": null,
    "children": [],
@@ -7768,7 +8030,7 @@
    ]
   },
   {
-   "id": 132,
+   "id": 135,
    "name": "Mote8",
    "parent": null,
    "children": [],
@@ -7817,7 +8079,7 @@
    ]
   },
   {
-   "id": 133,
+   "id": 136,
    "name": "Mote9",
    "parent": null,
    "children": [],
@@ -7866,7 +8128,7 @@
    ]
   },
   {
-   "id": 134,
+   "id": 137,
    "name": "Mote10",
    "parent": null,
    "children": [],
@@ -7915,7 +8177,7 @@
    ]
   },
   {
-   "id": 135,
+   "id": 138,
    "name": "Mote11",
    "parent": null,
    "children": [],
@@ -7964,7 +8226,7 @@
    ]
   },
   {
-   "id": 136,
+   "id": 139,
    "name": "Mote12",
    "parent": null,
    "children": [],
@@ -8013,7 +8275,7 @@
    ]
   },
   {
-   "id": 137,
+   "id": 140,
    "name": "Mote13",
    "parent": null,
    "children": [],
@@ -8062,7 +8324,7 @@
    ]
   },
   {
-   "id": 138,
+   "id": 141,
    "name": "Mote14",
    "parent": null,
    "children": [],
@@ -8111,7 +8373,7 @@
    ]
   },
   {
-   "id": 139,
+   "id": 142,
    "name": "Mote15",
    "parent": null,
    "children": [],
@@ -8160,7 +8422,7 @@
    ]
   },
   {
-   "id": 140,
+   "id": 143,
    "name": "Mote16",
    "parent": null,
    "children": [],
@@ -8209,7 +8471,7 @@
    ]
   },
   {
-   "id": 141,
+   "id": 144,
    "name": "Mote17",
    "parent": null,
    "children": [],
@@ -8258,7 +8520,7 @@
    ]
   },
   {
-   "id": 142,
+   "id": 145,
    "name": "Mote18",
    "parent": null,
    "children": [],
@@ -8307,7 +8569,7 @@
    ]
   },
   {
-   "id": 143,
+   "id": 146,
    "name": "Mote19",
    "parent": null,
    "children": [],
@@ -8356,7 +8618,7 @@
    ]
   },
   {
-   "id": 144,
+   "id": 147,
    "name": "Mote20",
    "parent": null,
    "children": [],
@@ -8405,7 +8667,7 @@
    ]
   },
   {
-   "id": 145,
+   "id": 148,
    "name": "Mote21",
    "parent": null,
    "children": [],
@@ -8454,7 +8716,7 @@
    ]
   },
   {
-   "id": 146,
+   "id": 149,
    "name": "Mote22",
    "parent": null,
    "children": [],
@@ -8503,7 +8765,7 @@
    ]
   },
   {
-   "id": 147,
+   "id": 150,
    "name": "Mote23",
    "parent": null,
    "children": [],
@@ -8552,7 +8814,7 @@
    ]
   },
   {
-   "id": 148,
+   "id": 151,
    "name": "Mote24",
    "parent": null,
    "children": [],
@@ -8601,7 +8863,7 @@
    ]
   },
   {
-   "id": 149,
+   "id": 152,
    "name": "Mote25",
    "parent": null,
    "children": [],
@@ -8650,7 +8912,7 @@
    ]
   },
   {
-   "id": 150,
+   "id": 153,
    "name": "Mote26",
    "parent": null,
    "children": [],
@@ -8699,7 +8961,7 @@
    ]
   },
   {
-   "id": 151,
+   "id": 154,
    "name": "Mote27",
    "parent": null,
    "children": [],
@@ -8748,7 +9010,7 @@
    ]
   },
   {
-   "id": 152,
+   "id": 155,
    "name": "Mote28",
    "parent": null,
    "children": [],
@@ -8797,7 +9059,7 @@
    ]
   },
   {
-   "id": 153,
+   "id": 156,
    "name": "Mote29",
    "parent": null,
    "children": [],
@@ -8846,7 +9108,7 @@
    ]
   },
   {
-   "id": 154,
+   "id": 157,
    "name": "Mote30",
    "parent": null,
    "children": [],
@@ -8895,7 +9157,7 @@
    ]
   },
   {
-   "id": 155,
+   "id": 158,
    "name": "Mote31",
    "parent": null,
    "children": [],
@@ -8944,7 +9206,7 @@
    ]
   },
   {
-   "id": 156,
+   "id": 159,
    "name": "Mote32",
    "parent": null,
    "children": [],
@@ -8993,7 +9255,7 @@
    ]
   },
   {
-   "id": 157,
+   "id": 160,
    "name": "Mote33",
    "parent": null,
    "children": [],
@@ -9042,7 +9304,7 @@
    ]
   },
   {
-   "id": 158,
+   "id": 161,
    "name": "Mote34",
    "parent": null,
    "children": [],
@@ -9091,7 +9353,7 @@
    ]
   },
   {
-   "id": 159,
+   "id": 162,
    "name": "Mote35",
    "parent": null,
    "children": [],
@@ -9140,7 +9402,7 @@
    ]
   },
   {
-   "id": 160,
+   "id": 163,
    "name": "Mote36",
    "parent": null,
    "children": [],
@@ -9189,7 +9451,7 @@
    ]
   },
   {
-   "id": 161,
+   "id": 164,
    "name": "Mote37",
    "parent": null,
    "children": [],
@@ -9238,7 +9500,7 @@
    ]
   },
   {
-   "id": 162,
+   "id": 165,
    "name": "Mote38",
    "parent": null,
    "children": [],
@@ -9287,7 +9549,7 @@
    ]
   },
   {
-   "id": 163,
+   "id": 166,
    "name": "Mote39",
    "parent": null,
    "children": [],
@@ -9336,7 +9598,7 @@
    ]
   },
   {
-   "id": 164,
+   "id": 167,
    "name": "Mote40",
    "parent": null,
    "children": [],
@@ -9385,7 +9647,7 @@
    ]
   },
   {
-   "id": 165,
+   "id": 168,
    "name": "Mote41",
    "parent": null,
    "children": [],
@@ -9434,7 +9696,7 @@
    ]
   },
   {
-   "id": 166,
+   "id": 169,
    "name": "Mote42",
    "parent": null,
    "children": [],
@@ -9483,7 +9745,7 @@
    ]
   },
   {
-   "id": 167,
+   "id": 170,
    "name": "Mote43",
    "parent": null,
    "children": [],
@@ -9532,7 +9794,7 @@
    ]
   },
   {
-   "id": 168,
+   "id": 171,
    "name": "Mote44",
    "parent": null,
    "children": [],
@@ -9581,7 +9843,7 @@
    ]
   },
   {
-   "id": 169,
+   "id": 172,
    "name": "Mote45",
    "parent": null,
    "children": [],
@@ -9630,7 +9892,7 @@
    ]
   },
   {
-   "id": 170,
+   "id": 173,
    "name": "Mote46",
    "parent": null,
    "children": [],
@@ -9679,7 +9941,7 @@
    ]
   },
   {
-   "id": 171,
+   "id": 174,
    "name": "Mote47",
    "parent": null,
    "children": [],
@@ -9728,7 +9990,7 @@
    ]
   },
   {
-   "id": 172,
+   "id": 175,
    "name": "Mote48",
    "parent": null,
    "children": [],
@@ -9777,7 +10039,7 @@
    ]
   },
   {
-   "id": 173,
+   "id": 176,
    "name": "Mote49",
    "parent": null,
    "children": [],
@@ -9826,7 +10088,7 @@
    ]
   },
   {
-   "id": 174,
+   "id": 177,
    "name": "Mote50",
    "parent": null,
    "children": [],
@@ -9875,7 +10137,7 @@
    ]
   },
   {
-   "id": 175,
+   "id": 178,
    "name": "Mote51",
    "parent": null,
    "children": [],
@@ -9924,7 +10186,7 @@
    ]
   },
   {
-   "id": 176,
+   "id": 179,
    "name": "Mote52",
    "parent": null,
    "children": [],
@@ -9973,7 +10235,7 @@
    ]
   },
   {
-   "id": 177,
+   "id": 180,
    "name": "Mote53",
    "parent": null,
    "children": [],
@@ -10022,7 +10284,7 @@
    ]
   },
   {
-   "id": 178,
+   "id": 181,
    "name": "Mote54",
    "parent": null,
    "children": [],
@@ -10071,7 +10333,7 @@
    ]
   },
   {
-   "id": 179,
+   "id": 182,
    "name": "Mote55",
    "parent": null,
    "children": [],
@@ -10120,7 +10382,7 @@
    ]
   },
   {
-   "id": 180,
+   "id": 183,
    "name": "Mote56",
    "parent": null,
    "children": [],
@@ -10169,7 +10431,7 @@
    ]
   },
   {
-   "id": 181,
+   "id": 184,
    "name": "Mote57",
    "parent": null,
    "children": [],
@@ -10218,7 +10480,7 @@
    ]
   },
   {
-   "id": 182,
+   "id": 185,
    "name": "Mote58",
    "parent": null,
    "children": [],
@@ -10267,7 +10529,7 @@
    ]
   },
   {
-   "id": 183,
+   "id": 186,
    "name": "Mote59",
    "parent": null,
    "children": [],
@@ -10316,7 +10578,7 @@
    ]
   },
   {
-   "id": 184,
+   "id": 187,
    "name": "Mote60",
    "parent": null,
    "children": [],
@@ -10365,7 +10627,7 @@
    ]
   },
   {
-   "id": 185,
+   "id": 188,
    "name": "Mote61",
    "parent": null,
    "children": [],
@@ -10414,7 +10676,7 @@
    ]
   },
   {
-   "id": 186,
+   "id": 189,
    "name": "Mote62",
    "parent": null,
    "children": [],
@@ -10463,7 +10725,7 @@
    ]
   },
   {
-   "id": 187,
+   "id": 190,
    "name": "Mote63",
    "parent": null,
    "children": [],
@@ -10512,7 +10774,7 @@
    ]
   },
   {
-   "id": 188,
+   "id": 191,
    "name": "Mote64",
    "parent": null,
    "children": [],
@@ -10561,7 +10823,7 @@
    ]
   },
   {
-   "id": 189,
+   "id": 192,
    "name": "Mote65",
    "parent": null,
    "children": [],
@@ -10610,7 +10872,7 @@
    ]
   },
   {
-   "id": 190,
+   "id": 193,
    "name": "Mote66",
    "parent": null,
    "children": [],
@@ -10659,7 +10921,7 @@
    ]
   },
   {
-   "id": 191,
+   "id": 194,
    "name": "Mote67",
    "parent": null,
    "children": [],
@@ -10708,7 +10970,7 @@
    ]
   },
   {
-   "id": 192,
+   "id": 195,
    "name": "Mote68",
    "parent": null,
    "children": [],
@@ -10757,7 +11019,7 @@
    ]
   },
   {
-   "id": 193,
+   "id": 196,
    "name": "Mote69",
    "parent": null,
    "children": [],
@@ -10806,7 +11068,7 @@
    ]
   },
   {
-   "id": 194,
+   "id": 197,
    "name": "Mote70",
    "parent": null,
    "children": [],
@@ -10855,7 +11117,7 @@
    ]
   },
   {
-   "id": 195,
+   "id": 198,
    "name": "Mote71",
    "parent": null,
    "children": [],
@@ -10904,7 +11166,7 @@
    ]
   },
   {
-   "id": 196,
+   "id": 199,
    "name": "Mote72",
    "parent": null,
    "children": [],
@@ -10953,7 +11215,7 @@
    ]
   },
   {
-   "id": 197,
+   "id": 200,
    "name": "Mote73",
    "parent": null,
    "children": [],
@@ -11002,7 +11264,7 @@
    ]
   },
   {
-   "id": 198,
+   "id": 201,
    "name": "Mote74",
    "parent": null,
    "children": [],
@@ -11051,7 +11313,7 @@
    ]
   },
   {
-   "id": 199,
+   "id": 202,
    "name": "Mote75",
    "parent": null,
    "children": [],
@@ -11100,7 +11362,7 @@
    ]
   },
   {
-   "id": 200,
+   "id": 203,
    "name": "Mote76",
    "parent": null,
    "children": [],
@@ -11149,7 +11411,7 @@
    ]
   },
   {
-   "id": 201,
+   "id": 204,
    "name": "Mote77",
    "parent": null,
    "children": [],
@@ -11198,7 +11460,7 @@
    ]
   },
   {
-   "id": 202,
+   "id": 205,
    "name": "Mote78",
    "parent": null,
    "children": [],
@@ -11247,7 +11509,7 @@
    ]
   },
   {
-   "id": 203,
+   "id": 206,
    "name": "Mote79",
    "parent": null,
    "children": [],
@@ -11296,7 +11558,7 @@
    ]
   },
   {
-   "id": 204,
+   "id": 207,
    "name": "Mote80",
    "parent": null,
    "children": [],
@@ -11345,7 +11607,7 @@
    ]
   },
   {
-   "id": 205,
+   "id": 208,
    "name": "Mote81",
    "parent": null,
    "children": [],
@@ -11394,7 +11656,7 @@
    ]
   },
   {
-   "id": 206,
+   "id": 209,
    "name": "Mote82",
    "parent": null,
    "children": [],
@@ -11443,7 +11705,7 @@
    ]
   },
   {
-   "id": 207,
+   "id": 210,
    "name": "Mote83",
    "parent": null,
    "children": [],
@@ -11492,7 +11754,7 @@
    ]
   },
   {
-   "id": 208,
+   "id": 211,
    "name": "Mote84",
    "parent": null,
    "children": [],
@@ -11541,7 +11803,7 @@
    ]
   },
   {
-   "id": 209,
+   "id": 212,
    "name": "Mote85",
    "parent": null,
    "children": [],
@@ -11590,7 +11852,7 @@
    ]
   },
   {
-   "id": 210,
+   "id": 213,
    "name": "Mote86",
    "parent": null,
    "children": [],
@@ -11639,7 +11901,7 @@
    ]
   },
   {
-   "id": 211,
+   "id": 214,
    "name": "Mote87",
    "parent": null,
    "children": [],
@@ -11688,7 +11950,7 @@
    ]
   },
   {
-   "id": 212,
+   "id": 215,
    "name": "Mote88",
    "parent": null,
    "children": [],
@@ -11737,7 +11999,7 @@
    ]
   },
   {
-   "id": 213,
+   "id": 216,
    "name": "Mote89",
    "parent": null,
    "children": [],
@@ -11786,7 +12048,7 @@
    ]
   },
   {
-   "id": 214,
+   "id": 217,
    "name": "Mote90",
    "parent": null,
    "children": [],
@@ -11835,7 +12097,7 @@
    ]
   },
   {
-   "id": 215,
+   "id": 218,
    "name": "Mote91",
    "parent": null,
    "children": [],
@@ -11884,7 +12146,7 @@
    ]
   },
   {
-   "id": 216,
+   "id": 219,
    "name": "Mote92",
    "parent": null,
    "children": [],
@@ -11933,7 +12195,7 @@
    ]
   },
   {
-   "id": 217,
+   "id": 220,
    "name": "Mote93",
    "parent": null,
    "children": [],
@@ -11982,7 +12244,7 @@
    ]
   },
   {
-   "id": 218,
+   "id": 221,
    "name": "Mote94",
    "parent": null,
    "children": [],
@@ -12031,7 +12293,7 @@
    ]
   },
   {
-   "id": 219,
+   "id": 222,
    "name": "Mote95",
    "parent": null,
    "children": [],
@@ -12080,7 +12342,7 @@
    ]
   },
   {
-   "id": 220,
+   "id": 223,
    "name": "Mote96",
    "parent": null,
    "children": [],
@@ -12129,7 +12391,7 @@
    ]
   },
   {
-   "id": 221,
+   "id": 224,
    "name": "Mote97",
    "parent": null,
    "children": [],
@@ -12178,7 +12440,7 @@
    ]
   },
   {
-   "id": 222,
+   "id": 225,
    "name": "Mote98",
    "parent": null,
    "children": [],
@@ -12227,7 +12489,7 @@
    ]
   },
   {
-   "id": 223,
+   "id": 226,
    "name": "Mote99",
    "parent": null,
    "children": [],
@@ -12276,7 +12538,7 @@
    ]
   },
   {
-   "id": 224,
+   "id": 227,
    "name": "Mote100",
    "parent": null,
    "children": [],
@@ -12325,7 +12587,7 @@
    ]
   },
   {
-   "id": 225,
+   "id": 228,
    "name": "Mote101",
    "parent": null,
    "children": [],
@@ -12374,7 +12636,7 @@
    ]
   },
   {
-   "id": 226,
+   "id": 229,
    "name": "Mote102",
    "parent": null,
    "children": [],
@@ -12423,7 +12685,7 @@
    ]
   },
   {
-   "id": 227,
+   "id": 230,
    "name": "Mote103",
    "parent": null,
    "children": [],
@@ -12472,7 +12734,7 @@
    ]
   },
   {
-   "id": 228,
+   "id": 231,
    "name": "Mote104",
    "parent": null,
    "children": [],
@@ -12521,7 +12783,7 @@
    ]
   },
   {
-   "id": 229,
+   "id": 232,
    "name": "Mote105",
    "parent": null,
    "children": [],
@@ -12570,7 +12832,7 @@
    ]
   },
   {
-   "id": 230,
+   "id": 233,
    "name": "Mote106",
    "parent": null,
    "children": [],
@@ -12619,7 +12881,7 @@
    ]
   },
   {
-   "id": 231,
+   "id": 234,
    "name": "Mote107",
    "parent": null,
    "children": [],
@@ -12668,7 +12930,7 @@
    ]
   },
   {
-   "id": 232,
+   "id": 235,
    "name": "Mote108",
    "parent": null,
    "children": [],
@@ -12717,7 +12979,7 @@
    ]
   },
   {
-   "id": 233,
+   "id": 236,
    "name": "Mote109",
    "parent": null,
    "children": [],
@@ -12766,7 +13028,7 @@
    ]
   },
   {
-   "id": 234,
+   "id": 237,
    "name": "Mote110",
    "parent": null,
    "children": [],
@@ -12815,7 +13077,7 @@
    ]
   },
   {
-   "id": 235,
+   "id": 238,
    "name": "Mote111",
    "parent": null,
    "children": [],
@@ -12864,7 +13126,7 @@
    ]
   },
   {
-   "id": 236,
+   "id": 239,
    "name": "Mote112",
    "parent": null,
    "children": [],
@@ -12913,7 +13175,7 @@
    ]
   },
   {
-   "id": 237,
+   "id": 240,
    "name": "Mote113",
    "parent": null,
    "children": [],
@@ -12962,7 +13224,7 @@
    ]
   },
   {
-   "id": 238,
+   "id": 241,
    "name": "Mote114",
    "parent": null,
    "children": [],
@@ -13011,7 +13273,7 @@
    ]
   },
   {
-   "id": 239,
+   "id": 242,
    "name": "Mote115",
    "parent": null,
    "children": [],
@@ -13060,7 +13322,7 @@
    ]
   },
   {
-   "id": 240,
+   "id": 243,
    "name": "Mote116",
    "parent": null,
    "children": [],
@@ -13109,7 +13371,7 @@
    ]
   },
   {
-   "id": 241,
+   "id": 244,
    "name": "Mote117",
    "parent": null,
    "children": [],
@@ -13158,7 +13420,7 @@
    ]
   },
   {
-   "id": 242,
+   "id": 245,
    "name": "Mote118",
    "parent": null,
    "children": [],
@@ -13207,7 +13469,7 @@
    ]
   },
   {
-   "id": 243,
+   "id": 246,
    "name": "Mote119",
    "parent": null,
    "children": [],
@@ -13256,7 +13518,7 @@
    ]
   },
   {
-   "id": 244,
+   "id": 247,
    "name": "Mote120",
    "parent": null,
    "children": [],
@@ -13305,7 +13567,7 @@
    ]
   },
   {
-   "id": 245,
+   "id": 248,
    "name": "Mote121",
    "parent": null,
    "children": [],
@@ -13354,7 +13616,7 @@
    ]
   },
   {
-   "id": 246,
+   "id": 249,
    "name": "Mote122",
    "parent": null,
    "children": [],
@@ -13403,7 +13665,7 @@
    ]
   },
   {
-   "id": 247,
+   "id": 250,
    "name": "Mote123",
    "parent": null,
    "children": [],
@@ -13452,7 +13714,7 @@
    ]
   },
   {
-   "id": 248,
+   "id": 251,
    "name": "Mote124",
    "parent": null,
    "children": [],
@@ -13501,7 +13763,7 @@
    ]
   },
   {
-   "id": 249,
+   "id": 252,
    "name": "Mote125",
    "parent": null,
    "children": [],
@@ -13550,7 +13812,7 @@
    ]
   },
   {
-   "id": 250,
+   "id": 253,
    "name": "Mote126",
    "parent": null,
    "children": [],
@@ -13599,7 +13861,7 @@
    ]
   },
   {
-   "id": 251,
+   "id": 254,
    "name": "Mote127",
    "parent": null,
    "children": [],
@@ -13648,7 +13910,7 @@
    ]
   },
   {
-   "id": 252,
+   "id": 255,
    "name": "Mote128",
    "parent": null,
    "children": [],
@@ -13697,7 +13959,7 @@
    ]
   },
   {
-   "id": 253,
+   "id": 256,
    "name": "Mote129",
    "parent": null,
    "children": [],
@@ -13746,7 +14008,7 @@
    ]
   },
   {
-   "id": 254,
+   "id": 257,
    "name": "Mote130",
    "parent": null,
    "children": [],
@@ -13795,7 +14057,7 @@
    ]
   },
   {
-   "id": 255,
+   "id": 258,
    "name": "Mote131",
    "parent": null,
    "children": [],
@@ -13844,7 +14106,7 @@
    ]
   },
   {
-   "id": 256,
+   "id": 259,
    "name": "Mote132",
    "parent": null,
    "children": [],
@@ -13893,7 +14155,7 @@
    ]
   },
   {
-   "id": 257,
+   "id": 260,
    "name": "Mote133",
    "parent": null,
    "children": [],
@@ -13942,7 +14204,7 @@
    ]
   },
   {
-   "id": 258,
+   "id": 261,
    "name": "Mote134",
    "parent": null,
    "children": [],
@@ -13991,7 +14253,7 @@
    ]
   },
   {
-   "id": 259,
+   "id": 262,
    "name": "Mote135",
    "parent": null,
    "children": [],
@@ -14040,7 +14302,7 @@
    ]
   },
   {
-   "id": 260,
+   "id": 263,
    "name": "Mote136",
    "parent": null,
    "children": [],
@@ -14089,7 +14351,7 @@
    ]
   },
   {
-   "id": 261,
+   "id": 264,
    "name": "Mote137",
    "parent": null,
    "children": [],
@@ -14138,7 +14400,7 @@
    ]
   },
   {
-   "id": 262,
+   "id": 265,
    "name": "Mote138",
    "parent": null,
    "children": [],
@@ -14187,7 +14449,7 @@
    ]
   },
   {
-   "id": 263,
+   "id": 266,
    "name": "Mote139",
    "parent": null,
    "children": [],
@@ -14236,7 +14498,7 @@
    ]
   },
   {
-   "id": 264,
+   "id": 267,
    "name": "Mote140",
    "parent": null,
    "children": [],
@@ -14285,7 +14547,7 @@
    ]
   },
   {
-   "id": 265,
+   "id": 268,
    "name": "Mote141",
    "parent": null,
    "children": [],
@@ -14334,7 +14596,7 @@
    ]
   },
   {
-   "id": 266,
+   "id": 269,
    "name": "Mote142",
    "parent": null,
    "children": [],
@@ -14383,7 +14645,7 @@
    ]
   },
   {
-   "id": 267,
+   "id": 270,
    "name": "Mote143",
    "parent": null,
    "children": [],
@@ -14432,7 +14694,7 @@
    ]
   },
   {
-   "id": 268,
+   "id": 271,
    "name": "Mote144",
    "parent": null,
    "children": [],
@@ -14481,7 +14743,7 @@
    ]
   },
   {
-   "id": 269,
+   "id": 272,
    "name": "Mote145",
    "parent": null,
    "children": [],
@@ -14530,7 +14792,7 @@
    ]
   },
   {
-   "id": 270,
+   "id": 273,
    "name": "Mote146",
    "parent": null,
    "children": [],
@@ -14579,7 +14841,7 @@
    ]
   },
   {
-   "id": 271,
+   "id": 274,
    "name": "Mote147",
    "parent": null,
    "children": [],
@@ -14628,7 +14890,7 @@
    ]
   },
   {
-   "id": 272,
+   "id": 275,
    "name": "Mote148",
    "parent": null,
    "children": [],
@@ -14677,7 +14939,7 @@
    ]
   },
   {
-   "id": 273,
+   "id": 276,
    "name": "Mote149",
    "parent": null,
    "children": [],
@@ -14726,7 +14988,7 @@
    ]
   },
   {
-   "id": 274,
+   "id": 277,
    "name": "Rock0",
    "parent": null,
    "children": [],
@@ -14775,7 +15037,7 @@
    ]
   },
   {
-   "id": 275,
+   "id": 278,
    "name": "Rock1",
    "parent": null,
    "children": [],
@@ -14824,7 +15086,7 @@
    ]
   },
   {
-   "id": 276,
+   "id": 279,
    "name": "Rock2",
    "parent": null,
    "children": [],
@@ -14873,7 +15135,7 @@
    ]
   },
   {
-   "id": 277,
+   "id": 280,
    "name": "Rock3",
    "parent": null,
    "children": [],
@@ -14922,7 +15184,7 @@
    ]
   },
   {
-   "id": 278,
+   "id": 281,
    "name": "Rock4",
    "parent": null,
    "children": [],
@@ -14971,7 +15233,7 @@
    ]
   },
   {
-   "id": 279,
+   "id": 282,
    "name": "Rock5",
    "parent": null,
    "children": [],
@@ -15020,7 +15282,7 @@
    ]
   },
   {
-   "id": 280,
+   "id": 283,
    "name": "Rock6",
    "parent": null,
    "children": [],
@@ -15069,7 +15331,7 @@
    ]
   },
   {
-   "id": 281,
+   "id": 284,
    "name": "Rock7",
    "parent": null,
    "children": [],
@@ -15118,7 +15380,7 @@
    ]
   },
   {
-   "id": 282,
+   "id": 285,
    "name": "Rock8",
    "parent": null,
    "children": [],
@@ -15167,7 +15429,7 @@
    ]
   },
   {
-   "id": 283,
+   "id": 286,
    "name": "Rock9",
    "parent": null,
    "children": [],
@@ -15216,7 +15478,7 @@
    ]
   },
   {
-   "id": 284,
+   "id": 287,
    "name": "Rock10",
    "parent": null,
    "children": [],
@@ -15265,7 +15527,7 @@
    ]
   },
   {
-   "id": 285,
+   "id": 288,
    "name": "Rock11",
    "parent": null,
    "children": [],
@@ -15314,7 +15576,7 @@
    ]
   },
   {
-   "id": 286,
+   "id": 289,
    "name": "Rock12",
    "parent": null,
    "children": [],
@@ -15363,7 +15625,7 @@
    ]
   },
   {
-   "id": 287,
+   "id": 290,
    "name": "Rock13",
    "parent": null,
    "children": [],
@@ -15412,7 +15674,7 @@
    ]
   },
   {
-   "id": 288,
+   "id": 291,
    "name": "Rock14",
    "parent": null,
    "children": [],
@@ -15461,7 +15723,7 @@
    ]
   },
   {
-   "id": 289,
+   "id": 292,
    "name": "Rock15",
    "parent": null,
    "children": [],
@@ -15510,7 +15772,7 @@
    ]
   },
   {
-   "id": 290,
+   "id": 293,
    "name": "Rock16",
    "parent": null,
    "children": [],
@@ -15559,7 +15821,7 @@
    ]
   },
   {
-   "id": 291,
+   "id": 294,
    "name": "Rock17",
    "parent": null,
    "children": [],
@@ -15608,7 +15870,7 @@
    ]
   },
   {
-   "id": 292,
+   "id": 295,
    "name": "Rock18",
    "parent": null,
    "children": [],
@@ -15657,7 +15919,7 @@
    ]
   },
   {
-   "id": 293,
+   "id": 296,
    "name": "Rock19",
    "parent": null,
    "children": [],
@@ -15706,7 +15968,7 @@
    ]
   },
   {
-   "id": 294,
+   "id": 297,
    "name": "Rock20",
    "parent": null,
    "children": [],
@@ -15755,7 +16017,7 @@
    ]
   },
   {
-   "id": 295,
+   "id": 298,
    "name": "Rock21",
    "parent": null,
    "children": [],
@@ -15804,7 +16066,7 @@
    ]
   },
   {
-   "id": 296,
+   "id": 299,
    "name": "Rock22",
    "parent": null,
    "children": [],
@@ -15853,7 +16115,7 @@
    ]
   },
   {
-   "id": 297,
+   "id": 300,
    "name": "Rock23",
    "parent": null,
    "children": [],
@@ -15902,7 +16164,7 @@
    ]
   },
   {
-   "id": 298,
+   "id": 301,
    "name": "Rock24",
    "parent": null,
    "children": [],
@@ -15951,7 +16213,7 @@
    ]
   },
   {
-   "id": 299,
+   "id": 302,
    "name": "Rock25",
    "parent": null,
    "children": [],
@@ -16000,7 +16262,7 @@
    ]
   },
   {
-   "id": 300,
+   "id": 303,
    "name": "Rock26",
    "parent": null,
    "children": [],
@@ -16049,7 +16311,7 @@
    ]
   },
   {
-   "id": 301,
+   "id": 304,
    "name": "Rock27",
    "parent": null,
    "children": [],
@@ -16098,7 +16360,7 @@
    ]
   },
   {
-   "id": 302,
+   "id": 305,
    "name": "Rock28",
    "parent": null,
    "children": [],
@@ -16147,7 +16409,7 @@
    ]
   },
   {
-   "id": 303,
+   "id": 306,
    "name": "Rock29",
    "parent": null,
    "children": [],
@@ -16196,7 +16458,7 @@
    ]
   },
   {
-   "id": 304,
+   "id": 307,
    "name": "Rock30",
    "parent": null,
    "children": [],
@@ -16245,7 +16507,7 @@
    ]
   },
   {
-   "id": 305,
+   "id": 308,
    "name": "Rock31",
    "parent": null,
    "children": [],
@@ -16294,7 +16556,7 @@
    ]
   },
   {
-   "id": 306,
+   "id": 309,
    "name": "Rock32",
    "parent": null,
    "children": [],
@@ -16343,7 +16605,7 @@
    ]
   },
   {
-   "id": 307,
+   "id": 310,
    "name": "Rock33",
    "parent": null,
    "children": [],
@@ -16392,7 +16654,7 @@
    ]
   },
   {
-   "id": 308,
+   "id": 311,
    "name": "Rock34",
    "parent": null,
    "children": [],
@@ -16441,7 +16703,7 @@
    ]
   },
   {
-   "id": 309,
+   "id": 312,
    "name": "Rock35",
    "parent": null,
    "children": [],
@@ -16490,7 +16752,7 @@
    ]
   },
   {
-   "id": 310,
+   "id": 313,
    "name": "Rock36",
    "parent": null,
    "children": [],
@@ -16539,7 +16801,7 @@
    ]
   },
   {
-   "id": 311,
+   "id": 314,
    "name": "Rock37",
    "parent": null,
    "children": [],
@@ -16588,7 +16850,7 @@
    ]
   },
   {
-   "id": 312,
+   "id": 315,
    "name": "Rock38",
    "parent": null,
    "children": [],
@@ -16637,7 +16899,7 @@
    ]
   },
   {
-   "id": 313,
+   "id": 316,
    "name": "Rock39",
    "parent": null,
    "children": [],
@@ -16686,7 +16948,7 @@
    ]
   },
   {
-   "id": 314,
+   "id": 317,
    "name": "Rock40",
    "parent": null,
    "children": [],
@@ -16735,7 +16997,7 @@
    ]
   },
   {
-   "id": 315,
+   "id": 318,
    "name": "Rock41",
    "parent": null,
    "children": [],
@@ -16784,7 +17046,7 @@
    ]
   },
   {
-   "id": 316,
+   "id": 319,
    "name": "Rock42",
    "parent": null,
    "children": [],
@@ -16833,7 +17095,7 @@
    ]
   },
   {
-   "id": 317,
+   "id": 320,
    "name": "Rock43",
    "parent": null,
    "children": [],
@@ -16882,7 +17144,7 @@
    ]
   },
   {
-   "id": 318,
+   "id": 321,
    "name": "Rock44",
    "parent": null,
    "children": [],
@@ -16931,7 +17193,7 @@
    ]
   },
   {
-   "id": 319,
+   "id": 322,
    "name": "Rock45",
    "parent": null,
    "children": [],
@@ -16980,12 +17242,12 @@
    ]
   },
   {
-   "id": 320,
+   "id": 323,
    "name": "GateA",
    "parent": null,
    "children": [
-    321,
-    322
+    324,
+    325
    ],
    "visible": true,
    "components": [
@@ -17021,135 +17283,8 @@
    ]
   },
   {
-   "id": 321,
-   "name": "GateAStrobe",
-   "parent": 320,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 266.5,
-       "z": 0
-      },
-      "scale": {
-       "x": 2.6,
-       "y": 2.6,
-       "z": 2.6
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/flare.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "layer": 2,
-      "material": "assets/materials/flare-white.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 322,
-   "name": "GateAField",
-   "parent": 320,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      },
-      "scale": {
-       "x": 157.0,
-       "y": 157.0,
-       "z": 157.0
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/gate-field.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": false,
-      "opaque": false,
-      "cullBackfaces": false,
-      "castShadows": false,
-      "layer": 2,
-      "material": "assets/materials/gatefield.esmaterial"
-     }
-    }
-   ]
-  },
-  {
-   "id": 323,
-   "name": "GateB",
-   "parent": null,
-   "children": [
-    324,
-    325
-   ],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": -60000,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/gate.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/gate.esmaterial",
-      "texture": "assets/models/gate_color.png"
-     }
-    }
-   ]
-  },
-  {
    "id": 324,
-   "name": "GateBStrobe",
+   "name": "GateAStrobe",
    "parent": 323,
    "children": [],
    "visible": true,
@@ -17192,7 +17327,7 @@
   },
   {
    "id": 325,
-   "name": "GateBField",
+   "name": "GateAField",
    "parent": 323,
    "children": [],
    "visible": true,
@@ -17235,6 +17370,133 @@
   },
   {
    "id": 326,
+   "name": "GateB",
+   "parent": null,
+   "children": [
+    327,
+    328
+   ],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": -60000,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/gate.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/gate.esmaterial",
+      "texture": "assets/models/gate_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 327,
+   "name": "GateBStrobe",
+   "parent": 326,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 266.5,
+       "z": 0
+      },
+      "scale": {
+       "x": 2.6,
+       "y": 2.6,
+       "z": 2.6
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/flare.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "layer": 2,
+      "material": "assets/materials/flare-white.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 328,
+   "name": "GateBField",
+   "parent": 326,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": {
+       "x": 157.0,
+       "y": 157.0,
+       "z": 157.0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/gate-field.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "layer": 2,
+      "material": "assets/materials/gatefield.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 329,
    "name": "Planet0",
    "parent": null,
    "children": [],
@@ -17277,7 +17539,7 @@
    ]
   },
   {
-   "id": 327,
+   "id": 330,
    "name": "Atmosphere0",
    "parent": null,
    "children": [],
@@ -17319,7 +17581,7 @@
    ]
   },
   {
-   "id": 328,
+   "id": 331,
    "name": "Planet1",
    "parent": null,
    "children": [],
@@ -17362,7 +17624,7 @@
    ]
   },
   {
-   "id": 329,
+   "id": 332,
    "name": "Atmosphere1",
    "parent": null,
    "children": [],
@@ -17404,7 +17666,7 @@
    ]
   },
   {
-   "id": 330,
+   "id": 333,
    "name": "Veil1",
    "parent": null,
    "children": [],
@@ -17447,7 +17709,7 @@
    ]
   },
   {
-   "id": 331,
+   "id": 334,
    "name": "Ring1",
    "parent": null,
    "children": [],
@@ -17495,7 +17757,7 @@
    ]
   },
   {
-   "id": 332,
+   "id": 335,
    "name": "Planet2",
    "parent": null,
    "children": [],
@@ -17538,7 +17800,7 @@
    ]
   },
   {
-   "id": 333,
+   "id": 336,
    "name": "Atmosphere2",
    "parent": null,
    "children": [],
@@ -17580,7 +17842,7 @@
    ]
   },
   {
-   "id": 334,
+   "id": 337,
    "name": "Veil2",
    "parent": null,
    "children": [],

@@ -59,7 +59,7 @@ export function installAudio(app: App): void {
 
         const now: ShipSound = {
             throttle: ship.throttle, order: helm.order, rudder: helm.rudder, elevation: helm.elevation, mode: helm.mode, arrivals: helm.arrivals,
-            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps,
+            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps, impacts: ship.impacts, blow: ship.blow?.closing ?? 0,
         };
         const hum = engineVoice(now.throttle), cut = beamVoice(now.firing, now.heat);
         engine = voice(world, engine, 'EngineSound', SOUNDS.engine, ENGINE_AT, ENGINE_REACH, hum, 1.2);

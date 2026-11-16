@@ -20,6 +20,7 @@ export const ENGINE_ORDERS = [0, 0.25, 0.5, 0.75, 1] as const;
 export const RUDDER_ORDERS = [-1, -2 / 3, -1 / 3, 0, 1 / 3, 2 / 3, 1] as const;
 export const ELEVATION_ORDERS = [-1, -0.5, 0, 0.5, 1] as const;
 const GATE_REACH = 260;
+export const STANDOFF = 200;
 
 export const mulQuat = (a: Quat, b: Quat): Quat => ({
     x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
@@ -109,6 +110,7 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
     if (tapped('align', keys.align, dt)) engage('align');
     if (tapped('level', keys.level, dt)) engage('level');
     if (helm.mode === 'approach' && !helm.aim) steady();
+    if (helm.mode === 'approach' && helm.aim && Math.hypot(helm.aim.x, helm.aim.y, helm.aim.z) < STANDOFF) { steady(); setEngine(0); }
 
     let want = { yaw: -helm.rudder * TURN_RATE, pitch: helm.elevation * PITCH_RATE, roll: 0 };
     const to = helm.mode === 'approach' ? helm.aim : helm.mode === 'align' ? helm.gate : null;

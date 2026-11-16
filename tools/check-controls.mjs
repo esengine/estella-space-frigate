@@ -191,6 +191,45 @@ try {
     expect('the system changes in the middle of the jump, behind the flash', changed > 2.2 && changed < 2.5, changed);
     expect('the jump ends, in a few seconds', now.jump === -1 && longest > 4 && longest < 4.7, { jump: now.jump, longest });
     expect('and leaves her in the next system, with its planet and the view as it was', now.system === 'VELA' && now.planets === '010' && now.fov === 34 && now.jumps === 1, now);
+    await voyage.close();
+
+    const ram = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    ram.on('pageerror', (e) => problems.push(String(e)));
+    ram.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
+    await ram.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
+    await ram.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await ram.waitForFunction(() => window.__spaceHud?.ready || window.__spaceHud?.error, null, { timeout: 120000 });
+    await ram.evaluate(() => window.__estellaCooked.setPaused(true));
+    const drive = (n) => ram.evaluate((frames) => window.__estellaCooked.step(frames), n);
+    const press = async (key) => { await ram.keyboard.down(key); await drive(1); await ram.keyboard.up(key); await drive(1); };
+    const state = () => ram.evaluate(() => { const f = window.__estellaCooked.facts(), h = window.__spaceHud.helm; return { time: f.time, shield: f.shield, hull: f.hull, impacts: f.impacts, gap: f.gap, closest: f.closest, speed: f.speed, mode: h.mode, order: h.order, aim: h.aim ? Math.round(Math.hypot(h.aim.x, h.aim.y, h.aim.z)) : null }; });
+    {
+    await drive(240);
+    const whole = await state();
+    expect('she starts whole, with nothing touching her', whole.shield === 1 && whole.hull === 1 && whole.impacts === 0 && whole.closest > 50, whole);
+    await press('KeyT');
+    await drive(90);
+    await press('KeyV');
+    await drive(2);
+    let held = await state();
+    expect('T locks a rock and V turns her toward it', held.mode === 'approach' && held.aim > 200, held);
+    for (let second = 0; second < 120 && held.mode !== 'manual'; second++) { await drive(60); held = await state(); }
+    await drive(240);
+    held = await state();
+    expect('closing on a rock she stops short of it', held.mode === 'manual' && held.order === 0 && held.impacts === 0 && held.aim > 60 && held.aim <= 200 && held.speed < 60, held);
+    for (let n = 0; n < 4; n++) await press('KeyW');
+    let fastest = 0, struck = held;
+    for (let frame = 0; frame < 2400 && struck.impacts === 0; frame += 6) { fastest = Math.max(fastest, struck.speed); await drive(6); struck = await state(); }
+    expect('driven on, she hits it', struck.impacts >= 1, struck);
+    expect('the blow comes off the shield and takes way off her', struck.shield < 1 && struck.hull === 1 && struck.speed < fastest - 1, { shield: struck.shield, speed: struck.speed, fastest });
+    await drive(180);
+    const after = await state();
+    expect('and the rock is knocked away: at no moment is it inside the hull', after.closest > -0.5 && after.gap > -0.5, { closest: after.closest, gap: after.gap });
+    for (let n = 0; n < 4; n++) await press('KeyS');
+    await drive(60 * 9);
+    const mended = await state();
+    expect('left alone the shield comes back', mended.shield > after.shield && mended.impacts === after.impacts, { before: after.shield, now: mended.shield, impacts: [after.impacts, mended.impacts] });
+    }
 } finally {
     await browser.close();
     server.close();

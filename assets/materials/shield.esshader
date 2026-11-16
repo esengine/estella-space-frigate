@@ -1,0 +1,57 @@
+#pragma shader "Ship Shield"
+#pragma version 300 es
+#pragma domain Unlit
+#pragma feature MESH_LOCAL_POSITION
+#pragma param u_tint color default(0.35,0.7,1,1)
+#pragma param u_hot color default(0.85,0.95,1,1)
+#pragma param u_strength float default(2.4) range(0,20)
+#pragma param u_glow float default(0) range(0,1)
+#pragma param u_hit vec3 default(0,0,1)
+
+#pragma fragment
+precision highp float;
+
+in vec4 v_color;
+in vec2 v_texCoord;
+#ifdef MESH_NORMALS
+in highp vec3 v_worldNormal;
+in highp vec3 v_worldXYZ;
+#endif
+#ifdef MESH_LOCAL_POSITION
+in highp vec3 v_localPos;
+#endif
+
+out vec4 fragColor;
+
+float cells(vec2 p) {
+    vec2 q = vec2(p.x * 1.1547, p.y + p.x * 0.57735);
+    vec2 i = floor(q), f = fract(q);
+    float skew = step(f.x, f.y);
+    vec2 a = f - vec2(0.0, 0.0), b = f - vec2(1.0, 1.0), c = f - vec2(1.0 - skew, skew);
+    float near = min(min(dot(a, a), dot(b, b)), dot(c, c));
+    return smoothstep(0.16, 0.3, near);
+}
+
+void main() {
+    vec3 at = vec3(0.0, 0.0, 1.0);
+    float facing = 0.5;
+#ifdef MESH_LOCAL_POSITION
+    at = normalize(v_localPos);
+#endif
+#ifdef MESH_NORMALS
+    facing = abs(dot(normalize(v_worldNormal), viewDirection(v_worldXYZ)));
+#endif
+    float away = acos(clamp(dot(at, normalize(u_hit)), -1.0, 1.0));
+    float spent = 1.0 - u_glow;
+    float front = spent * 2.6;
+    float ring = exp(-pow((away - front) / 0.06, 2.0));
+    float core = exp(-pow(away / 0.5, 2.0)) * u_glow * u_glow;
+    float wake = step(away, front) * exp(-(front - away) * 6.0) * 0.3;
+    vec2 spread = vec2(atan(at.x, at.z), asin(clamp(at.y, -1.0, 1.0))) * 24.0;
+    float mesh = 0.2 + 0.8 * cells(spread);
+    float rim = pow(1.0 - facing, 4.0) * 0.12;
+    float lit = (ring + core * 1.4 + wake) * mesh + rim * u_glow;
+    vec3 tone = mix(u_tint.rgb, u_hot.rgb, clamp(ring + core, 0.0, 1.0));
+    fragColor = vec4(tone * (lit * u_glow * u_strength), 1.0);
+}
+#pragma end

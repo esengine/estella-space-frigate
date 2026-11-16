@@ -760,6 +760,8 @@ def make_materials():
         **{f"veil-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'veil.esshader', 'blendMode': 2, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                                   'properties': {'u_tint': dict(zip('rgb', sys['veil']), a=1)}}
            for sys in SYSTEMS if 'veil' in sys},
+        'shield': {'version': '1.0', 'type': 'material', 'shader': 'shield.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                   'properties': {'u_tint': {'r': 0.35, 'g': 0.7, 'b': 1.0, 'a': 1}, 'u_hot': {'r': 0.85, 'g': 0.95, 'b': 1.0, 'a': 1}, 'u_strength': 1.7, 'u_glow': 0, 'u_hit': [0, 0, 1]}},
         'warp': {'version': '1.0', 'type': 'material', 'shader': 'warp.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                  'properties': {'u_core': {'r': 0.8, 'g': 0.93, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.1, 'g': 0.3, 'b': 1.0, 'a': 1}, 'u_strength': 1, 'u_cover': 0, 'u_travel': 0, 'u_flash': 0, 'u_half': WARP['half']}},
         'plume': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
@@ -787,7 +789,7 @@ def make_materials():
         stamp(path, 'material')
     for old in ('atmosphere.esmaterial', 'atmosphere.esmaterial.meta'):
         (MAT / old).unlink(missing_ok=True)
-    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'veil'):
+    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'veil', 'shield'):
         stamp(MAT / f'{name}.esshader', 'shader')
     stamp(ROOT / 'assets/fx/puff.esimage', 'imageSource')
     for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'turret', 'guns')):
@@ -907,6 +909,9 @@ def make_scene():
     for name, at, way in JETS:
         add(f'Jet{name}', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), look((0, 0, 0), way), (0.001,) * 3), mesh('jet', 'assets/materials/jet.esmaterial', None, False, False, False, False)], ship)
         add(f'Jet{name}Gas', [transform(tuple(a + w * 0.9 for a, w in zip(at, way)), aim_y(way)), emitter(**GAS)], ship)
+    add('Shield', [transform((0, 1, 2), None, (0.001,) * 3), mesh('shell', 'assets/materials/shield.esmaterial', None, False, False, False, False)], ship)
+    add('HullSparks', [transform(), emitter(**SPARKS)])
+    add('HullDust', [transform(), emitter(**SMOKE)])
     add('GunSparks', [transform(), emitter(**SPARKS)])
     add('GunSmoke', [transform(), emitter(**SMOKE)])
     add('GunBlast', [transform(), emitter(**BLAST)])

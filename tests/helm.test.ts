@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: Copyright (c) 2024-present ESEngine Team
-import { PITCH_THRUST, TURN_RATE, YAW_THRUST, engage, helm, setElevation, setRudder, steady, stepHelm, type HelmKeys } from '../src/helm';
+import { PITCH_THRUST, STANDOFF, TURN_RATE, YAW_THRUST, engage, helm, setElevation, setRudder, steady, stepHelm, type HelmKeys } from '../src/helm';
 
 const IDLE: HelmKeys = { ahead: false, astern: false, port: false, starboard: false, climb: false, dive: false, steady: false, approach: false, align: false, level: false };
 const STEP = 1 / 60;
@@ -121,6 +121,19 @@ describe('how the space frigate answers its helm', () => {
             expect(helm.mode).toBe('manual');
             expect(Math.abs(helm.yawRate) + Math.abs(helm.pitchRate) + Math.abs(helm.rollRate)).toBeLessThan(0.01);
         }
+    });
+
+    it('closing on a target, she stops her engines short of it instead of ramming it', () => {
+        helm.aim = { x: 0, y: 0, z: STANDOFF + 40 };
+        engage('approach');
+        run(0.1);
+        expect(helm.mode).toBe('approach');
+        expect(helm.order).toBe(0.75);
+        helm.aim = { x: 0, y: 0, z: STANDOFF - 1 };
+        run(0.1);
+        expect(helm.mode).toBe('manual');
+        expect(helm.order).toBe(0);
+        expect(helm.rudder).toBe(0);
     });
 
     it('a hand on the rudder takes her back from coming level', () => {

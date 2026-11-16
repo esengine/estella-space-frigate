@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "duration": 2.2,
+  "gain": 0.85,
+  "lowpass": 5200,
+  "reverb": {
+    "size": 0.5,
+    "mix": 0.3,
+    "kind": "room"
+  },
+  "layers": [
+    {
+      "id": "crack",
+      "source": "noise",
+      "band": [
+        500,
+        4200
+      ],
+      "seed": 113,
+      "attack": 0.001,
+      "decay": 0.05,
+      "gain": 0.8
+    },
+    {
+      "id": "thud",
+      "source": "sine",
+      "freq": [
+        [
+          0,
+          120
+        ],
+        [
+          0.1,
+          52
+        ],
+        [
+          0.6,
+          36
+        ]
+      ],
+      "attack": 0.001,
+      "decay": 0.4,
+      "gain": 1
+    },
+    {
+      "id": "plate",
+      "source": "modes",
+      "gain": 0.45,
+      "modes": [
+        [
+          212,
+          1,
+          0.7
+        ],
+        [
+          347,
+          0.6,
+          0.5
+        ],
+        [
+          561,
+          0.4,
+          0.35
+        ],
+        [
+          903,
+          0.2,
+          0.25
+        ]
+      ]
+    },
+    {
+      "id": "groan",
+      "source": "noise",
+      "color": "brown",
+      "seed": 117,
+      "start": 0.04,
+      "attack": 0.03,
+      "decay": 0.9,
+      "gain": 0.5,
+      "filters": [
+        {
+          "type": "lowpass",
+          "freq": 300
+        }
+      ]
+    }
+  ]
+}

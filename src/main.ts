@@ -5,8 +5,9 @@ import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit 
 import { createGunnery, guns } from './gunnery';
 import { helm, mulQuat, turnBy, type Quat } from './helm';
 import { installHud } from './hud';
+import { createImpacts } from './impacts';
 import { JUMP, jumpAt, nextSystem } from './jump';
-import { ship, TOP_SPEED, DRIFTING_ROCKS, FIELD_HALF_LENGTH, FIELD_DRIFT } from './shipState';
+import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { SYSTEMS } from './systems';
 
 const PLUMES = [
@@ -49,7 +50,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '' };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0 };
         app.insertResource(Playthrough, { facts });
         installHud(app);
         installAudio(app);
@@ -78,6 +79,7 @@ addPlugin({
         let wide = FOV;
         let open = false;
         const gunnery = createGunnery(app);
+        const impacts = createImpacts(app);
 
         const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
         const light = (world: World, name: string, way: { x: number; y: number; z: number }, color: { r: number; g: number; b: number; a: number }, intensity: number): void => {
@@ -259,17 +261,13 @@ addPlugin({
 
             const cruise = ship.speed * FIELD_DRIFT * dt, drift = cruise * (1 + JUMP.rush * leap.rush);
             const leavingField = ship.jump >= 0 && !leap.swapped, past = leavingField ? drift : cruise;
-            for (let i = 0; i < DRIFTING_ROCKS; i++) {
-                const e = get(world, `Rock${i}`);
-                const t = world.get(e, Transform);
-                const round = (v: number, half: number): number => (leavingField ? v : v < -half ? v + half * 2 : v > half ? v - half * 2 : v);
-                t.position = {
-                    x: round(t.position.x - helm.forward.x * past, FIELD_HALF_LENGTH * 1.2),
-                    y: round(t.position.y - helm.forward.y * past, FIELD_HALF_LENGTH * 0.7),
-                    z: round(t.position.z - helm.forward.z * past, FIELD_HALF_LENGTH),
-                };
-                world.insert(e, Transform, t);
-            }
+            impacts(world, dt, cruise, past, leavingField);
+            facts.shield = ship.shield;
+            facts.hull = ship.hull;
+            facts.impacts = ship.impacts;
+            facts.gap = Number.isFinite(ship.gap) ? ship.gap : 9999;
+            facts.closest = Number.isFinite(ship.closest) ? ship.closest : 9999;
+            facts.speed = ship.speed;
 
             if (helm.arrivals !== arrivals) {
                 arrivals = helm.arrivals;

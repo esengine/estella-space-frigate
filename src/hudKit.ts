@@ -1,3 +1,4 @@
+import { HULL_BOXES } from './collision';
 import {
     BlendMode, Canvas, Material, Name, ScaleMode, Text, TextAlign, TextVerticalAlign, Transform, UINode, UIPointerEvents, UIPositionType, UIVisual, UIVisualType,
     placeOnScreen, px, spawnUIEntity,
@@ -193,12 +194,6 @@ export function createKit(world: World, textures: Textures, fonts: { regular: nu
 
     return { world, root, textures, node, image, sliced, solid, label, centred, pivot, tilt, lift, glow, say, ink, fill, fade, place, size, turn };
 }
-
-const HULL_BOXES: readonly (readonly number[])[] = [
-    [-10.5, -6, -46, 10.5, 5.6, 6], [-7, -4.8, 6, 7, 3.6, 34], [-4, -3.6, 34, 4, 1.6, 56],
-    [-5, 5.6, -36, 5, 9.4, 5], [-3.2, 9.4, -28, 3.2, 14.2, -18],
-    [-21, -4.6, -46, -13, 2.6, -8], [13, -4.6, -46, 21, 2.6, -8],
-];
 
 export function hullBlocks(from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }): boolean {
     const a = turnBack(helm.attitude, from), b = turnBack(helm.attitude, to);

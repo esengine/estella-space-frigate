@@ -9,6 +9,14 @@ export const ship = {
     bound: 0,
     jump: -1,
     jumps: 0,
+    shield: 1,
+    hull: 1,
+    impacts: 0,
+    breaches: 0,
+    struck: -100,
+    blow: null as { rock: number; closing: number; shielded: boolean } | null,
+    gap: Infinity,
+    closest: Infinity,
 };
 
 export const TOP_SPEED = 420;
