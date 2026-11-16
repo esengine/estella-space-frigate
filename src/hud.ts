@@ -49,7 +49,7 @@ export function installHud(app: App): void {
             for (let i = MAJOR_FROM; i < ROCKS; i++) { const e = world.findEntityByName(`Rock${i}`); if (e !== null) majors.push(e); }
         }
         for (const e of majors) world.update(e, Transform, (t) => { t.position = { x: t.position.x + moved.x, y: t.position.y + moved.y, z: t.position.z + moved.z }; });
-    }));
+    }, { name: 'space-frigate:helm' }));
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
         if (update) { update(Math.min(time.delta, 0.05), input); return; }
         if (world.findEntityByName('Camera') === null || boot.cover) return;
@@ -66,7 +66,7 @@ export function installHud(app: App): void {
             update = build(app, world, loaded);
             state.ready = true;
         }
-    }));
+    }, { name: 'space-frigate:hud' }));
 }
 
 type InputState = { isKeyDown(key: string): boolean; isMouseButtonDown(button: number): boolean };
