@@ -7,6 +7,7 @@ export const SOUNDS = {
     alarm: 'assets/audio/alarm.essound',
     rockBreak: 'assets/audio/rock-break.essound',
     gun: 'assets/audio/gun.essound',
+    jump: 'assets/audio/jump.essound',
 } as const;
 
 export const MUSIC = 'assets/audio/drift.esmusic';
@@ -31,6 +32,7 @@ export interface ShipSound {
     overheated: boolean;
     broken: number;
     shots: number;
+    jumps: number;
 }
 
 export interface Voice { playing: boolean; volume: number; pitch: number }
@@ -55,5 +57,6 @@ export function cuesBetween(before: ShipSound, now: ShipSound): Cue[] {
     if (now.overheated && !before.overheated) cues.push({ sound: 'alarm', volume: 0.3, pitch: 1 });
     if (now.broken > before.broken) cues.push({ sound: 'rockBreak', volume: 0.45, pitch: 1 });
     if (now.shots > before.shots) cues.push({ sound: 'gun', volume: 0.85, pitch: 0.92 + 0.03 * (now.shots % 5) });
+    if (now.jumps > before.jumps) cues.push({ sound: 'jump', volume: 0.7, pitch: 1 });
     return cues;
 }

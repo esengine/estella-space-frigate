@@ -6,6 +6,7 @@ import { METRES, helm, turnBy } from './helm';
 import { AMBER, DESIGN, HAZE, ICE, KEPT_CLEAR, ease, hullBlocks, keptClear, pad, reach, sameRoom, rgb, spaced, stamp, towardOnScreen, type Frame, type Kit, type Log, type Rock } from './hudKit';
 import { MINING, mining, rockClass } from './hudMining';
 import { ship } from './shipState';
+import { SYSTEMS } from './systems';
 
 const HULL = [{ x: 0, y: 0, z: 52 }, { x: 0, y: 0, z: -52 }, { x: 24, y: 0, z: -40 }, { x: -24, y: 0, z: -40 }, { x: 0, y: 16, z: -20 }, { x: 0, y: -10, z: 0 }, { x: 14, y: 0, z: 20 }, { x: -14, y: 0, z: 20 }];
 const MINOR = 6;
@@ -23,17 +24,15 @@ export interface TargetProbe {
     picks: { index: number; left: number; top: number }[];
 }
 
-export function buildTargets(kit: Kit, rocks: readonly Rock[], planet: Entity | null, log: Log): { update(frame: Frame): void; probe: TargetProbe } {
+export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { update(frame: Frame): void; probe: TargetProbe } {
     const { world, root, textures, node, image, sliced, solid, label, centred, say, ink, fill, fade, place, size, turn } = kit;
 
     const body = centred(node(root, 'Body', { left: 0, top: 0, width: 24, height: 24 }), 24, 68);
-    const globe = planet === null ? null : world.get(planet, Transform);
-    const altitude = globe ? Math.hypot(globe.position.x, globe.position.y, globe.position.z) - globe.scale.x : 0;
     world.insert(body, UIWorldAnchor, { clampToEdges: false });
     image(body, 'BodyMark', { left: -4, top: -4, width: 32, height: 32 }, textures.body);
     solid(body, 'BodyLeader', { left: 26, top: 12, width: 28, height: 1 }, rgb(ICE, 0.45));
-    label(body, 'BodyName', { left: 62, top: -3, width: 220, height: 14 }, { size: 11, color: rgb(ICE), spacing: 3, content: 'KARIS IV' });
-    label(body, 'BodyRange', { left: 62, top: 14, width: 220, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 2, strong: false, content: `ALTITUDE ${spaced(Math.round((altitude * METRES) / 100) * 100)} KM` });
+    const bodyName = label(body, 'BodyName', { left: 62, top: -3, width: 220, height: 14 }, { size: 11, color: rgb(ICE), spacing: 3 });
+    const bodyRange = label(body, 'BodyRange', { left: 62, top: 14, width: 220, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 2, strong: false });
 
     const minors = Array.from({ length: MINOR }, (_, i) => {
         const e = centred(node(root, `Contact${i}`, { left: 0, top: 0, width: 22, height: 22 }), 22, 22);
@@ -204,18 +203,22 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], planet: Entity | 
         const clear = keptClear(box.width, world.get(marker, UINode).insetLeft.value, 64, anchor.onScreen);
         if (!sameRoom(anchor.edgeInsets, clear)) world.update(marker, UIWorldAnchor, (anchored) => { anchored.edgeInsets = clear; });
         place(callout, world.get(marker, UINode).insetLeft.value > box.width - 380 ? -246 : 86, 2);
-        fade(callout, guns.view ? 0 : 1);
-        fade(bracket, anchor.clamped ? 0 : 1);
-        fade(diamond, anchor.clamped ? 0 : 1);
-        fade(chevron, anchor.clamped ? 0.75 + 0.25 * Math.sin(frame.time * 5) : 0);
+        const quiet = ship.jump >= 0;
+        fade(callout, guns.view || quiet ? 0 : 1);
+        fade(bracket, anchor.clamped || quiet ? 0 : 1);
+        fade(diamond, anchor.clamped || quiet ? 0 : 1);
+        fade(chevron, anchor.clamped && !quiet ? 0.75 + 0.25 * Math.sin(frame.time * 5) : 0);
         if (anchor.clamped && frame.lens) turn(chevron, towardOnScreen(frame.lens, gate));
         say(waypointName, `NAV ${pad(helm.leg, 2)}  ${helm.gateName}`);
         say(waypointRange, reach(away));
         say(waypointEta, ship.speed > 1 ? `ETA ${stamp((away * METRES) / ship.speed)}` : 'ETA  HOLDING');
 
-        if (globe && frame.lens) {
+        const globe = SYSTEMS[ship.system]!;
+        say(bodyName, globe.body);
+        say(bodyRange, `ALTITUDE ${spaced(Math.round(((Math.hypot(globe.at.x, globe.at.y, globe.at.z) - globe.radius) * METRES) / 100) * 100)} KM`);
+        if (frame.lens && ship.jump < 0) {
             const lens = frame.lens;
-            const q = lens.rotation, from = lens.position, c = globe.position, radius = globe.scale.x;
+            const q = lens.rotation, from = lens.position, c = globe.at, radius = globe.radius;
             const up = { x: 2 * (q.x * q.y - q.w * q.z), y: 1 - 2 * (q.x * q.x + q.z * q.z), z: 2 * (q.y * q.z + q.w * q.x) };
             const d = { x: c.x - from.x, y: c.y - from.y, z: c.z - from.z };
             const far = Math.hypot(d.x, d.y, d.z) || 1;

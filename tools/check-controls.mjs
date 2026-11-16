@@ -162,6 +162,35 @@ try {
     await step(30);
     const left = await facts();
     expect('leaving combat takes auto fire off with it', left.gunView === false && left.gunAuto === false, guns(left));
+    await page.close();
+
+    const voyage = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    voyage.on('pageerror', (e) => problems.push(String(e)));
+    voyage.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
+    await voyage.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
+    await voyage.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 120000 });
+    await voyage.evaluate(() => window.__estellaCooked.setPaused(true));
+    const sail = (n) => voyage.evaluate((frames) => window.__estellaCooked.step(frames), n);
+    const seen = () => voyage.evaluate(() => { const f = window.__estellaCooked.facts(); return { time: f.time, transits: f.transits, system: f.systemName, jump: f.jump, jumps: f.jumps, fov: f.fov, planets: f.planets }; });
+    const home = await seen();
+    expect('she starts in the first system with only its planet shown', home.system === 'KARIS' && home.planets === '100' && home.jump === -1 && home.fov === 34, home);
+    let through = home;
+    for (let second = 0; second < 100 && through.transits === 0; second++) { await sail(60); through = await seen(); }
+    expect('left alone she flies through the gate ahead', through.transits === 1, through);
+    await sail(2);
+    let widest = 0, changed = -1, longest = 0, now = await seen();
+    expect('and passing through it starts a jump', now.jump >= 0 && now.jumps === 1 && now.system === 'KARIS', now);
+    for (let frame = 0; frame < 400 && now.jump >= 0; frame += 4) {
+        widest = Math.max(widest, now.fov);
+        longest = Math.max(longest, now.jump);
+        if (changed < 0 && now.system !== 'KARIS') changed = now.jump;
+        await sail(4);
+        now = await seen();
+    }
+    expect('the view opens out as she accelerates', widest > 55, widest);
+    expect('the system changes in the middle of the jump, behind the flash', changed > 2.2 && changed < 2.5, changed);
+    expect('the jump ends, in a few seconds', now.jump === -1 && longest > 4 && longest < 4.7, { jump: now.jump, longest });
+    expect('and leaves her in the next system, with its planet and the view as it was', now.system === 'VELA' && now.planets === '010' && now.fov === 34 && now.jumps === 1, now);
 } finally {
     await browser.close();
     server.close();

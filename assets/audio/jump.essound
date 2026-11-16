@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "duration": 5.2,
+  "gain": 0.8,
+  "lowpass": 5200,
+  "reverb": {
+    "size": 0.8,
+    "mix": 0.4,
+    "kind": "open"
+  },
+  "layers": [
+    {
+      "id": "charge",
+      "source": "sine",
+      "freq": [
+        [
+          0,
+          48
+        ],
+        [
+          1.4,
+          120
+        ],
+        [
+          2.3,
+          360
+        ]
+      ],
+      "attack": 0.03,
+      "release": 0.25,
+      "length": 2.4,
+      "gain": [
+        [
+          0,
+          0.35
+        ],
+        [
+          1.6,
+          0.45
+        ],
+        [
+          2.3,
+          0.7
+        ],
+        [
+          2.4,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "whine",
+      "source": "triangle",
+      "freq": [
+        [
+          0,
+          190
+        ],
+        [
+          2.3,
+          1500
+        ]
+      ],
+      "attack": 0.6,
+      "release": 0.2,
+      "length": 2.4,
+      "gain": [
+        [
+          0,
+          0
+        ],
+        [
+          1.2,
+          0.07
+        ],
+        [
+          2.3,
+          0.22
+        ],
+        [
+          2.4,
+          0
+        ]
+      ],
+      "filters": [
+        {
+          "type": "lowpass",
+          "freq": 2600
+        }
+      ]
+    },
+    {
+      "id": "rush",
+      "source": "noise",
+      "color": "pink",
+      "band": [
+        180,
+        2600
+      ],
+      "seed": 91,
+      "attack": 0.08,
+      "release": 1.6,
+      "length": 4.6,
+      "gain": [
+        [
+          0,
+          0.16
+        ],
+        [
+          2.2,
+          0.5
+        ],
+        [
+          2.5,
+          0.6
+        ],
+        [
+          4.6,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "boom",
+      "source": "sine",
+      "freq": [
+        [
+          0,
+          92
+        ],
+        [
+          0.25,
+          44
+        ],
+        [
+          1.2,
+          28
+        ]
+      ],
+      "start": 2.28,
+      "attack": 0.004,
+      "decay": 1.3,
+      "gain": 1
+    },
+    {
+      "id": "wash",
+      "source": "noise",
+      "color": "brown",
+      "seed": 93,
+      "start": 2.3,
+      "attack": 0.02,
+      "decay": 2.2,
+      "gain": 0.7,
+      "filters": [
+        {
+          "type": "lowpass",
+          "freq": 420
+        }
+      ]
+    },
+    {
+      "id": "settle",
+      "source": "modes",
+      "start": 3.5,
+      "gain": 0.3,
+      "modes": [
+        [
+          440,
+          1,
+          1.1
+        ],
+        [
+          659.25,
+          0.5,
+          0.9
+        ],
+        [
+          1318.5,
+          0.15,
+          0.5
+        ]
+      ]
+    }
+  ]
+}

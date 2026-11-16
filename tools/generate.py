@@ -20,9 +20,21 @@ CLI = REPO / 'pipeline/bin/estella.mjs'
 MAP = int(sys.argv[sys.argv.index('--size') + 1]) if '--size' in sys.argv else 4096
 ONLY = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else ['sky', 'planet', 'grain', 'fx', 'models', 'materials', 'scene']
 MODELS_ONLY = sys.argv[sys.argv.index('--models') + 1].split(',') if '--models' in sys.argv else None
-SUN = (0.62, -0.5, -0.6)
-PLANET_AT = (-6000, -5760, -3500)
-PLANET_RADIUS = 4300
+SYSTEMS = [
+    dict(key='karis', name='KARIS', body='KARIS IV', texture='giant', at=(-6000, -5760, -3500), radius=4300, air=1.022,
+         sun=(0.62, -0.5, -0.6), sunColor=(1.0, 0.94, 0.86), sunPower=1.5, shineColor=(1.0, 0.72, 0.45), shinePower=0.4,
+         rim=(0.45, 0.68, 1.0), rimPower=5.0, rimStrength=1.6, skyTurn=0, skyTint=(1.0, 1.0, 1.0), bandTurn=40),
+    dict(key='vela', name='VELA', body='VELA II', texture='ice', at=(5200, 3400, 6400), radius=3000, air=1.03,
+         sun=(-0.5, -0.35, 0.8), sunColor=(0.82, 0.92, 1.0), sunPower=1.7, shineColor=(0.45, 0.75, 1.0), shinePower=0.35,
+         rim=(0.4, 0.85, 1.0), rimPower=4.0, rimStrength=2.0, skyTurn=140, skyTint=(0.75, 0.95, 1.15), bandTurn=170, veil=(0.3, 1.2, 1.7),
+         ring=dict(normal=(0.34, 0.9, -0.28), outer=2.25, inner=1.28)),
+    dict(key='morn', name='MORN', body='MORN PRIME', texture='rust', at=(3800, -4200, -5200), radius=3300, air=1.014,
+         sun=(0.75, -0.3, 0.58), sunColor=(1.0, 0.86, 0.7), sunPower=1.6, shineColor=(1.0, 0.55, 0.35), shinePower=0.3,
+         rim=(1.0, 0.5, 0.3), rimPower=6.0, rimStrength=1.1, skyTurn=255, skyTint=(1.06, 0.96, 0.88), bandTurn=290, veil=(1.4, 0.75, 0.45)),
+]
+SUN = SYSTEMS[0]['sun']
+WARP = dict(radius=300.0, half=2600.0)
+SKY_VEIL = 26000
 SHIP_COAT = (0.22, 0.24)
 SHIP_DETAIL = {'texture': 'assets/textures/hull-grain.png', 'size': 1.1, 'strength': 0.1, 'bump': 0.1}
 
@@ -172,9 +184,74 @@ def make_planet():
     col=col*(1-pole)+np.array([0.34,0.38,0.44],np.float32)*pole*(0.8+0.3*fine[...,None])
     grey=col.mean(-1,keepdims=True)
     col=np.clip((grey+(col-grey)*1.35)*0.62,0,1)
-    path = TEX / 'giant.png'
+    save_planet('giant', col)
+    save_planet('ice', ice_giant(D))
+    save_planet('rust', rust_world(D))
+
+
+def save_planet(name, col):
+    path = TEX / f'{name}.png'
     Image.fromarray((col ** (1 / 2.2) * 255).astype(np.uint8)).save(path, optimize=True)
     stamp(path, 'texture', {'sRGB': True, 'maxSize': 4096, 'filterMode': 'linear', 'wrapMode': 'repeat'})
+
+
+def ice_giant(D):
+    lat=D[...,1]
+    turb=fbm(D*np.array([2,5,2],np.float32)+4.0,211,5)-0.5
+    slow=fbm(np.stack([lat*2.2,np.full_like(lat,3.0),np.full_like(lat,7.0)],-1),223,4)-0.5
+    band=lat*4.2+turb*0.5+slow*2.4
+    pal=np.array([[0.10,0.33,0.56],[0.16,0.45,0.66],[0.30,0.62,0.76],[0.13,0.38,0.60],[0.38,0.70,0.80],[0.09,0.27,0.50]],np.float32)
+    sel=(np.sin(band*1.7+0.4)*0.5+0.5)*(len(pal)-1.001)
+    i0=np.floor(sel).astype(int); f=sm(0,1,sel-i0)[...,None]
+    col=pal[i0]*(1-f)+pal[np.minimum(i0+1,len(pal)-1)]*f
+    streak=fbm(np.stack([D[...,0]*2.5+turb*2,band*5.0,D[...,2]*2.5-turb*2],-1),241,7,0.55)
+    col=col*(0.9+0.2*(streak[...,None]-0.5)*2*0.6)
+    wisp=fbm(np.stack([D[...,0]*3+turb*4,lat*46.0+turb*5,D[...,2]*3-turb*4],-1),251,6,0.5)
+    cover=sm(0.3,0.75,fbm(D*np.array([2.5,7,2.5],np.float32)+13.0,263,5))
+    haze=(sm(0.6,0.82,wisp)*cover)[...,None]
+    col=col*(1-0.6*haze)+np.array([0.88,0.96,0.98],np.float32)*0.6*haze
+    for lon,la,size,tone in ((2.2,0.36,0.1,(0.9,0.97,1.0)),(4.4,-0.2,0.075,(0.05,0.14,0.32))):
+        c=np.array([np.cos(lon)*np.cos(la),np.sin(la),np.sin(lon)*np.cos(la)],np.float32)
+        d=np.arccos(np.clip(D@c,-1,1))
+        spot=sm(size,size*0.3,d*np.sqrt(1+5*(D[...,1]-c[1])**2/(0.01+d*d)))[...,None]
+        col=col*(1-spot*0.8)+np.array(tone,np.float32)*spot*0.8*(0.8+0.4*streak[...,None])
+    pole=sm(0.7,0.97,np.abs(lat))[...,None]
+    col=col*(1-pole*0.6)+np.array([0.06,0.2,0.4],np.float32)*pole*0.6
+    grey=col.mean(-1,keepdims=True)
+    return np.clip((grey+(col-grey)*1.15)*0.82,0,1)
+
+
+def rust_world(D):
+    lat=D[...,1]
+    W1=warp(D*1.6,307,0.9,1.2)
+    land=fbm(W1*1.5,311,8,0.55)
+    rough=fbm(W1*7.0,331,7,0.6)
+    ridge=fbm(warp(D*2.4,347,0.7,1.4)*3.2,353,7,0.55,ridged=True)
+    high=sm(0.42,0.66,land+0.12*(rough-0.5))[...,None]
+    basalt=np.array([0.17,0.12,0.105],np.float32); rust=np.array([0.58,0.25,0.12],np.float32)
+    ochre=np.array([0.78,0.50,0.27],np.float32); pale=np.array([0.86,0.70,0.52],np.float32)
+    lowland=basalt*(0.55+0.9*rough[...,None])*(0.8+0.5*ridge[...,None])
+    upland=rust*(1-sm(0.55,0.8,land)[...,None])+ochre*sm(0.55,0.8,land)[...,None]
+    upland=upland*(0.75+0.5*rough[...,None])
+    col=lowland*(1-high)+upland*high
+    peaks=sm(0.74,0.9,ridge)[...,None]*high
+    col=col*(1-0.45*peaks)+pale*0.45*peaks
+    rift=sm(0.08,0.0,np.abs(fbm(warp(D*1.1,367,1.2,0.9)*2.2,373,6)-0.5))[...,None]*sm(0.3,0.6,land)[...,None]
+    col=col*(1-0.8*rift)+np.array([0.05,0.03,0.03],np.float32)*0.8*rift
+    rng=np.random.default_rng(383)
+    for _ in range(160):
+        c=rng.normal(0,1,3).astype(np.float32); c/=np.linalg.norm(c)
+        size=0.01+0.05*rng.random()**5
+        along=D@c
+        near=along>np.cos(1.6*size)
+        d=np.arccos(np.clip(along[near],-1,1))/size
+        bowl=sm(1.0,0.2,d); rim=np.exp(-((d-1.0)/0.14)**2)
+        col[near]=col[near]*(1-0.3*bowl[:,None])*(1+0.35*rim[:,None])
+    cap=sm(0.925,0.975,np.abs(lat)+0.05*(rough-0.5))[...,None]
+    col=col*(1-cap)+np.array([0.90,0.90,0.92],np.float32)*cap*(0.85+0.3*rough[...,None])
+    dust=sm(0.56,0.82,fbm(warp(D*np.array([2,4,2],np.float32),389,1.4,1.1)*2.6,397,7,0.55))[...,None]*(1-cap)
+    col=col*(1-0.55*dust)+np.array([0.80,0.56,0.36],np.float32)*0.55*dust
+    return np.clip(col*0.9,0,1)
 
 
 def make_grain():
@@ -632,6 +709,10 @@ SMALL = {
     'gate-field': {'version': 1, 'smoothAngle': 80, 'steps': [{'op': 'plane', 'size': 2, 'tag': 'field', 'color': [1, 1, 1]}, {'op': 'transform', 'rotate': [90, 0, 0]}]},
     'planet': {'version': 1, 'smoothAngle': 80, 'material': {'roughness': 0.92, 'metallic': 0, 'texture': 'assets/textures/giant.png'},
                'steps': [{'op': 'sphere', 'radius': 1, 'rings': 64, 'sides': 128, 'tag': 'planet', 'color': [1, 1, 1]}, {'op': 'uv', 'mode': 'sphere'}]},
+    'warp': {'version': 1, 'smoothAngle': 80,
+             'steps': [{'op': 'lathe', 'axis': 'z', 'sides': 48, 'curve': 3, 'tag': 'warp', 'color': [1, 1, 1],
+                        'profile': [[0.0, -WARP['half']], [WARP['radius'] * 0.5, -WARP['half'] * 0.94], [WARP['radius'] * 0.86, -WARP['half'] * 0.78], [WARP['radius'], -WARP['half'] * 0.5],
+                                    [WARP['radius'], WARP['half'] * 0.5], [WARP['radius'] * 0.86, WARP['half'] * 0.78], [WARP['radius'] * 0.5, WARP['half'] * 0.94], [0.0, WARP['half']]]}]},
     'shell': {'version': 1, 'smoothAngle': 80, 'steps': [{'op': 'sphere', 'radius': 1, 'rings': 48, 'sides': 96, 'tag': 'shell', 'color': [1, 1, 1]}]},
     **{name: {'version': 1, 'smoothAngle': 60, 'material': {'roughness': 0.92, 'metallic': 0},
               'normalBake': {'from': 'dense', 'size': 1024, 'color': True, 'surface': True, 'occlusion': {'samples': 36, 'size': 512, 'reach': 0.35}},
@@ -668,8 +749,18 @@ def make_models():
 
 def make_materials():
     docs = {
-        'atmosphere': {'version': '1.0', 'type': 'material', 'shader': 'atmosphere.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 1,
-                       'properties': {'u_rim': {'r': 0.45, 'g': 0.68, 'b': 1.0, 'a': 1}, 'u_power': 5.0, 'u_strength': 1.6, 'u_sun': [-SUN[0], -SUN[1], -SUN[2]]}},
+        **{f"atmosphere-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'atmosphere.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 1,
+                                        'properties': {'u_rim': dict(zip('rgb', sys['rim']), a=1), 'u_power': sys['rimPower'], 'u_strength': sys['rimStrength'], 'u_sun': [-c for c in sys['sun']]}}
+           for sys in SYSTEMS},
+        **{f"ring-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'ring.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                                  'properties': {'u_bright': {'r': 0.84, 'g': 0.9, 'b': 0.95, 'a': 1}, 'u_dim': {'r': 0.42, 'g': 0.5, 'b': 0.6, 'a': 1}, 'u_strength': 0.9, 'u_inner': sys['ring']['inner'] / sys['ring']['outer'],
+                                                 'u_planet': 1 / sys['ring']['outer'], 'u_sun': ring_sun(sys)}}
+           for sys in SYSTEMS if 'ring' in sys},
+        **{f"veil-{sys['key']}": {'version': '1.0', 'type': 'material', 'shader': 'veil.esshader', 'blendMode': 2, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                                  'properties': {'u_tint': dict(zip('rgb', sys['veil']), a=1)}}
+           for sys in SYSTEMS if 'veil' in sys},
+        'warp': {'version': '1.0', 'type': 'material', 'shader': 'warp.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                 'properties': {'u_core': {'r': 0.8, 'g': 0.93, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.1, 'g': 0.3, 'b': 1.0, 'a': 1}, 'u_strength': 1, 'u_cover': 0, 'u_travel': 0, 'u_flash': 0, 'u_half': WARP['half']}},
         'plume': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                   'properties': {'u_core': {'r': 0.25, 'g': 0.5, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.03, 'g': 0.14, 'b': 0.7, 'a': 1}, 'u_strength': 1.2, 'u_length': 11,
                                  'u_falloff': 2.6, 'u_fade': 1.6, 'u_diamonds': 0, 'u_knots': 0, 'u_flicker': 0.08}},
@@ -693,7 +784,9 @@ def make_materials():
         path = MAT / f'{name}.esmaterial'
         path.write_text(json.dumps(doc, indent=2) + '\n')
         stamp(path, 'material')
-    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet'):
+    for old in ('atmosphere.esmaterial', 'atmosphere.esmaterial.meta'):
+        (MAT / old).unlink(missing_ok=True)
+    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'veil'):
         stamp(MAT / f'{name}.esshader', 'shader')
     stamp(ROOT / 'assets/fx/puff.esimage', 'imageSource')
     for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'turret', 'guns')):
@@ -703,6 +796,25 @@ def make_materials():
         doc['properties'].update({'u_detailMap': SHIP_DETAIL['texture'], 'u_detailSize': SHIP_DETAIL['size'], 'u_detailStrength': SHIP_DETAIL['strength'], 'u_detailBump': SHIP_DETAIL['bump']})
         doc['properties'].update({'u_clearcoat': SHIP_COAT[0], 'u_clearcoatRoughness': SHIP_COAT[1]})
         hull.write_text(json.dumps(doc, indent=2) + '\n')
+
+
+def frame(eye, target):
+    f = [t - e for e, t in zip(eye, target)]
+    l = math.sqrt(sum(x * x for x in f))
+    f = [x / l for x in f]
+    up = (0, 0, 1) if abs(f[1]) > 0.99 else (0, 1, 0)
+    r = [f[1] * up[2] - f[2] * up[1], f[2] * up[0] - f[0] * up[2], f[0] * up[1] - f[1] * up[0]]
+    l = math.sqrt(sum(x * x for x in r))
+    r = [x / l for x in r]
+    u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]]
+    return r, u, f
+
+
+def ring_sun(sys):
+    r, u, f = frame((0, 0, 0), sys['ring']['normal'])
+    to = [-c for c in sys['sun']]
+    l = math.sqrt(sum(c * c for c in to))
+    return [sum(a * b for a, b in zip(to, axis)) / l for axis in (r, u, [-c for c in f])]
 
 
 def look(eye, target):
@@ -750,8 +862,10 @@ def make_scene():
             data['scale'] = v3(scale)
         return {'type': 'Transform', 'data': data}
 
-    def mesh(mesh, material=None, texture=None, lit=True, opaque=True, cull=True, shadows=True):
+    def mesh(mesh, material=None, texture=None, lit=True, opaque=True, cull=True, shadows=True, layer=0):
         data = {'mesh': f'assets/models/{mesh}.esmesh', 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'enabled': True, 'lit': lit, 'opaque': opaque, 'cullBackfaces': cull, 'castShadows': shadows}
+        if layer:
+            data['layer'] = layer
         if material:
             data['material'] = material
         if texture:
@@ -773,12 +887,12 @@ def make_scene():
         {'type': 'Camera', 'data': {'projectionType': 0, 'fov': 34, 'nearPlane': 1, 'farPlane': 30000, 'isActive': True, 'priority': 0, 'clearFlags': 3}},
         {'type': 'PostProcessVolume', 'data': {'isGlobal': True, 'weight': 1, 'priority': 0, 'effects': effects}},
     ])
+    home = SYSTEMS[0]
     add('Sun', [transform((0, 0, 0), look((0, 0, 0), SUN)),
-                {'type': 'Light', 'data': {'type': 1, 'color': {'r': 1, 'g': 0.94, 'b': 0.86, 'a': 1}, 'intensity': 1.5, 'enabled': True, 'meshShadows': True, 'shadowDistance': 260, 'sourceAngle': 0}}])
+                {'type': 'Light', 'data': {'type': 1, 'color': dict(zip('rgb', home['sunColor']), a=1), 'intensity': home['sunPower'], 'enabled': True, 'meshShadows': True, 'shadowDistance': 260, 'sourceAngle': 0}}])
     add('Sky', [transform(), {'type': 'Light', 'data': {'type': 2, 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'intensity': 1.5, 'enabled': True, 'environment': 'assets/env/nebula.esenv', 'drawEnvironment': True, 'reflectionScale': 2.6, 'reflectionSaturation': 0.7}}])
-    shine = [-c / math.sqrt(sum(x * x for x in PLANET_AT)) for c in PLANET_AT]
-    add('PlanetShine', [transform((0, 0, 0), look((0, 0, 0), shine)),
-                        {'type': 'Light', 'data': {'type': 1, 'color': {'r': 1, 'g': 0.72, 'b': 0.45, 'a': 1}, 'intensity': 0.4, 'enabled': True, 'meshShadows': False}}])
+    add('PlanetShine', [transform((0, 0, 0), look((0, 0, 0), [-c for c in home['at']])),
+                        {'type': 'Light', 'data': {'type': 1, 'color': dict(zip('rgb', home['shineColor']), a=1), 'intensity': home['shinePower'], 'enabled': True, 'meshShadows': False}}])
     add('Rim', [transform((0, 0, 0), look((0, 0, 0), (0.55, 0.2, 0.8))),
                 {'type': 'Light', 'data': {'type': 1, 'color': {'r': 0.62, 'g': 0.74, 'b': 1.0, 'a': 1}, 'intensity': 0.26, 'enabled': True, 'meshShadows': False}}])
     ship = add('Ship', [transform()])
@@ -813,6 +927,7 @@ def make_scene():
     for name, at, tint, size in STROBES:
         lamp = add(name, [transform(at, None, (size,) * 3), mesh('flare', f'assets/materials/flare-{tint}.esmaterial', None, False, False, True, False)], ship)
         add(name + 'Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES[tint]), a=1), 'intensity': 0.5, 'radius': 9, 'enabled': True, 'meshShadows': False}}], lamp)
+    add('Warp', [transform((0, 0, 0), None, (0.001,) * 3), mesh('warp', 'assets/materials/warp.esmaterial', None, False, False, False, False, -50)], ship)
     add('GateFlash', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': {'r': 0.55, 'g': 0.78, 'b': 1.0, 'a': 1}, 'intensity': 0, 'radius': 320, 'enabled': True, 'meshShadows': False}}])
     dust = random.Random(71)
     for i in range(MOTES):
@@ -844,10 +959,25 @@ def make_scene():
         gate = add(name, [transform(at), mesh('gate', 'assets/models/gate.esmaterial', 'assets/models/gate_color.png', True, True, True, False)])
         add(name + 'Strobe', [transform((0, GATE_RADIUS + 96.5, 0), None, (2.6,) * 3), mesh('flare', 'assets/materials/flare-white.esmaterial', None, False, False, True, False)], gate)
         add(name + 'Field', [transform((0, 0, 0), None, (GATE_RADIUS - 13,) * 3), mesh('gate-field', 'assets/materials/gatefield.esmaterial', None, False, False, False, False)], gate)
-    add('Planet', [transform(PLANET_AT, None, (PLANET_RADIUS,) * 3), mesh('planet', 'assets/models/planet.esmaterial', 'assets/textures/giant.png', True, True, True, False)])
-    add('Atmosphere', [transform(PLANET_AT, None, (PLANET_RADIUS * 1.022,) * 3), mesh('shell', 'assets/materials/atmosphere.esmaterial', None, False, False, True, False)])
+    for i, sys in enumerate(SYSTEMS):
+        add(f'Planet{i}', [transform(sys['at'], None, (sys['radius'],) * 3), mesh('planet', 'assets/models/planet.esmaterial', f"assets/textures/{sys['texture']}.png", True, True, True, False)])
+        add(f'Atmosphere{i}', [transform(sys['at'], None, (sys['radius'] * sys['air'],) * 3), mesh('shell', f"assets/materials/atmosphere-{sys['key']}.esmaterial", None, False, False, True, False)])
+        if 'veil' in sys:
+            add(f'Veil{i}', [transform((0, 0, 0), None, (SKY_VEIL,) * 3), mesh('shell', f"assets/materials/veil-{sys['key']}.esmaterial", None, False, False, False, False, -100)])
+        if 'ring' in sys:
+            add(f'Ring{i}', [transform(sys['at'], look((0, 0, 0), sys['ring']['normal']), (sys['radius'] * sys['ring']['outer'],) * 3),
+                             mesh('gate-field', f"assets/materials/ring-{sys['key']}.esmaterial", None, False, False, False, False)])
     SCENE.write_text(json.dumps({'version': 4, 'name': 'SpaceFrigate', 'entities': entities}, indent=1) + '\n')
     stamp(SCENE, 'scene')
+    unit = lambda v: [c / math.sqrt(sum(x * x for x in v)) for c in v]
+    vec = lambda v: '{ x: %s, y: %s, z: %s }' % tuple(round(c, 5) for c in v)
+    tone = lambda v: '{ r: %s, g: %s, b: %s, a: 1 }' % tuple(v)
+    rows = []
+    for i, sys in enumerate(SYSTEMS):
+        parts = [f'Planet{i}', f'Atmosphere{i}'] + [f'{part.capitalize()}{i}' for part in ('ring', 'veil') if part in sys]
+        rows.append(f"    {{ name: '{sys['name']}', body: '{sys['body']}', at: {vec(sys['at'])}, radius: {sys['radius']}, parts: {json.dumps(parts)}, sun: {vec(unit(sys['sun']))}, sunColor: {tone(sys['sunColor'])}, sunPower: {sys['sunPower']},\n"
+                    f"      shine: {vec(unit([-c for c in sys['at']]))}, shineColor: {tone(sys['shineColor'])}, shinePower: {sys['shinePower']}, skyTurn: {sys['skyTurn']}, skyTint: {tone(sys['skyTint'])}, bandTurn: {sys['bandTurn']} }},")
+    (ROOT / 'src/systems.ts').write_text('export const SYSTEMS = [\n' + '\n'.join(rows) + '\n] as const;\n\nexport type StarSystem = (typeof SYSTEMS)[number];\n')
 
 
 for part, make in (('sky', make_sky), ('planet', make_planet), ('grain', make_grain), ('fx', make_fx), ('models', make_models), ('materials', make_materials), ('scene', make_scene)):

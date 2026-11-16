@@ -144,7 +144,7 @@
      "data": {
       "type": 1,
       "color": {
-       "r": 1,
+       "r": 1.0,
        "g": 0.94,
        "b": 0.86,
        "a": 1
@@ -223,7 +223,7 @@
      "data": {
       "type": 1,
       "color": {
-       "r": 1,
+       "r": 1.0,
        "g": 0.72,
        "b": 0.45,
        "a": 1
@@ -323,7 +323,8 @@
     114,
     116,
     118,
-    120
+    120,
+    122
    ],
    "visible": true,
    "components": [
@@ -7212,6 +7213,49 @@
   },
   {
    "id": 122,
+   "name": "Warp",
+   "parent": 5,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": {
+       "x": 0.001,
+       "y": 0.001,
+       "z": 0.001
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/warp.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "layer": -50,
+      "material": "assets/materials/warp.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 123,
    "name": "GateFlash",
    "parent": null,
    "children": [],
@@ -7246,7 +7290,7 @@
    ]
   },
   {
-   "id": 123,
+   "id": 124,
    "name": "Mote0",
    "parent": null,
    "children": [],
@@ -7295,7 +7339,7 @@
    ]
   },
   {
-   "id": 124,
+   "id": 125,
    "name": "Mote1",
    "parent": null,
    "children": [],
@@ -7344,7 +7388,7 @@
    ]
   },
   {
-   "id": 125,
+   "id": 126,
    "name": "Mote2",
    "parent": null,
    "children": [],
@@ -7393,7 +7437,7 @@
    ]
   },
   {
-   "id": 126,
+   "id": 127,
    "name": "Mote3",
    "parent": null,
    "children": [],
@@ -7442,7 +7486,7 @@
    ]
   },
   {
-   "id": 127,
+   "id": 128,
    "name": "Mote4",
    "parent": null,
    "children": [],
@@ -7491,7 +7535,7 @@
    ]
   },
   {
-   "id": 128,
+   "id": 129,
    "name": "Mote5",
    "parent": null,
    "children": [],
@@ -7540,7 +7584,7 @@
    ]
   },
   {
-   "id": 129,
+   "id": 130,
    "name": "Mote6",
    "parent": null,
    "children": [],
@@ -7589,7 +7633,7 @@
    ]
   },
   {
-   "id": 130,
+   "id": 131,
    "name": "Mote7",
    "parent": null,
    "children": [],
@@ -7638,7 +7682,7 @@
    ]
   },
   {
-   "id": 131,
+   "id": 132,
    "name": "Mote8",
    "parent": null,
    "children": [],
@@ -7687,7 +7731,7 @@
    ]
   },
   {
-   "id": 132,
+   "id": 133,
    "name": "Mote9",
    "parent": null,
    "children": [],
@@ -7736,7 +7780,7 @@
    ]
   },
   {
-   "id": 133,
+   "id": 134,
    "name": "Mote10",
    "parent": null,
    "children": [],
@@ -7785,7 +7829,7 @@
    ]
   },
   {
-   "id": 134,
+   "id": 135,
    "name": "Mote11",
    "parent": null,
    "children": [],
@@ -7834,7 +7878,7 @@
    ]
   },
   {
-   "id": 135,
+   "id": 136,
    "name": "Mote12",
    "parent": null,
    "children": [],
@@ -7883,7 +7927,7 @@
    ]
   },
   {
-   "id": 136,
+   "id": 137,
    "name": "Mote13",
    "parent": null,
    "children": [],
@@ -7932,7 +7976,7 @@
    ]
   },
   {
-   "id": 137,
+   "id": 138,
    "name": "Mote14",
    "parent": null,
    "children": [],
@@ -7981,7 +8025,7 @@
    ]
   },
   {
-   "id": 138,
+   "id": 139,
    "name": "Mote15",
    "parent": null,
    "children": [],
@@ -8030,7 +8074,7 @@
    ]
   },
   {
-   "id": 139,
+   "id": 140,
    "name": "Mote16",
    "parent": null,
    "children": [],
@@ -8079,7 +8123,7 @@
    ]
   },
   {
-   "id": 140,
+   "id": 141,
    "name": "Mote17",
    "parent": null,
    "children": [],
@@ -8128,7 +8172,7 @@
    ]
   },
   {
-   "id": 141,
+   "id": 142,
    "name": "Mote18",
    "parent": null,
    "children": [],
@@ -8177,7 +8221,7 @@
    ]
   },
   {
-   "id": 142,
+   "id": 143,
    "name": "Mote19",
    "parent": null,
    "children": [],
@@ -8226,7 +8270,7 @@
    ]
   },
   {
-   "id": 143,
+   "id": 144,
    "name": "Mote20",
    "parent": null,
    "children": [],
@@ -8275,7 +8319,7 @@
    ]
   },
   {
-   "id": 144,
+   "id": 145,
    "name": "Mote21",
    "parent": null,
    "children": [],
@@ -8324,7 +8368,7 @@
    ]
   },
   {
-   "id": 145,
+   "id": 146,
    "name": "Mote22",
    "parent": null,
    "children": [],
@@ -8373,7 +8417,7 @@
    ]
   },
   {
-   "id": 146,
+   "id": 147,
    "name": "Mote23",
    "parent": null,
    "children": [],
@@ -8422,7 +8466,7 @@
    ]
   },
   {
-   "id": 147,
+   "id": 148,
    "name": "Mote24",
    "parent": null,
    "children": [],
@@ -8471,7 +8515,7 @@
    ]
   },
   {
-   "id": 148,
+   "id": 149,
    "name": "Mote25",
    "parent": null,
    "children": [],
@@ -8520,7 +8564,7 @@
    ]
   },
   {
-   "id": 149,
+   "id": 150,
    "name": "Mote26",
    "parent": null,
    "children": [],
@@ -8569,7 +8613,7 @@
    ]
   },
   {
-   "id": 150,
+   "id": 151,
    "name": "Mote27",
    "parent": null,
    "children": [],
@@ -8618,7 +8662,7 @@
    ]
   },
   {
-   "id": 151,
+   "id": 152,
    "name": "Mote28",
    "parent": null,
    "children": [],
@@ -8667,7 +8711,7 @@
    ]
   },
   {
-   "id": 152,
+   "id": 153,
    "name": "Mote29",
    "parent": null,
    "children": [],
@@ -8716,7 +8760,7 @@
    ]
   },
   {
-   "id": 153,
+   "id": 154,
    "name": "Mote30",
    "parent": null,
    "children": [],
@@ -8765,7 +8809,7 @@
    ]
   },
   {
-   "id": 154,
+   "id": 155,
    "name": "Mote31",
    "parent": null,
    "children": [],
@@ -8814,7 +8858,7 @@
    ]
   },
   {
-   "id": 155,
+   "id": 156,
    "name": "Mote32",
    "parent": null,
    "children": [],
@@ -8863,7 +8907,7 @@
    ]
   },
   {
-   "id": 156,
+   "id": 157,
    "name": "Mote33",
    "parent": null,
    "children": [],
@@ -8912,7 +8956,7 @@
    ]
   },
   {
-   "id": 157,
+   "id": 158,
    "name": "Mote34",
    "parent": null,
    "children": [],
@@ -8961,7 +9005,7 @@
    ]
   },
   {
-   "id": 158,
+   "id": 159,
    "name": "Mote35",
    "parent": null,
    "children": [],
@@ -9010,7 +9054,7 @@
    ]
   },
   {
-   "id": 159,
+   "id": 160,
    "name": "Mote36",
    "parent": null,
    "children": [],
@@ -9059,7 +9103,7 @@
    ]
   },
   {
-   "id": 160,
+   "id": 161,
    "name": "Mote37",
    "parent": null,
    "children": [],
@@ -9108,7 +9152,7 @@
    ]
   },
   {
-   "id": 161,
+   "id": 162,
    "name": "Mote38",
    "parent": null,
    "children": [],
@@ -9157,7 +9201,7 @@
    ]
   },
   {
-   "id": 162,
+   "id": 163,
    "name": "Mote39",
    "parent": null,
    "children": [],
@@ -9206,7 +9250,7 @@
    ]
   },
   {
-   "id": 163,
+   "id": 164,
    "name": "Mote40",
    "parent": null,
    "children": [],
@@ -9255,7 +9299,7 @@
    ]
   },
   {
-   "id": 164,
+   "id": 165,
    "name": "Mote41",
    "parent": null,
    "children": [],
@@ -9304,7 +9348,7 @@
    ]
   },
   {
-   "id": 165,
+   "id": 166,
    "name": "Mote42",
    "parent": null,
    "children": [],
@@ -9353,7 +9397,7 @@
    ]
   },
   {
-   "id": 166,
+   "id": 167,
    "name": "Mote43",
    "parent": null,
    "children": [],
@@ -9402,7 +9446,7 @@
    ]
   },
   {
-   "id": 167,
+   "id": 168,
    "name": "Mote44",
    "parent": null,
    "children": [],
@@ -9451,7 +9495,7 @@
    ]
   },
   {
-   "id": 168,
+   "id": 169,
    "name": "Mote45",
    "parent": null,
    "children": [],
@@ -9500,7 +9544,7 @@
    ]
   },
   {
-   "id": 169,
+   "id": 170,
    "name": "Mote46",
    "parent": null,
    "children": [],
@@ -9549,7 +9593,7 @@
    ]
   },
   {
-   "id": 170,
+   "id": 171,
    "name": "Mote47",
    "parent": null,
    "children": [],
@@ -9598,7 +9642,7 @@
    ]
   },
   {
-   "id": 171,
+   "id": 172,
    "name": "Mote48",
    "parent": null,
    "children": [],
@@ -9647,7 +9691,7 @@
    ]
   },
   {
-   "id": 172,
+   "id": 173,
    "name": "Mote49",
    "parent": null,
    "children": [],
@@ -9696,7 +9740,7 @@
    ]
   },
   {
-   "id": 173,
+   "id": 174,
    "name": "Mote50",
    "parent": null,
    "children": [],
@@ -9745,7 +9789,7 @@
    ]
   },
   {
-   "id": 174,
+   "id": 175,
    "name": "Mote51",
    "parent": null,
    "children": [],
@@ -9794,7 +9838,7 @@
    ]
   },
   {
-   "id": 175,
+   "id": 176,
    "name": "Mote52",
    "parent": null,
    "children": [],
@@ -9843,7 +9887,7 @@
    ]
   },
   {
-   "id": 176,
+   "id": 177,
    "name": "Mote53",
    "parent": null,
    "children": [],
@@ -9892,7 +9936,7 @@
    ]
   },
   {
-   "id": 177,
+   "id": 178,
    "name": "Mote54",
    "parent": null,
    "children": [],
@@ -9941,7 +9985,7 @@
    ]
   },
   {
-   "id": 178,
+   "id": 179,
    "name": "Mote55",
    "parent": null,
    "children": [],
@@ -9990,7 +10034,7 @@
    ]
   },
   {
-   "id": 179,
+   "id": 180,
    "name": "Mote56",
    "parent": null,
    "children": [],
@@ -10039,7 +10083,7 @@
    ]
   },
   {
-   "id": 180,
+   "id": 181,
    "name": "Mote57",
    "parent": null,
    "children": [],
@@ -10088,7 +10132,7 @@
    ]
   },
   {
-   "id": 181,
+   "id": 182,
    "name": "Mote58",
    "parent": null,
    "children": [],
@@ -10137,7 +10181,7 @@
    ]
   },
   {
-   "id": 182,
+   "id": 183,
    "name": "Mote59",
    "parent": null,
    "children": [],
@@ -10186,7 +10230,7 @@
    ]
   },
   {
-   "id": 183,
+   "id": 184,
    "name": "Mote60",
    "parent": null,
    "children": [],
@@ -10235,7 +10279,7 @@
    ]
   },
   {
-   "id": 184,
+   "id": 185,
    "name": "Mote61",
    "parent": null,
    "children": [],
@@ -10284,7 +10328,7 @@
    ]
   },
   {
-   "id": 185,
+   "id": 186,
    "name": "Mote62",
    "parent": null,
    "children": [],
@@ -10333,7 +10377,7 @@
    ]
   },
   {
-   "id": 186,
+   "id": 187,
    "name": "Mote63",
    "parent": null,
    "children": [],
@@ -10382,7 +10426,7 @@
    ]
   },
   {
-   "id": 187,
+   "id": 188,
    "name": "Mote64",
    "parent": null,
    "children": [],
@@ -10431,7 +10475,7 @@
    ]
   },
   {
-   "id": 188,
+   "id": 189,
    "name": "Mote65",
    "parent": null,
    "children": [],
@@ -10480,7 +10524,7 @@
    ]
   },
   {
-   "id": 189,
+   "id": 190,
    "name": "Mote66",
    "parent": null,
    "children": [],
@@ -10529,7 +10573,7 @@
    ]
   },
   {
-   "id": 190,
+   "id": 191,
    "name": "Mote67",
    "parent": null,
    "children": [],
@@ -10578,7 +10622,7 @@
    ]
   },
   {
-   "id": 191,
+   "id": 192,
    "name": "Mote68",
    "parent": null,
    "children": [],
@@ -10627,7 +10671,7 @@
    ]
   },
   {
-   "id": 192,
+   "id": 193,
    "name": "Mote69",
    "parent": null,
    "children": [],
@@ -10676,7 +10720,7 @@
    ]
   },
   {
-   "id": 193,
+   "id": 194,
    "name": "Mote70",
    "parent": null,
    "children": [],
@@ -10725,7 +10769,7 @@
    ]
   },
   {
-   "id": 194,
+   "id": 195,
    "name": "Mote71",
    "parent": null,
    "children": [],
@@ -10774,7 +10818,7 @@
    ]
   },
   {
-   "id": 195,
+   "id": 196,
    "name": "Mote72",
    "parent": null,
    "children": [],
@@ -10823,7 +10867,7 @@
    ]
   },
   {
-   "id": 196,
+   "id": 197,
    "name": "Mote73",
    "parent": null,
    "children": [],
@@ -10872,7 +10916,7 @@
    ]
   },
   {
-   "id": 197,
+   "id": 198,
    "name": "Mote74",
    "parent": null,
    "children": [],
@@ -10921,7 +10965,7 @@
    ]
   },
   {
-   "id": 198,
+   "id": 199,
    "name": "Mote75",
    "parent": null,
    "children": [],
@@ -10970,7 +11014,7 @@
    ]
   },
   {
-   "id": 199,
+   "id": 200,
    "name": "Mote76",
    "parent": null,
    "children": [],
@@ -11019,7 +11063,7 @@
    ]
   },
   {
-   "id": 200,
+   "id": 201,
    "name": "Mote77",
    "parent": null,
    "children": [],
@@ -11068,7 +11112,7 @@
    ]
   },
   {
-   "id": 201,
+   "id": 202,
    "name": "Mote78",
    "parent": null,
    "children": [],
@@ -11117,7 +11161,7 @@
    ]
   },
   {
-   "id": 202,
+   "id": 203,
    "name": "Mote79",
    "parent": null,
    "children": [],
@@ -11166,7 +11210,7 @@
    ]
   },
   {
-   "id": 203,
+   "id": 204,
    "name": "Mote80",
    "parent": null,
    "children": [],
@@ -11215,7 +11259,7 @@
    ]
   },
   {
-   "id": 204,
+   "id": 205,
    "name": "Mote81",
    "parent": null,
    "children": [],
@@ -11264,7 +11308,7 @@
    ]
   },
   {
-   "id": 205,
+   "id": 206,
    "name": "Mote82",
    "parent": null,
    "children": [],
@@ -11313,7 +11357,7 @@
    ]
   },
   {
-   "id": 206,
+   "id": 207,
    "name": "Mote83",
    "parent": null,
    "children": [],
@@ -11362,7 +11406,7 @@
    ]
   },
   {
-   "id": 207,
+   "id": 208,
    "name": "Mote84",
    "parent": null,
    "children": [],
@@ -11411,7 +11455,7 @@
    ]
   },
   {
-   "id": 208,
+   "id": 209,
    "name": "Mote85",
    "parent": null,
    "children": [],
@@ -11460,7 +11504,7 @@
    ]
   },
   {
-   "id": 209,
+   "id": 210,
    "name": "Mote86",
    "parent": null,
    "children": [],
@@ -11509,7 +11553,7 @@
    ]
   },
   {
-   "id": 210,
+   "id": 211,
    "name": "Mote87",
    "parent": null,
    "children": [],
@@ -11558,7 +11602,7 @@
    ]
   },
   {
-   "id": 211,
+   "id": 212,
    "name": "Mote88",
    "parent": null,
    "children": [],
@@ -11607,7 +11651,7 @@
    ]
   },
   {
-   "id": 212,
+   "id": 213,
    "name": "Mote89",
    "parent": null,
    "children": [],
@@ -11656,7 +11700,7 @@
    ]
   },
   {
-   "id": 213,
+   "id": 214,
    "name": "Mote90",
    "parent": null,
    "children": [],
@@ -11705,7 +11749,7 @@
    ]
   },
   {
-   "id": 214,
+   "id": 215,
    "name": "Mote91",
    "parent": null,
    "children": [],
@@ -11754,7 +11798,7 @@
    ]
   },
   {
-   "id": 215,
+   "id": 216,
    "name": "Mote92",
    "parent": null,
    "children": [],
@@ -11803,7 +11847,7 @@
    ]
   },
   {
-   "id": 216,
+   "id": 217,
    "name": "Mote93",
    "parent": null,
    "children": [],
@@ -11852,7 +11896,7 @@
    ]
   },
   {
-   "id": 217,
+   "id": 218,
    "name": "Mote94",
    "parent": null,
    "children": [],
@@ -11901,7 +11945,7 @@
    ]
   },
   {
-   "id": 218,
+   "id": 219,
    "name": "Mote95",
    "parent": null,
    "children": [],
@@ -11950,7 +11994,7 @@
    ]
   },
   {
-   "id": 219,
+   "id": 220,
    "name": "Mote96",
    "parent": null,
    "children": [],
@@ -11999,7 +12043,7 @@
    ]
   },
   {
-   "id": 220,
+   "id": 221,
    "name": "Mote97",
    "parent": null,
    "children": [],
@@ -12048,7 +12092,7 @@
    ]
   },
   {
-   "id": 221,
+   "id": 222,
    "name": "Mote98",
    "parent": null,
    "children": [],
@@ -12097,7 +12141,7 @@
    ]
   },
   {
-   "id": 222,
+   "id": 223,
    "name": "Mote99",
    "parent": null,
    "children": [],
@@ -12146,7 +12190,7 @@
    ]
   },
   {
-   "id": 223,
+   "id": 224,
    "name": "Mote100",
    "parent": null,
    "children": [],
@@ -12195,7 +12239,7 @@
    ]
   },
   {
-   "id": 224,
+   "id": 225,
    "name": "Mote101",
    "parent": null,
    "children": [],
@@ -12244,7 +12288,7 @@
    ]
   },
   {
-   "id": 225,
+   "id": 226,
    "name": "Mote102",
    "parent": null,
    "children": [],
@@ -12293,7 +12337,7 @@
    ]
   },
   {
-   "id": 226,
+   "id": 227,
    "name": "Mote103",
    "parent": null,
    "children": [],
@@ -12342,7 +12386,7 @@
    ]
   },
   {
-   "id": 227,
+   "id": 228,
    "name": "Mote104",
    "parent": null,
    "children": [],
@@ -12391,7 +12435,7 @@
    ]
   },
   {
-   "id": 228,
+   "id": 229,
    "name": "Mote105",
    "parent": null,
    "children": [],
@@ -12440,7 +12484,7 @@
    ]
   },
   {
-   "id": 229,
+   "id": 230,
    "name": "Mote106",
    "parent": null,
    "children": [],
@@ -12489,7 +12533,7 @@
    ]
   },
   {
-   "id": 230,
+   "id": 231,
    "name": "Mote107",
    "parent": null,
    "children": [],
@@ -12538,7 +12582,7 @@
    ]
   },
   {
-   "id": 231,
+   "id": 232,
    "name": "Mote108",
    "parent": null,
    "children": [],
@@ -12587,7 +12631,7 @@
    ]
   },
   {
-   "id": 232,
+   "id": 233,
    "name": "Mote109",
    "parent": null,
    "children": [],
@@ -12636,7 +12680,7 @@
    ]
   },
   {
-   "id": 233,
+   "id": 234,
    "name": "Mote110",
    "parent": null,
    "children": [],
@@ -12685,7 +12729,7 @@
    ]
   },
   {
-   "id": 234,
+   "id": 235,
    "name": "Mote111",
    "parent": null,
    "children": [],
@@ -12734,7 +12778,7 @@
    ]
   },
   {
-   "id": 235,
+   "id": 236,
    "name": "Mote112",
    "parent": null,
    "children": [],
@@ -12783,7 +12827,7 @@
    ]
   },
   {
-   "id": 236,
+   "id": 237,
    "name": "Mote113",
    "parent": null,
    "children": [],
@@ -12832,7 +12876,7 @@
    ]
   },
   {
-   "id": 237,
+   "id": 238,
    "name": "Mote114",
    "parent": null,
    "children": [],
@@ -12881,7 +12925,7 @@
    ]
   },
   {
-   "id": 238,
+   "id": 239,
    "name": "Mote115",
    "parent": null,
    "children": [],
@@ -12930,7 +12974,7 @@
    ]
   },
   {
-   "id": 239,
+   "id": 240,
    "name": "Mote116",
    "parent": null,
    "children": [],
@@ -12979,7 +13023,7 @@
    ]
   },
   {
-   "id": 240,
+   "id": 241,
    "name": "Mote117",
    "parent": null,
    "children": [],
@@ -13028,7 +13072,7 @@
    ]
   },
   {
-   "id": 241,
+   "id": 242,
    "name": "Mote118",
    "parent": null,
    "children": [],
@@ -13077,7 +13121,7 @@
    ]
   },
   {
-   "id": 242,
+   "id": 243,
    "name": "Mote119",
    "parent": null,
    "children": [],
@@ -13126,7 +13170,7 @@
    ]
   },
   {
-   "id": 243,
+   "id": 244,
    "name": "Mote120",
    "parent": null,
    "children": [],
@@ -13175,7 +13219,7 @@
    ]
   },
   {
-   "id": 244,
+   "id": 245,
    "name": "Mote121",
    "parent": null,
    "children": [],
@@ -13224,7 +13268,7 @@
    ]
   },
   {
-   "id": 245,
+   "id": 246,
    "name": "Mote122",
    "parent": null,
    "children": [],
@@ -13273,7 +13317,7 @@
    ]
   },
   {
-   "id": 246,
+   "id": 247,
    "name": "Mote123",
    "parent": null,
    "children": [],
@@ -13322,7 +13366,7 @@
    ]
   },
   {
-   "id": 247,
+   "id": 248,
    "name": "Mote124",
    "parent": null,
    "children": [],
@@ -13371,7 +13415,7 @@
    ]
   },
   {
-   "id": 248,
+   "id": 249,
    "name": "Mote125",
    "parent": null,
    "children": [],
@@ -13420,7 +13464,7 @@
    ]
   },
   {
-   "id": 249,
+   "id": 250,
    "name": "Mote126",
    "parent": null,
    "children": [],
@@ -13469,7 +13513,7 @@
    ]
   },
   {
-   "id": 250,
+   "id": 251,
    "name": "Mote127",
    "parent": null,
    "children": [],
@@ -13518,7 +13562,7 @@
    ]
   },
   {
-   "id": 251,
+   "id": 252,
    "name": "Mote128",
    "parent": null,
    "children": [],
@@ -13567,7 +13611,7 @@
    ]
   },
   {
-   "id": 252,
+   "id": 253,
    "name": "Mote129",
    "parent": null,
    "children": [],
@@ -13616,7 +13660,7 @@
    ]
   },
   {
-   "id": 253,
+   "id": 254,
    "name": "Mote130",
    "parent": null,
    "children": [],
@@ -13665,7 +13709,7 @@
    ]
   },
   {
-   "id": 254,
+   "id": 255,
    "name": "Mote131",
    "parent": null,
    "children": [],
@@ -13714,7 +13758,7 @@
    ]
   },
   {
-   "id": 255,
+   "id": 256,
    "name": "Mote132",
    "parent": null,
    "children": [],
@@ -13763,7 +13807,7 @@
    ]
   },
   {
-   "id": 256,
+   "id": 257,
    "name": "Mote133",
    "parent": null,
    "children": [],
@@ -13812,7 +13856,7 @@
    ]
   },
   {
-   "id": 257,
+   "id": 258,
    "name": "Mote134",
    "parent": null,
    "children": [],
@@ -13861,7 +13905,7 @@
    ]
   },
   {
-   "id": 258,
+   "id": 259,
    "name": "Mote135",
    "parent": null,
    "children": [],
@@ -13910,7 +13954,7 @@
    ]
   },
   {
-   "id": 259,
+   "id": 260,
    "name": "Mote136",
    "parent": null,
    "children": [],
@@ -13959,7 +14003,7 @@
    ]
   },
   {
-   "id": 260,
+   "id": 261,
    "name": "Mote137",
    "parent": null,
    "children": [],
@@ -14008,7 +14052,7 @@
    ]
   },
   {
-   "id": 261,
+   "id": 262,
    "name": "Mote138",
    "parent": null,
    "children": [],
@@ -14057,7 +14101,7 @@
    ]
   },
   {
-   "id": 262,
+   "id": 263,
    "name": "Mote139",
    "parent": null,
    "children": [],
@@ -14106,7 +14150,7 @@
    ]
   },
   {
-   "id": 263,
+   "id": 264,
    "name": "Mote140",
    "parent": null,
    "children": [],
@@ -14155,7 +14199,7 @@
    ]
   },
   {
-   "id": 264,
+   "id": 265,
    "name": "Mote141",
    "parent": null,
    "children": [],
@@ -14204,7 +14248,7 @@
    ]
   },
   {
-   "id": 265,
+   "id": 266,
    "name": "Mote142",
    "parent": null,
    "children": [],
@@ -14253,7 +14297,7 @@
    ]
   },
   {
-   "id": 266,
+   "id": 267,
    "name": "Mote143",
    "parent": null,
    "children": [],
@@ -14302,7 +14346,7 @@
    ]
   },
   {
-   "id": 267,
+   "id": 268,
    "name": "Mote144",
    "parent": null,
    "children": [],
@@ -14351,7 +14395,7 @@
    ]
   },
   {
-   "id": 268,
+   "id": 269,
    "name": "Mote145",
    "parent": null,
    "children": [],
@@ -14400,7 +14444,7 @@
    ]
   },
   {
-   "id": 269,
+   "id": 270,
    "name": "Mote146",
    "parent": null,
    "children": [],
@@ -14449,7 +14493,7 @@
    ]
   },
   {
-   "id": 270,
+   "id": 271,
    "name": "Mote147",
    "parent": null,
    "children": [],
@@ -14498,7 +14542,7 @@
    ]
   },
   {
-   "id": 271,
+   "id": 272,
    "name": "Mote148",
    "parent": null,
    "children": [],
@@ -14547,7 +14591,7 @@
    ]
   },
   {
-   "id": 272,
+   "id": 273,
    "name": "Mote149",
    "parent": null,
    "children": [],
@@ -14596,7 +14640,7 @@
    ]
   },
   {
-   "id": 273,
+   "id": 274,
    "name": "Rock0",
    "parent": null,
    "children": [],
@@ -14645,7 +14689,7 @@
    ]
   },
   {
-   "id": 274,
+   "id": 275,
    "name": "Rock1",
    "parent": null,
    "children": [],
@@ -14694,7 +14738,7 @@
    ]
   },
   {
-   "id": 275,
+   "id": 276,
    "name": "Rock2",
    "parent": null,
    "children": [],
@@ -14743,7 +14787,7 @@
    ]
   },
   {
-   "id": 276,
+   "id": 277,
    "name": "Rock3",
    "parent": null,
    "children": [],
@@ -14792,7 +14836,7 @@
    ]
   },
   {
-   "id": 277,
+   "id": 278,
    "name": "Rock4",
    "parent": null,
    "children": [],
@@ -14841,7 +14885,7 @@
    ]
   },
   {
-   "id": 278,
+   "id": 279,
    "name": "Rock5",
    "parent": null,
    "children": [],
@@ -14890,7 +14934,7 @@
    ]
   },
   {
-   "id": 279,
+   "id": 280,
    "name": "Rock6",
    "parent": null,
    "children": [],
@@ -14939,7 +14983,7 @@
    ]
   },
   {
-   "id": 280,
+   "id": 281,
    "name": "Rock7",
    "parent": null,
    "children": [],
@@ -14988,7 +15032,7 @@
    ]
   },
   {
-   "id": 281,
+   "id": 282,
    "name": "Rock8",
    "parent": null,
    "children": [],
@@ -15037,7 +15081,7 @@
    ]
   },
   {
-   "id": 282,
+   "id": 283,
    "name": "Rock9",
    "parent": null,
    "children": [],
@@ -15086,7 +15130,7 @@
    ]
   },
   {
-   "id": 283,
+   "id": 284,
    "name": "Rock10",
    "parent": null,
    "children": [],
@@ -15135,7 +15179,7 @@
    ]
   },
   {
-   "id": 284,
+   "id": 285,
    "name": "Rock11",
    "parent": null,
    "children": [],
@@ -15184,7 +15228,7 @@
    ]
   },
   {
-   "id": 285,
+   "id": 286,
    "name": "Rock12",
    "parent": null,
    "children": [],
@@ -15233,7 +15277,7 @@
    ]
   },
   {
-   "id": 286,
+   "id": 287,
    "name": "Rock13",
    "parent": null,
    "children": [],
@@ -15282,7 +15326,7 @@
    ]
   },
   {
-   "id": 287,
+   "id": 288,
    "name": "Rock14",
    "parent": null,
    "children": [],
@@ -15331,7 +15375,7 @@
    ]
   },
   {
-   "id": 288,
+   "id": 289,
    "name": "Rock15",
    "parent": null,
    "children": [],
@@ -15380,7 +15424,7 @@
    ]
   },
   {
-   "id": 289,
+   "id": 290,
    "name": "Rock16",
    "parent": null,
    "children": [],
@@ -15429,7 +15473,7 @@
    ]
   },
   {
-   "id": 290,
+   "id": 291,
    "name": "Rock17",
    "parent": null,
    "children": [],
@@ -15478,7 +15522,7 @@
    ]
   },
   {
-   "id": 291,
+   "id": 292,
    "name": "Rock18",
    "parent": null,
    "children": [],
@@ -15527,7 +15571,7 @@
    ]
   },
   {
-   "id": 292,
+   "id": 293,
    "name": "Rock19",
    "parent": null,
    "children": [],
@@ -15576,7 +15620,7 @@
    ]
   },
   {
-   "id": 293,
+   "id": 294,
    "name": "Rock20",
    "parent": null,
    "children": [],
@@ -15625,7 +15669,7 @@
    ]
   },
   {
-   "id": 294,
+   "id": 295,
    "name": "Rock21",
    "parent": null,
    "children": [],
@@ -15674,7 +15718,7 @@
    ]
   },
   {
-   "id": 295,
+   "id": 296,
    "name": "Rock22",
    "parent": null,
    "children": [],
@@ -15723,7 +15767,7 @@
    ]
   },
   {
-   "id": 296,
+   "id": 297,
    "name": "Rock23",
    "parent": null,
    "children": [],
@@ -15772,7 +15816,7 @@
    ]
   },
   {
-   "id": 297,
+   "id": 298,
    "name": "Rock24",
    "parent": null,
    "children": [],
@@ -15821,7 +15865,7 @@
    ]
   },
   {
-   "id": 298,
+   "id": 299,
    "name": "Rock25",
    "parent": null,
    "children": [],
@@ -15870,7 +15914,7 @@
    ]
   },
   {
-   "id": 299,
+   "id": 300,
    "name": "Rock26",
    "parent": null,
    "children": [],
@@ -15919,7 +15963,7 @@
    ]
   },
   {
-   "id": 300,
+   "id": 301,
    "name": "Rock27",
    "parent": null,
    "children": [],
@@ -15968,7 +16012,7 @@
    ]
   },
   {
-   "id": 301,
+   "id": 302,
    "name": "Rock28",
    "parent": null,
    "children": [],
@@ -16017,7 +16061,7 @@
    ]
   },
   {
-   "id": 302,
+   "id": 303,
    "name": "Rock29",
    "parent": null,
    "children": [],
@@ -16066,7 +16110,7 @@
    ]
   },
   {
-   "id": 303,
+   "id": 304,
    "name": "Rock30",
    "parent": null,
    "children": [],
@@ -16115,7 +16159,7 @@
    ]
   },
   {
-   "id": 304,
+   "id": 305,
    "name": "Rock31",
    "parent": null,
    "children": [],
@@ -16164,7 +16208,7 @@
    ]
   },
   {
-   "id": 305,
+   "id": 306,
    "name": "Rock32",
    "parent": null,
    "children": [],
@@ -16213,7 +16257,7 @@
    ]
   },
   {
-   "id": 306,
+   "id": 307,
    "name": "Rock33",
    "parent": null,
    "children": [],
@@ -16262,7 +16306,7 @@
    ]
   },
   {
-   "id": 307,
+   "id": 308,
    "name": "Rock34",
    "parent": null,
    "children": [],
@@ -16311,7 +16355,7 @@
    ]
   },
   {
-   "id": 308,
+   "id": 309,
    "name": "Rock35",
    "parent": null,
    "children": [],
@@ -16360,7 +16404,7 @@
    ]
   },
   {
-   "id": 309,
+   "id": 310,
    "name": "Rock36",
    "parent": null,
    "children": [],
@@ -16409,7 +16453,7 @@
    ]
   },
   {
-   "id": 310,
+   "id": 311,
    "name": "Rock37",
    "parent": null,
    "children": [],
@@ -16458,7 +16502,7 @@
    ]
   },
   {
-   "id": 311,
+   "id": 312,
    "name": "Rock38",
    "parent": null,
    "children": [],
@@ -16507,7 +16551,7 @@
    ]
   },
   {
-   "id": 312,
+   "id": 313,
    "name": "Rock39",
    "parent": null,
    "children": [],
@@ -16556,7 +16600,7 @@
    ]
   },
   {
-   "id": 313,
+   "id": 314,
    "name": "Rock40",
    "parent": null,
    "children": [],
@@ -16605,7 +16649,7 @@
    ]
   },
   {
-   "id": 314,
+   "id": 315,
    "name": "Rock41",
    "parent": null,
    "children": [],
@@ -16654,7 +16698,7 @@
    ]
   },
   {
-   "id": 315,
+   "id": 316,
    "name": "Rock42",
    "parent": null,
    "children": [],
@@ -16703,7 +16747,7 @@
    ]
   },
   {
-   "id": 316,
+   "id": 317,
    "name": "Rock43",
    "parent": null,
    "children": [],
@@ -16752,7 +16796,7 @@
    ]
   },
   {
-   "id": 317,
+   "id": 318,
    "name": "Rock44",
    "parent": null,
    "children": [],
@@ -16801,7 +16845,7 @@
    ]
   },
   {
-   "id": 318,
+   "id": 319,
    "name": "Rock45",
    "parent": null,
    "children": [],
@@ -16850,12 +16894,12 @@
    ]
   },
   {
-   "id": 319,
+   "id": 320,
    "name": "GateA",
    "parent": null,
    "children": [
-    320,
-    321
+    321,
+    322
    ],
    "visible": true,
    "components": [
@@ -16891,9 +16935,9 @@
    ]
   },
   {
-   "id": 320,
+   "id": 321,
    "name": "GateAStrobe",
-   "parent": 319,
+   "parent": 320,
    "children": [],
    "visible": true,
    "components": [
@@ -16933,9 +16977,9 @@
    ]
   },
   {
-   "id": 321,
+   "id": 322,
    "name": "GateAField",
-   "parent": 319,
+   "parent": 320,
    "children": [],
    "visible": true,
    "components": [
@@ -16975,12 +17019,12 @@
    ]
   },
   {
-   "id": 322,
+   "id": 323,
    "name": "GateB",
    "parent": null,
    "children": [
-    323,
-    324
+    324,
+    325
    ],
    "visible": true,
    "components": [
@@ -17016,9 +17060,9 @@
    ]
   },
   {
-   "id": 323,
+   "id": 324,
    "name": "GateBStrobe",
-   "parent": 322,
+   "parent": 323,
    "children": [],
    "visible": true,
    "components": [
@@ -17058,9 +17102,9 @@
    ]
   },
   {
-   "id": 324,
+   "id": 325,
    "name": "GateBField",
-   "parent": 322,
+   "parent": 323,
    "children": [],
    "visible": true,
    "components": [
@@ -17100,8 +17144,8 @@
    ]
   },
   {
-   "id": 325,
-   "name": "Planet",
+   "id": 326,
+   "name": "Planet0",
    "parent": null,
    "children": [],
    "visible": true,
@@ -17143,8 +17187,8 @@
    ]
   },
   {
-   "id": 326,
-   "name": "Atmosphere",
+   "id": 327,
+   "name": "Atmosphere0",
    "parent": null,
    "children": [],
    "visible": true,
@@ -17179,7 +17223,311 @@
       "opaque": false,
       "cullBackfaces": true,
       "castShadows": false,
-      "material": "assets/materials/atmosphere.esmaterial"
+      "material": "assets/materials/atmosphere-karis.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 328,
+   "name": "Planet1",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 5200,
+       "y": 3400,
+       "z": 6400
+      },
+      "scale": {
+       "x": 3000,
+       "y": 3000,
+       "z": 3000
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/planet.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/planet.esmaterial",
+      "texture": "assets/textures/ice.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 329,
+   "name": "Atmosphere1",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 5200,
+       "y": 3400,
+       "z": 6400
+      },
+      "scale": {
+       "x": 3090.0,
+       "y": 3090.0,
+       "z": 3090.0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/shell.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/materials/atmosphere-vela.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 330,
+   "name": "Veil1",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": {
+       "x": 26000,
+       "y": 26000,
+       "z": 26000
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/shell.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "layer": -100,
+      "material": "assets/materials/veil-vela.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 331,
+   "name": "Ring1",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 5200,
+       "y": 3400,
+       "z": 6400
+      },
+      "rotation": {
+       "x": 0.47871952702103837,
+       "y": -0.36208669851154224,
+       "z": 0.22591944655222054,
+       "w": 0.7672556554886404
+      },
+      "scale": {
+       "x": 6750.0,
+       "y": 6750.0,
+       "z": 6750.0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/gate-field.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "material": "assets/materials/ring-vela.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 332,
+   "name": "Planet2",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 3800,
+       "y": -4200,
+       "z": -5200
+      },
+      "scale": {
+       "x": 3300,
+       "y": 3300,
+       "z": 3300
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/planet.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/planet.esmaterial",
+      "texture": "assets/textures/rust.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 333,
+   "name": "Atmosphere2",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 3800,
+       "y": -4200,
+       "z": -5200
+      },
+      "scale": {
+       "x": 3346.2,
+       "y": 3346.2,
+       "z": 3346.2
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/shell.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/materials/atmosphere-morn.esmaterial"
+     }
+    }
+   ]
+  },
+  {
+   "id": 334,
+   "name": "Veil2",
+   "parent": null,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "scale": {
+       "x": 26000,
+       "y": 26000,
+       "z": 26000
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/shell.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
+      "castShadows": false,
+      "layer": -100,
+      "material": "assets/materials/veil-morn.esmaterial"
      }
     }
    ]

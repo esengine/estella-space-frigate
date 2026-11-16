@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "ring.esshader",
+  "blendMode": 0,
+  "depthTest": true,
+  "depthWrite": false,
+  "cull": 0,
+  "properties": {
+    "u_bright": {
+      "r": 0.84,
+      "g": 0.9,
+      "b": 0.95,
+      "a": 1
+    },
+    "u_dim": {
+      "r": 0.42,
+      "g": 0.5,
+      "b": 0.6,
+      "a": 1
+    },
+    "u_strength": 0.9,
+    "u_inner": 0.5688888888888889,
+    "u_planet": 0.4444444444444444,
+    "u_sun": [
+      -0.2978348751058616,
+      -0.6455984152211182,
+      -0.7032048587962518
+    ]
+  }
+}

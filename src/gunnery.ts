@@ -28,7 +28,6 @@ export const guns = {
     ready: 0,
     shots: 0,
     hits: 0,
-    shake: 0,
     note: '',
     turrets: [] as Turret[],
     strike: null as ((rock: number, amount: number) => void) | null,
@@ -91,7 +90,6 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
         turret.kick = 1;
         turret.flash = 1;
         guns.shots++;
-        guns.shake = Math.min(1.2, guns.shake + 0.5);
         const rig = rigs![guns.turrets.indexOf(turret)]!;
         const astern = { x: -helm.forward.x * vessel.speed * FIELD_DRIFT, y: -helm.forward.y * vessel.speed * FIELD_DRIFT, z: -helm.forward.z * vessel.speed * FIELD_DRIFT };
         if (rig.smoke !== null) world.update(rig.smoke, ParticleEmitter, (p) => { p.addedVelocityMin = astern; p.addedVelocityMax = astern; });
@@ -243,7 +241,6 @@ export function createGunnery(app: App): (world: World, dt: number, sight: { fro
                 puff(sparks, 110, bolt.at);
                 puff(smoke, 22, bolt.at);
                 puff(blast, 1, bolt.at);
-                guns.shake = Math.min(1.2, guns.shake + 0.12);
                 guns.strike?.(struck, GUNNERY.damage);
             }
             bolt.live = struck < 0 && bolt.flown < GUNNERY.reach;

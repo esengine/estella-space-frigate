@@ -16,7 +16,9 @@ import { buildHelm } from './hudHelm';
 import { buildScope } from './hudScope';
 import { installHudEffects } from './hudEffects';
 import { buildTargets } from './hudTargets';
+import { JUMP } from './jump';
 import { ship } from './shipState';
+import { SYSTEMS } from './systems';
 
 const GAUGE = { box: 320, sweep: 0.75, fullScale: 440, redline: 400, labels: 114, command: 106 };
 const BAR_CELLS = 24;
@@ -80,7 +82,7 @@ async function load(app: App): Promise<Loaded> {
 
 function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number, input: InputState) => void {
     const kit = createKit(world, textures, fonts);
-    const { root, node, image, sliced, solid, label, pivot, tilt, lift, glow, say, ink, fill, fade, place } = kit;
+    const { root, node, image, sliced, solid, label, centred, pivot, tilt, lift, glow, say, ink, fill, fade, place } = kit;
     app.getResource(ScreenOverlay).perspective = 1500;
     installHudEffects(app);
 
@@ -182,11 +184,15 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         if (entity !== null) rocks.push({ entity, index: i, big: i >= MAJOR_FROM });
     }
     const camera = world.findEntityByName('Camera');
-    const targets = buildTargets(kit, rocks, world.findEntityByName('Planet'), log);
+    const targets = buildTargets(kit, rocks, log);
     const mine = installMining(app, world, rocks, targets.probe, log);
     const scope = buildScope(kit, rocks, targets.probe);
     const desk = buildHelm(kit, targets.probe);
     const battery = buildGunnery(kit, log, targets.probe);
+    const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
+    const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
+    const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
+    let jumps = ship.jumps, landed = true;
     const press = { down: false, at: 0, left: 0, top: 0, travel: 0 };
     const groups: readonly (readonly [Entity, number, number])[] = [[identity, 0, 1], [view, 0.15, 1], [systems, 0.35, 1], [gauge, 0.5, 1], [desk.root, 0.9, 1]];
     const leans: readonly (readonly [Entity, number, number])[] = [[identityAt, 0.1, 0.26], [viewAt, 0.1, -0.26], [systemsAt, -0.12, 0.3], [gaugeAt, -0.12, -0.3]];
@@ -244,7 +250,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         if (!model.primed) { model.reactor = load; model.primed = true; }
         model.reactor += (load - model.reactor) * Math.min(1, dt * 1.6);
 
-        say(clock, `OUTER PATROL   T+ ${stamp(ship.time)}`);
+        say(clock, `${SYSTEMS[ship.system]!.name} SYSTEM   T+ ${stamp(ship.time)}`);
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
         const lean = Math.round((helm.lean * 180) / Math.PI);
         say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? 'ALIGNING TO GATE' : helm.mode === 'level' ? 'COMING LEVEL' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
@@ -254,6 +260,21 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
             mining.delivered = Math.round((mining.delivered + mining.hold) * 10) / 10;
             mining.hold = 0;
         }
+
+        const bound = SYSTEMS[ship.bound]!;
+        if (ship.jumps !== jumps) {
+            jumps = ship.jumps;
+            landed = false;
+            log.say(`GATE TRANSIT   BOUND FOR ${bound.name}`, AMBER);
+        }
+        if (!landed && ship.jump < 0) {
+            landed = true;
+            log.say(`ARRIVED   ${bound.name} SYSTEM   ${bound.body} IN SIGHT`, AMBER);
+        }
+        place(transit, across / 2, 210);
+        fade(transit, ship.jump < 0 ? 0 : clamp(ship.jump * 3, 0, 1) * clamp((JUMP.seconds - ship.jump) * 1.6, 0, 1));
+        say(transitNote, ship.system === ship.bound ? 'ARRIVED' : 'GATE TRANSIT');
+        say(transitName, `${bound.name} SYSTEM`);
 
         if (guns.view) {
             say(viewTitle, 'COMBAT');

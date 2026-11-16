@@ -1,0 +1,53 @@
+#pragma shader "Planet Ring"
+#pragma version 300 es
+#pragma domain Unlit
+#pragma feature MESH_LOCAL_POSITION
+#pragma param u_bright color default(0.84,0.9,0.95,1)
+#pragma param u_dim color default(0.42,0.5,0.6,1)
+#pragma param u_strength float default(1.5) range(0,8)
+#pragma param u_inner float default(0.57) range(0,1)
+#pragma param u_planet float default(0.44) range(0,1)
+#pragma param u_sun vec3 default(0.3,0.5,0.8)
+
+#pragma fragment
+precision highp float;
+
+in vec4 v_color;
+in vec2 v_texCoord;
+#ifdef MESH_LOCAL_POSITION
+in highp vec3 v_localPos;
+#endif
+
+out vec4 fragColor;
+
+float lane(float x) {
+    float i = floor(x), f = fract(x);
+    float a = fract(sin(i * 127.1) * 43758.5453), b = fract(sin((i + 1.0) * 127.1) * 43758.5453);
+    return mix(a, b, f * f * (3.0 - 2.0 * f));
+}
+
+void main() {
+    vec2 p = v_texCoord * 2.0 - 1.0;
+#ifdef MESH_LOCAL_POSITION
+    p = v_localPos.xy;
+#endif
+    float r = length(p);
+    float k = (r - u_inner) / (1.0 - u_inner);
+    float broad = lane(k * 7.0 + 3.0);
+    float mid = lane(k * 31.0 + 11.0);
+    float fine = lane(k * 140.0 + 5.0);
+    float density = 0.25 + 0.75 * smoothstep(0.2, 0.75, broad * 0.55 + mid * 0.3 + fine * 0.15);
+    density *= 1.0 - 0.92 * smoothstep(0.035, 0.0, abs(k - 0.62));
+    density *= 1.0 - 0.7 * smoothstep(0.012, 0.0, abs(k - 0.83));
+    density *= 0.35 + 0.65 * smoothstep(0.0, 0.3, k);
+    density *= smoothstep(0.0, 0.015, k) * smoothstep(1.0, 0.97, k);
+    vec3 sun = normalize(u_sun);
+    vec3 at = vec3(p, 0.0);
+    float along = dot(at, sun);
+    float miss = length(at - sun * along);
+    float lit = along > 0.0 ? 1.0 : smoothstep(u_planet * 0.985, u_planet * 1.03, miss);
+    vec3 tone = mix(u_dim.rgb, u_bright.rgb, mid * 0.6 + fine * 0.4);
+    float glow = u_strength * (0.02 + 0.98 * lit) * (0.45 + 0.55 * abs(sun.z));
+    fragColor = vec4(tone * glow, clamp(density * 0.92, 0.0, 1.0));
+}
+#pragma end

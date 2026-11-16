@@ -58,7 +58,7 @@ try {
         } else if (verb === 'shot') {
             const f = await facts();
             await page.screenshot({ path: path.join(out, `${a}.png`), timeout: 60000 });
-            console.log(JSON.stringify({ shot: a, time: +f.time.toFixed(2), throttle: +f.throttle.toFixed(2), tour: f.tour, eye: [f.eyeX, f.eyeY, f.eyeZ].map((v) => Math.round(v)), gate: Math.round(f.gate), transits: f.transits, gun: [f.gunView, f.gunSource, f.gunBearing, f.gunReady, f.gunShots, f.gunHits, Math.round(f.gunRange ?? 0), f.gunTrain, f.gunAuto, +(f.gunSpread ?? 0).toFixed(2), +(f.gunLead ?? 0).toFixed(2)] }));
+            console.log(JSON.stringify({ shot: a, time: +f.time.toFixed(2), throttle: +f.throttle.toFixed(2), tour: f.tour, eye: [f.eyeX, f.eyeY, f.eyeZ].map((v) => Math.round(v)), gate: Math.round(f.gate), transits: f.transits, system: f.systemName, jump: +(f.jump ?? -1).toFixed(2), fov: +(f.fov ?? 0).toFixed(1), planets: f.planets, gun: [f.gunView, f.gunSource, f.gunBearing, f.gunReady, f.gunShots, f.gunHits, Math.round(f.gunRange ?? 0), f.gunTrain, f.gunAuto, +(f.gunSpread ?? 0).toFixed(2), +(f.gunLead ?? 0).toFixed(2)] }));
         }
     }
 } finally {

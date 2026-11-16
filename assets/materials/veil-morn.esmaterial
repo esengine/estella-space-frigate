@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "veil.esshader",
+  "blendMode": 2,
+  "depthTest": true,
+  "depthWrite": false,
+  "cull": 0,
+  "properties": {
+    "u_tint": {
+      "r": 1.4,
+      "g": 0.75,
+      "b": 0.45,
+      "a": 1
+    }
+  }
+}

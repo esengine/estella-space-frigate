@@ -2,9 +2,9 @@
 
 Made with the [Estella engine](https://github.com/esengine/estella).
 
-![Cruising, turning on thrusters, a gate transit, mining and gunnery](docs/demo.gif)
+![Cruising, turning on thrusters, mining, gunnery, and a jump through a gate to a ringed planet](docs/demo.gif)
 
-A frigate on patrol off a gas giant: fly her, mine asteroids, fight with five turrets, and jump through gates. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
+A frigate on patrol: fly her, mine asteroids, fight with five turrets, and jump through gates from one star system to the next: a banded gas giant, a ringed ice giant and a rust-red desert world. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
 
 ## Controls
 
@@ -17,7 +17,7 @@ A frigate on patrol off a gas giant: fly her, mine asteroids, fight with five tu
 | `Z` | Come level |
 | `T` / `R` | Lock next target / release |
 | `F` | Mining beam (cruise mode) |
-| `V` / `B` | Autopilot: close on target / align to gate |
+| `V` / `B` | Autopilot: close on target / align to gate (flying through a gate jumps to the next system) |
 | `G` | Combat mode on / off |
 | `Space` | Fire in combat mode (twice for a salvo, hold to keep firing); toggle the camera tour in cruise mode |
 | `C` | Auto fire on the locked target (combat mode) |

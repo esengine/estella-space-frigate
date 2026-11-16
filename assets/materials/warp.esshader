@@ -1,0 +1,61 @@
+#pragma shader "Jump Tunnel"
+#pragma version 300 es
+#pragma domain Unlit
+#pragma feature MESH_LOCAL_POSITION
+#pragma param u_core color default(0.8,0.93,1,1)
+#pragma param u_edge color default(0.1,0.3,1,1)
+#pragma param u_strength float default(0) range(0,8)
+#pragma param u_cover float default(0) range(0,1)
+#pragma param u_travel float default(0) range(0,100000)
+#pragma param u_flash float default(0) range(0,40)
+#pragma param u_half float default(2600) range(1,10000)
+
+#pragma fragment
+precision highp float;
+
+in vec4 v_color;
+in vec2 v_texCoord;
+#ifdef MESH_LOCAL_POSITION
+in highp vec3 v_localPos;
+#endif
+
+out vec4 fragColor;
+
+float cell(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float cloud(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(cell(i), cell(i + vec2(1.0, 0.0)), u.x), mix(cell(i + vec2(0.0, 1.0)), cell(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+float streaks(float turn, float along, float columns, float stretch, float seed) {
+    float column = turn * columns;
+    float id = floor(column);
+    float across = fract(column) - 0.5;
+    float speed = 0.6 + 0.8 * cell(vec2(id, seed));
+    float phase = fract(along / stretch + u_travel * speed / stretch + cell(vec2(id, seed + 7.0)));
+    float keep = step(0.5, cell(vec2(id, seed + 13.0)));
+    float tail = pow(1.0 - phase, 6.0) * smoothstep(0.0, 0.01, phase);
+    float width = 0.05 + 0.15 * cell(vec2(id, seed + 19.0));
+    return keep * tail * exp(-(across * across) / (width * width));
+}
+
+void main() {
+    vec3 at = vec3(0.0, 1.0, 0.0);
+#ifdef MESH_LOCAL_POSITION
+    at = v_localPos;
+#endif
+    float turn = atan(at.y, at.x) / 6.2831853 + 0.5;
+    float along = at.z;
+    float reach = abs(along) / u_half;
+    float lines = streaks(turn, along, 180.0, 1800.0, 1.0) + streaks(turn, along, 80.0, 2600.0, 31.0) * 0.8 + streaks(turn, along, 330.0, 1200.0, 67.0) * 0.6;
+    float mist = cloud(vec2(sin(turn * 6.2831853 * 3.0) * 1.5, (along + u_travel * 0.45) / 520.0)) * cloud(vec2(cos(turn * 6.2831853 * 7.0) * 2.5, (along + u_travel * 0.8) / 240.0));
+    float ahead = smoothstep(0.45, 1.0, along / u_half);
+    vec3 wall = u_edge.rgb * (0.03 + 0.2 * mist + 0.1 * reach) + u_core.rgb * (0.9 * ahead * ahead * ahead);
+    vec3 glow = mix(u_edge.rgb * 1.6, u_core.rgb, clamp(lines * 1.4, 0.0, 1.0)) * lines * 2.2;
+    fragColor = vec4((wall + glow) * u_strength + u_core.rgb * u_flash, clamp(u_cover * (1.0 + 2.0 * lines), 0.0, 1.0));
+}
+#pragma end

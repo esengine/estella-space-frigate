@@ -1,11 +1,13 @@
-import { addPlugin, defineSystem, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough } from 'esengine';
+import { addPlugin, defineSystem, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
 import { createGunnery, guns } from './gunnery';
 import { helm, mulQuat, turnBy, type Quat } from './helm';
 import { installHud } from './hud';
+import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, DRIFTING_ROCKS, FIELD_HALF_LENGTH, FIELD_DRIFT } from './shipState';
+import { SYSTEMS } from './systems';
 
 const PLUMES = [
     { name: 'PlumeL', width: 4.0, length: 2.3 },
@@ -34,6 +36,8 @@ const JETS = [
     { name: 'JetPortDown', turn: 'roll', sign: 1 }, { name: 'JetStarboardUp', turn: 'roll', sign: 1 }, { name: 'JetPortUp', turn: 'roll', sign: -1 }, { name: 'JetStarboardDown', turn: 'roll', sign: -1 },
 ] as const;
 const WAVE_SECONDS = 0.9;
+const FOV = 34;
+const EXPOSURE = -0.15;
 const SIGHT = { height: 15, yaw: Math.PI + 0.45, pitch: 0.02, distance: 100, low: -0.6, high: 0.9 };
 
 function strobe(time: number, every: number, flashes: number): number {
@@ -45,7 +49,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '' };
         app.insertResource(Playthrough, { facts });
         installHud(app);
         installAudio(app);
@@ -68,7 +72,46 @@ addPlugin({
         const downs = new Map<string, boolean>();
         const jets = JETS.map(() => 0);
         let sight = 0;
+        let leaving = 0;
+        let shown = -1;
+        let travel = 0;
+        let wide = FOV;
+        let open = false;
         const gunnery = createGunnery(app);
+
+        const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
+        const light = (world: World, name: string, way: { x: number; y: number; z: number }, color: { r: number; g: number; b: number; a: number }, intensity: number): void => {
+            const e = get(world, name);
+            world.insert(e, Light, { ...world.get(e, Light), color, intensity });
+            world.update(e, Transform, (t) => { t.rotation = lookRotation([0, 0, 0], [way.x, way.y, way.z]); });
+        };
+        const dress = (world: World, from: number, to: number, k: number): void => {
+            const a = SYSTEMS[from]!, b = SYSTEMS[to]!;
+            const way = (p: { x: number; y: number; z: number }, q: { x: number; y: number; z: number }) => ({ x: mix(p.x, q.x, k), y: mix(p.y, q.y, k), z: mix(p.z, q.z, k) });
+            const tone = (p: { r: number; g: number; b: number }, q: { r: number; g: number; b: number }) => ({ r: mix(p.r, q.r, k), g: mix(p.g, q.g, k), b: mix(p.b, q.b, k), a: 1 });
+            light(world, 'Sun', way(a.sun, b.sun), tone(a.sunColor, b.sunColor), mix(a.sunPower, b.sunPower, k));
+            light(world, 'PlanetShine', way(a.shine, b.shine), tone(a.shineColor, b.shineColor), mix(a.shinePower, b.shinePower, k));
+            const sky = get(world, 'Sky'), here = k < 0.5 ? a : b;
+            world.insert(sky, Light, { ...world.get(sky, Light), environmentRotation: here.skyTurn, color: { ...here.skyTint } });
+        };
+        let stars: Record<string, number> | null = null;
+        const grade = (world: World, exposure: number, band: number, clear: number): void => {
+            const camera = get(world, 'Camera');
+            const volume = world.get(camera, PostProcessVolume);
+            stars ??= { ...volume.effects.find((effect) => effect.type === 'starfield')!.uniforms };
+            const sky = stars;
+            world.insert(camera, PostProcessVolume, {
+                ...volume,
+                effects: volume.effects.map((effect) => effect.type === 'colorGrade' ? { ...effect, uniforms: { ...effect.uniforms, u_exposure: exposure } }
+                    : effect.type === 'starfield' ? { ...effect, uniforms: { ...effect.uniforms, u_bandTurn: band, u_intensity: sky.u_intensity! * clear, u_sunSize: sky.u_sunSize! * clear, u_sunGlow: sky.u_sunGlow! * clear } } : effect),
+            });
+        };
+        const stage = (world: World, system: number): void => {
+            SYSTEMS.forEach((each, i) => {
+                for (const part of each.parts) world.update(get(world, part), MeshRenderer, (m) => { m.enabled = i === system; });
+            });
+            shown = system;
+        };
 
         const get = (world: World, name: string): Entity => {
             const known = ids.get(name);
@@ -146,9 +189,7 @@ addPlugin({
             const { eye, target } = eyeOf(orbit);
             const camera = get(world, 'Camera');
             const cam = world.get(camera, Transform);
-            guns.shake *= Math.exp(-dt * 5.5);
-            const jolt = guns.shake * guns.shake * (0.5 + orbit.distance * 0.012);
-            cam.position = turnBy(helm.frame, { x: eye[0] + Math.sin(clock * 83) * jolt, y: eye[1] + Math.sin(clock * 97 + 1.3) * jolt, z: eye[2] + Math.sin(clock * 71 + 2.1) * jolt * 0.6 });
+            cam.position = turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] });
             cam.rotation = mulQuat(helm.frame, lookRotation(eye, target));
             world.insert(camera, Transform, cam);
 
@@ -181,15 +222,51 @@ addPlugin({
             ship.tour = tour;
             ship.shot = Math.floor(clock / SHOT_SECONDS) % SHOTS.length;
 
-            const drift = ship.speed * FIELD_DRIFT * dt;
+            if (shown < 0) stage(world, ship.system);
+            if (ship.jump >= 0) ship.jump += dt;
+            const leap = jumpAt(ship.jump);
+            if (ship.jump >= 0) {
+                if (leap.swapped && ship.system !== ship.bound) {
+                    ship.system = ship.bound;
+                    stage(world, ship.system);
+                }
+                dress(world, leaving, ship.bound, leap.blend);
+                grade(world, EXPOSURE + JUMP.glare * leap.flash, SYSTEMS[ship.system]!.bandTurn, 1 - leap.tunnel);
+                travel = (travel + dt * JUMP.travel * (0.2 + leap.rush)) % 100000;
+                if (leap.over) ship.jump = -1;
+            }
+            const tunnel = leap.tunnel, fov = FOV + JUMP.widen * leap.stretch;
+            if (fov !== wide) {
+                wide = fov;
+                world.update(camera, Camera, (c) => { c.fov = fov; });
+            }
+            if (tunnel > 0 !== open) {
+                open = tunnel > 0;
+                world.update(get(world, 'Warp'), Transform, (t) => { const size = open ? 1 : 0.001; t.scale = { x: size, y: size, z: size }; });
+            }
+            if (open) {
+                const field = world.get(get(world, 'Warp'), MeshRenderer).material;
+                Material.setUniform(field, 'u_cover', tunnel);
+                Material.setUniform(field, 'u_travel', travel);
+                Material.setUniform(field, 'u_flash', 0.2 * leap.flash);
+            }
+            facts.system = ship.system;
+            facts.systemName = SYSTEMS[ship.system]!.name;
+            facts.jump = ship.jump;
+            facts.jumps = ship.jumps;
+            facts.fov = world.get(camera, Camera).fov;
+            facts.planets = SYSTEMS.map((each) => (world.get(get(world, each.parts[0]), MeshRenderer).enabled ? 1 : 0)).join('');
+
+            const cruise = ship.speed * FIELD_DRIFT * dt, drift = cruise * (1 + JUMP.rush * leap.rush);
+            const leavingField = ship.jump >= 0 && !leap.swapped, past = leavingField ? drift : cruise;
             for (let i = 0; i < DRIFTING_ROCKS; i++) {
                 const e = get(world, `Rock${i}`);
                 const t = world.get(e, Transform);
-                const round = (v: number, half: number): number => (v < -half ? v + half * 2 : v > half ? v - half * 2 : v);
+                const round = (v: number, half: number): number => (leavingField ? v : v < -half ? v + half * 2 : v > half ? v - half * 2 : v);
                 t.position = {
-                    x: round(t.position.x - helm.forward.x * drift, FIELD_HALF_LENGTH * 1.2),
-                    y: round(t.position.y - helm.forward.y * drift, FIELD_HALF_LENGTH * 0.7),
-                    z: round(t.position.z - helm.forward.z * drift, FIELD_HALF_LENGTH),
+                    x: round(t.position.x - helm.forward.x * past, FIELD_HALF_LENGTH * 1.2),
+                    y: round(t.position.y - helm.forward.y * past, FIELD_HALF_LENGTH * 0.7),
+                    z: round(t.position.z - helm.forward.z * past, FIELD_HALF_LENGTH),
                 };
                 world.insert(e, Transform, t);
             }
@@ -222,13 +299,19 @@ addPlugin({
                 flash = 1;
                 since = 0;
                 facts.transits++;
+                if (ship.jump < 0) {
+                    leaving = ship.system;
+                    ship.bound = nextSystem(ship.system, SYSTEMS.length);
+                    ship.jump = 0;
+                    ship.jumps++;
+                }
             }
             if (side !== 0) passedSide = side;
             flash *= Math.exp(-dt * 2.2);
             since = Math.min(since + dt, 60);
             const front = Math.min(since / WAVE_SECONDS, 4);
             const burst = get(world, 'GateFlash');
-            world.insert(burst, Light, { ...world.get(burst, Light), intensity: 4 * flash });
+            world.insert(burst, Light, { ...world.get(burst, Light), intensity: 4 * flash + 2.4 * tunnel });
             for (const name of GATES) {
                 const field = world.get(get(world, `${name}Field`), MeshRenderer).material;
                 Material.setUniform(field, 'u_strength', 0.45 + 0.9 * flash);

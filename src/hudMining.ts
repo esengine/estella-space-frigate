@@ -84,7 +84,24 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
         else { shrink(index); log.say(`ROCK ${pad(index + 1, 2)} HIT  ${Math.round(clamp(mining.integrity[index]!, 0, 1) * 100)} %`); }
     };
 
+    const homes = rocks.map((rock) => ({ ...world.get(rock.entity, Transform).position }));
+    let system = ship.system;
+    const scatter = (): void => {
+        system = ship.system;
+        const turn = system * 2.1, c = Math.cos(turn), s = Math.sin(turn), flip = system % 2 === 0 ? 1 : -1;
+        rocks.forEach((rock, index) => {
+            mining.integrity[index] = 1;
+            const home = homes[index]!;
+            world.update(rock.entity, Transform, (t) => {
+                t.position = { x: home.x * c + home.z * s, y: home.y * flip, z: home.z * c - home.x * s };
+                t.scale = { x: sizes[index]!, y: sizes[index]!, z: sizes[index]! };
+            });
+        });
+        probe.release = true;
+    };
+
     return (frame) => {
+        if (ship.system !== system) scatter();
         const index = probe.selected;
         const rock = index >= 0 ? rocks[index]! : null;
         const there = rock ? world.get(rock.entity, Transform).position : null;

@@ -5,6 +5,10 @@ export const ship = {
     speed: 0,
     tour: true,
     shot: 0,
+    system: 0,
+    bound: 0,
+    jump: -1,
+    jumps: 0,
 };
 
 export const TOP_SPEED = 420;
