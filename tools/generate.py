@@ -257,7 +257,8 @@ def emitter(**over):
     base = {'enabled': True, 'looping': True, 'playOnStart': True, 'simulationSpace': 0, 'rate': 0, 'burstCount': 0, 'duration': 1000, 'shape': 4, 'shapeRadius': 0.3,
             'speedMin': 0, 'speedMax': 1, 'gravity': {'x': 0, 'y': 0, 'z': 0}, 'damping': 0, 'rotationMin': 0, 'rotationMax': 360, 'angularVelocityMin': -40, 'angularVelocityMax': 40,
             'startColor': {'r': 1, 'g': 1, 'b': 1, 'a': 1}, 'endColor': {'r': 1, 'g': 1, 'b': 1, 'a': 0}, 'blendMode': 1, 'texture': 'assets/fx/puff.esimage',
-            'lifetimeMin': 0.3, 'lifetimeMax': 0.6, 'maxParticles': 200, 'startSizeMin': 1, 'startSizeMax': 1, 'endSizeMin': 1, 'endSizeMax': 1, 'renderMode': 0, 'intensity': 1, 'collisionEnabled': False}
+            'lifetimeMin': 0.3, 'lifetimeMax': 0.6, 'maxParticles': 200, 'startSizeMin': 1, 'startSizeMax': 1, 'endSizeMin': 1, 'endSizeMax': 1, 'renderMode': 0, 'intensity': 1, 'collisionEnabled': False,
+            'material': 'assets/materials/particle-soft.esmaterial'}
     return {'type': 'ParticleEmitter', 'data': {**base, **over}}
 
 
@@ -265,7 +266,7 @@ GAS = dict(shape=3, shapeAngle=30, shapeRadius=0.22, speedMin=20, speedMax=42, d
            startSizeMin=0.5, startSizeMax=0.9, endSizeMin=3.2, endSizeMax=5.6, intensity=1.1, noiseStrength=5, noiseFrequency=0.35, noiseScrollSpeed=1.5,
            colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 1, 'b': 1, 'a': 0.95}}, {'t': 0.25, 'color': {'r': 0.86, 'g': 0.92, 'b': 1, 'a': 0.55}},
                                     {'t': 0.7, 'color': {'r': 0.7, 'g': 0.8, 'b': 0.95, 'a': 0.2}}, {'t': 1, 'color': {'r': 0.6, 'g': 0.7, 'b': 0.9, 'a': 0}}]})
-SPARKS = dict(shape=4, shapeRadius=0.4, speedMin=14, speedMax=85, damping=1.6, lifetimeMin=0.18, lifetimeMax=0.7, maxParticles=600, texture='assets/fx/spark.esimage',
+SPARKS = dict(material='assets/materials/particle-hard.esmaterial', shape=4, shapeRadius=0.4, speedMin=14, speedMax=85, damping=1.6, lifetimeMin=0.18, lifetimeMax=0.7, maxParticles=600, texture='assets/fx/spark.esimage',
               startSizeMin=0.5, startSizeMax=1.3, endSizeMin=0.1, endSizeMax=0.3, renderMode=1, velocityScale=0.05, lengthScale=2.2, intensity=7, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
               colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.95, 'b': 0.8, 'a': 1}}, {'t': 0.3, 'color': {'r': 1, 'g': 0.62, 'b': 0.2, 'a': 1}},
                                        {'t': 0.75, 'color': {'r': 1, 'g': 0.28, 'b': 0.06, 'a': 0.8}}, {'t': 1, 'color': {'r': 0.5, 'g': 0.06, 'b': 0, 'a': 0}}]})
@@ -642,6 +643,8 @@ def make_materials():
                                  'u_falloff': 2.6, 'u_fade': 1.6, 'u_diamonds': 0, 'u_knots': 0, 'u_flicker': 0.08}},
         'jet': {'version': '1.0', 'type': 'material', 'shader': 'jet.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                 'properties': {'u_tint': {'r': 0.92, 'g': 0.95, 'b': 1.0, 'a': 1}, 'u_strength': 3.2, 'u_length': 5, 'u_fade': 1.6, 'u_streaks': 7, 'u_rush': 9}},
+        'particle-soft': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 1.5}},
+        'particle-hard': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 0.3}},
         'plume-core': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                        'properties': {'u_core': {'r': 0.9, 'g': 0.97, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.2, 'g': 0.55, 'b': 1.0, 'a': 1}, 'u_strength': 5, 'u_length': 11,
                                       'u_falloff': 1.3, 'u_fade': 2.4, 'u_diamonds': 5, 'u_knots': 1.4, 'u_flicker': 0.14}},

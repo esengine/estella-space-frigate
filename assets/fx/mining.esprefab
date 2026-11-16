@@ -240,7 +240,8 @@
                   }
                 }
               ]
-            }
+            },
+            "material": "assets/materials/particle-soft.esmaterial"
           }
         }
       ]
@@ -351,7 +352,8 @@
                   }
                 }
               ]
-            }
+            },
+            "material": "assets/materials/particle-hard.esmaterial"
           }
         }
       ]
@@ -460,7 +462,8 @@
                   }
                 }
               ]
-            }
+            },
+            "material": "assets/materials/particle-hard.esmaterial"
           }
         }
       ]
