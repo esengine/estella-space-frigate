@@ -1,10 +1,14 @@
 # Space Frigate · 深空护卫舰
 
+**用 [Estella 引擎](https://github.com/esengine/estella) 制作。** Made with the [Estella engine](https://github.com/esengine/estella): every model, texture, sound and the whole HUD here is built from recipes by the engine's own tools.
+
+![巡航、转向、穿越星门、采矿和开炮的演示](docs/demo.gif)
+
 一艘在气态巨行星外巡航的护卫舰。画面里没有一张手绘贴图，也没有一个外部建模软件做的模型：舰体、装甲分块、掉漆、舷窗和引擎都是模型配方（`.esmodel`）里的步骤，星云、行星和星空由脚本与着色器生成。
 
 ## 这个仓库
 
-这是一个独立的仓库，但它不带引擎：要放在 Estella 引擎检出目录的 `examples/space-frigate` 下使用（引擎仓库把它作为子模块挂在那里）。配方烘焙、导出、测试和检查脚本都按这个相对位置去找引擎。
+这是一个独立的仓库，但它不带引擎：要放在 [Estella 引擎](https://github.com/esengine/estella)检出目录的 `examples/space-frigate` 下使用（引擎仓库把它作为子模块挂在那里）。配方烘焙、导出、测试和检查脚本都按这个相对位置去找引擎。
 
 在引擎目录下：
 

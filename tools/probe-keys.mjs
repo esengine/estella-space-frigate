@@ -22,13 +22,15 @@ try {
     await page.waitForLoadState('networkidle', { timeout: 120000 }).catch(() => {});
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
+    let reel = 0;
+    const film = async () => { await page.screenshot({ path: path.join(out, `film-${String(++reel).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 92, timeout: 60000 }); };
     const step = async (frames) => {
         for (let left = frames; left > 0; left -= 120) {
             await page.evaluate((k) => window.__estellaCooked.step(k), Math.min(120, left));
             await page.waitForTimeout(25);
         }
     };
-    for (const [verb, a, b] of script) {
+    for (const [verb, a, b, extra] of script) {
         if (verb === 'run') await step(Math.max(0, Math.round((a - (await facts()).time) * 60)));
         else if (verb === 'step') await step(a);
         else if (verb === 'hold') {
@@ -40,7 +42,7 @@ try {
             const [x0, y0, x1, y1] = a;
             await page.mouse.move(x0, y0);
             await page.mouse.down();
-            for (let k = 1; k <= b; k++) { await page.mouse.move(x0 + ((x1 - x0) * k) / b, y0 + ((y1 - y0) * k) / b); await step(1); }
+            for (let k = 1; k <= b; k++) { await page.mouse.move(x0 + ((x1 - x0) * k) / b, y0 + ((y1 - y0) * k) / b); await step(1); if (extra && k % extra === 0) await film(); }
             await page.mouse.up();
             await step(1);
         } else if (verb === 'press') {
@@ -51,6 +53,8 @@ try {
             await step(b);
             await page.mouse.up();
             await step(1);
+        } else if (verb === 'film') {
+            for (let done = 0; done < a; done += b) { await step(b); await film(); }
         } else if (verb === 'shot') {
             const f = await facts();
             await page.screenshot({ path: path.join(out, `${a}.png`), timeout: 60000 });
