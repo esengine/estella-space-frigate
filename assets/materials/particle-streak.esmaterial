@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "streak.esshader",
+  "blendMode": 1,
+  "depthTest": true,
+  "depthWrite": false,
+  "cull": 0,
+  "properties": {
+    "u_near": 14,
+    "u_clear": 30,
+    "u_far": 900
+  }
+}

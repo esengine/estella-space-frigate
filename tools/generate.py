@@ -238,6 +238,12 @@ BLAST = dict(material='assets/materials/particle-blast.esmaterial', texture='ass
 TRACER = dict(material='assets/materials/particle-hard.esmaterial', shape=4, shapeRadius=0.12, speedMin=0, speedMax=1.5, damping=1, lifetimeMin=0.35, lifetimeMax=0.75, maxParticles=4000, texture='assets/fx/spark.esimage',
               startSizeMin=1.0, startSizeMax=1.5, endSizeMin=0.15, endSizeMax=0.3, intensity=5, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
               colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.9, 'b': 0.65, 'a': 1}}, {'t': 0.3, 'color': {'r': 1, 'g': 0.55, 'b': 0.18, 'a': 0.8}}, {'t': 1, 'color': {'r': 0.7, 'g': 0.16, 'b': 0.03, 'a': 0}}]})
+SPEED_DUST = dict(material='assets/materials/particle-streak.esmaterial', texture='assets/fx/spark.esimage', shape=2, shapeSize={'x': 340, 'y': 200, 'z': 480},
+                  speedMin=0, speedMax=0, lifetimeMin=1.2, lifetimeMax=2.2, maxParticles=1500, rate=0, intensity=0,
+                  startSizeMin=0.14, startSizeMax=0.3, endSizeMin=0.14, endSizeMax=0.3, renderMode=1, velocityScale=0.4, lengthScale=4,
+                  rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
+                  colorGradient={'stops': [{'t': 0, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}, {'t': 0.2, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.85}},
+                                           {'t': 0.7, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.85}}, {'t': 1, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}]})
 IMPACT_FIRE = {**MUZZLE_FIRE, 'shape': 4, 'shapeRadius': 1.2, 'speedMin': 8, 'speedMax': 70, 'lifetimeMax': 0.55, 'endSizeMin': 7, 'endSizeMax': 14}
 SMOKE = dict(shape=4, shapeRadius=0.5, speedMin=2, speedMax=11, damping=1.8, lifetimeMin=0.5, lifetimeMax=1.3, maxParticles=260,
              startSizeMin=0.8, startSizeMax=1.6, endSizeMin=3.5, endSizeMax=6.5, intensity=0.9, noiseStrength=3, noiseFrequency=0.3, noiseScrollSpeed=1,
@@ -535,7 +541,6 @@ GATE_RADIUS = 170.0
 FLARES = {'white': (1.0, 1.0, 1.0), 'red': (1.0, 0.08, 0.04), 'green': (0.08, 1.0, 0.25), 'bolt': (1.0, 0.6, 0.24)}
 STROBES = [('StrobeMast', (0, 23.1, -24.3), 'white', 0.55), ('StrobeKeel', (0, -10.95, -12), 'red', 0.5), ('NavPort', (17, 3.05, -20), 'red', 0.42), ('NavStarboard', (-17, 3.05, -20), 'green', 0.42),
            ('BowPort', (3.3, -0.1, 59.1), 'white', 0.34), ('BowStarboard', (-3.3, -0.1, 59.1), 'white', 0.34)]
-MOTES = 60
 
 def gate_source():
     S=[]
@@ -683,6 +688,8 @@ def make_materials():
         'particle-blast': {'version': '1.0', 'type': 'material', 'shader': 'builtin:distortion', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_strength': 0.03, 'u_radial': 1, 'u_dispersion': 0.2}},
         'particle-fire': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 1.0, 'u_erosion': 0.75, 'u_erosionEdge': 0.25}},
         'particle-hard': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 0.3}},
+        'particle-streak': {'version': '1.0', 'type': 'material', 'shader': 'streak.esshader', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                            'properties': {'u_near': 14, 'u_clear': 30, 'u_far': 900}},
         'plume-core': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                        'properties': {'u_core': {'r': 0.9, 'g': 0.97, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.2, 'g': 0.55, 'b': 1.0, 'a': 1}, 'u_strength': 5, 'u_length': 11,
                                       'u_falloff': 1.3, 'u_fade': 2.4, 'u_diamonds': 5, 'u_knots': 1.4, 'u_flicker': 0.14}},
@@ -696,7 +703,7 @@ def make_materials():
         path = MAT / f'{name}.esmaterial'
         path.write_text(json.dumps(doc, indent=2) + '\n')
         stamp(path, 'material')
-    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'planet', 'shield'):
+    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'planet', 'shield', 'streak'):
         stamp(MAT / f'{name}.esshader', 'shader')
     stamp(ROOT / 'assets/fx/puff.esimage', 'imageSource')
     for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'turret', 'guns')):
@@ -858,17 +865,7 @@ def make_scene():
         add(name + 'Light', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': dict(zip('rgb', FLARES[tint]), a=1), 'intensity': 0.5, 'radius': 9, 'enabled': True, 'meshShadows': False}}], lamp)
     add('Warp', [transform((0, 0, 0), None, (0.001,) * 3), mesh('warp', 'assets/materials/warp.esmaterial', None, False, False, False, False, LAYERS['tunnel'])], ship)
     add('GateFlash', [transform(), {'type': 'Light', 'data': {'type': 0, 'color': {'r': 0.55, 'g': 0.78, 'b': 1.0, 'a': 1}, 'intensity': 0, 'radius': 320, 'enabled': True, 'meshShadows': False}}])
-    dust = random.Random(71)
-    for i in range(MOTES):
-        at = (0, 0, 0)
-        while math.hypot(at[0], at[1]) < 34:
-            at = (dust.uniform(-170, 170), dust.uniform(-100, 100), dust.uniform(-240, 240))
-        spin = [dust.gauss(0, 1) for _ in range(4)]
-        norm = math.sqrt(sum(q * q for q in spin))
-        kind = 'rock-' + 'abc'[i % 3]
-        size = dust.uniform(0.12, 0.5) * (1 + 2.5 * dust.random() ** 5)
-        add(f'Mote{i}', [transform(at, {'x': spin[0] / norm, 'y': spin[1] / norm, 'z': spin[2] / norm, 'w': spin[3] / norm}, (size,) * 3),
-                         mesh(kind, f'assets/models/{kind}.esmaterial', f'assets/models/{kind}_color.png', True, True, True, False)])
+    add('SpeedDust', [transform(), emitter(**SPEED_DUST)])
     rocks = random.Random(47)
     for placed in range(46):
         far = placed >= 40
