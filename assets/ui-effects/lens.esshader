@@ -21,14 +21,20 @@ void main() {
     vec2 p = v_texCoord * 2.0 - 1.0;
     vec2 at = bent(p, u_curve);
     vec4 mid = texture(u_texture, at);
-    float red = texture(u_texture, bent(p, u_curve + u_fringe)).r;
-    float blue = texture(u_texture, bent(p, u_curve - u_fringe)).b;
-    vec3 halo = vec3(0.0);
-    for (int i = 0; i < 8; i++) {
-        float turn = float(i) * 0.7853982;
-        halo += texture(u_texture, at + vec2(cos(turn), sin(turn)) * u_viewport.zw * 7.0).rgb;
+    vec3 split = mid.rgb;
+    if (u_fringe > 0.0) {
+        split.r = texture(u_texture, bent(p, u_curve + u_fringe)).r;
+        split.b = texture(u_texture, bent(p, u_curve - u_fringe)).b;
     }
-    vec4 layer = vec4(vec3(red, mid.g, blue) + halo * 0.125 * u_glow, mid.a);
+    if (u_glow > 0.0) {
+        vec3 halo = vec3(0.0);
+        for (int i = 0; i < 8; i++) {
+            float turn = float(i) * 0.7853982;
+            halo += texture(u_texture, at + vec2(cos(turn), sin(turn)) * u_viewport.zw * 7.0).rgb;
+        }
+        split += halo * 0.125 * u_glow;
+    }
+    vec4 layer = vec4(split, mid.a);
     float line = 1.0 - u_scan * (0.5 + 0.5 * sin(gl_FragCoord.y * 2.0943951 + u_time.x * 6.0));
     fragColor = layer * line;
 }
@@ -43,14 +49,20 @@ fn bent(p : vec2f, k : f32) -> vec2f {
     let p = v.v_texCoord * 2.0 - 1.0;
     let at = bent(p, mc.u_curve);
     let mid = textureSampleLevel(t0, s0, at, 0.0);
-    let red = textureSampleLevel(t0, s0, bent(p, mc.u_curve + mc.u_fringe), 0.0).r;
-    let blue = textureSampleLevel(t0, s0, bent(p, mc.u_curve - mc.u_fringe), 0.0).b;
-    var halo = vec3f(0.0);
-    for (var i = 0; i < 8; i++) {
-        let turn = f32(i) * 0.7853982;
-        halo += textureSampleLevel(t0, s0, at + vec2f(cos(turn), sin(turn)) * tc.u_viewport.zw * 7.0, 0.0).rgb;
+    var split = mid.rgb;
+    if (mc.u_fringe > 0.0) {
+        split.r = textureSampleLevel(t0, s0, bent(p, mc.u_curve + mc.u_fringe), 0.0).r;
+        split.b = textureSampleLevel(t0, s0, bent(p, mc.u_curve - mc.u_fringe), 0.0).b;
     }
-    let layer = vec4f(vec3f(red, mid.g, blue) + halo * 0.125 * mc.u_glow, mid.a);
+    if (mc.u_glow > 0.0) {
+        var halo = vec3f(0.0);
+        for (var i = 0; i < 8; i++) {
+            let turn = f32(i) * 0.7853982;
+            halo += textureSampleLevel(t0, s0, at + vec2f(cos(turn), sin(turn)) * tc.u_viewport.zw * 7.0, 0.0).rgb;
+        }
+        split += halo * 0.125 * mc.u_glow;
+    }
+    let layer = vec4f(split, mid.a);
     let line = 1.0 - mc.u_scan * (0.5 + 0.5 * sin(v.pos.y * 2.0943951 + tc.u_time.x * 6.0));
     return layer * line;
 }
