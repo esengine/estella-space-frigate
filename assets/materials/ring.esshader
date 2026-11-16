@@ -8,6 +8,8 @@
 #pragma param u_inner float default(0.57) range(0,1)
 #pragma param u_planet float default(0.44) range(0,1)
 #pragma param u_sun vec3 default(0.3,0.5,0.8)
+#pragma param u_split vec4 default(0,0,0,0)
+#pragma param u_second color default(0.7,0.75,0.8,1)
 
 #pragma fragment
 precision highp float;
@@ -41,12 +43,16 @@ void main() {
     density *= 1.0 - 0.7 * smoothstep(0.012, 0.0, abs(k - 0.83));
     density *= 0.35 + 0.65 * smoothstep(0.0, 0.3, k);
     density *= smoothstep(0.0, 0.015, k) * smoothstep(1.0, 0.97, k);
+    float apart = u_split.x > 0.0 ? 1.0 - smoothstep(u_split.y * 0.75, u_split.y, abs(k - u_split.x)) : 0.0;
+    float beyond = u_split.x > 0.0 ? smoothstep(u_split.x, u_split.x + u_split.y, k) : 0.0;
+    density *= (1.0 - 0.98 * apart) * (1.0 - 0.3 * beyond);
     vec3 sun = normalize(u_sun);
     vec3 at = vec3(p, 0.0);
     float along = dot(at, sun);
     float miss = length(at - sun * along);
     float lit = along > 0.0 ? 1.0 : smoothstep(u_planet * 0.985, u_planet * 1.03, miss);
     vec3 tone = mix(u_dim.rgb, u_bright.rgb, mid * 0.6 + fine * 0.4);
+    tone = mix(tone, u_second.rgb * (0.75 + 0.5 * fine), beyond);
     float glow = u_strength * (0.02 + 0.98 * lit) * (0.45 + 0.55 * abs(sun.z));
     fragColor = vec4(tone * glow, clamp(density * 0.92, 0.0, 1.0));
 }

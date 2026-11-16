@@ -22,7 +22,7 @@ import { JUMP } from './jump';
 import { fall } from './planetfall';
 import { foes } from './raiders';
 import { MAJOR_FROM, ROCKS, ship } from './shipState';
-import { SYSTEMS } from './systems';
+import { systemAt } from './worlds';
 
 const GAUGE = { box: 320, sweep: 0.75, fullScale: 440, redline: 400, labels: 114, command: 106 };
 const BAR_CELLS = 24;
@@ -263,7 +263,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         const test = clamp((age - 0.6) / 1.6, 0, 1), sweep = Math.sin(Math.PI * test), settle = test * test * (3 - 2 * test);
         const shown = (actual: number): number => sweep * (1 - settle) + actual * settle;
 
-        const world_ = ship.away ? `${fall.body}   ALT ${reach(Math.max(fall.altitude, 0))}` : Number.isFinite(fall.altitude) ? `${fall.body} ${reach(Math.max(fall.altitude, 0))}` : `${SYSTEMS[ship.system]!.name} SYSTEM`;
+        const world_ = ship.away ? `${fall.body}   ALT ${reach(Math.max(fall.altitude, 0))}` : Number.isFinite(fall.altitude) ? `${fall.body} ${reach(Math.max(fall.altitude, 0))}` : `${systemAt(ship.system).name} SYSTEM`;
         say(clock, `${world_}   T+ ${stamp(ship.time)}`);
         if (fall.note) { log.say(fall.note, AMBER); fall.note = ''; }
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
@@ -276,7 +276,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
             mining.hold = 0;
         }
 
-        const bound = SYSTEMS[ship.bound]!;
+        const bound = systemAt(ship.bound);
         if (ship.jumps !== jumps) {
             jumps = ship.jumps;
             landed = false;

@@ -1,6 +1,7 @@
-import { Device, Quality, TextAlign, UIVisual } from 'esengine';
-import type { App, QualityLevel, QualityMode, QualityPreferences } from 'esengine';
-import { AMBER, EDGE, HAZE, ICE, rgb, type Frame, type Kit } from './hudKit';
+import { Device, Material, MeshRenderer, Quality, TextAlign, UIVisual } from 'esengine';
+import type { App, QualityController, QualityLevel, QualityMode, QualityPreferences } from 'esengine';
+import { AMBER, DESIGN, EDGE, HAZE, ICE, rgb, type Frame, type Kit } from './hudKit';
+import { SETTLED_FRAMES, pendingShaders } from './shaders';
 
 const STORE = 'space-frigate:graphics';
 const PANEL = { w: 560, row: 36, top: 70 };
@@ -40,6 +41,53 @@ const keep = (c: Choices): void => {
     }
 };
 
+const applyChoices = (q: QualityController, c: Choices): void => {
+    q.setMode(c.mode);
+    q.setPreferences({
+        ...(c.renderScale !== undefined ? { renderScale: c.renderScale } : {}),
+        ...(c.antialiasing !== undefined ? { antialiasing: c.antialiasing } : {}),
+        ...(c.ssao !== undefined ? { ssao: c.ssao } : {}),
+        skipEffects: [...c.off],
+    });
+};
+
+export function applyStoredGraphics(app: App): void {
+    const q = app.getResource(Quality);
+    if (q) applyChoices(q, read());
+}
+
+const FINISH = ['u_clearcoat', 'u_detailSize'] as const;
+
+const RESCAN_FRAMES = 30;
+const WATCH_FRAMES = 20;
+const VEIL_TEXT = { w: 640, top: DESIGN.height / 2 + 120 };
+
+const finisher = (app: App): ((plain: boolean) => number) => {
+    const authored = new Map<number, [string, number][]>();
+    let current: boolean | null = null, trimmed = 0, since = RESCAN_FRAMES;
+    const set = (material: number, plain: boolean): void => {
+        for (const [name, value] of authored.get(material) ?? []) Material.setUniform(material, name, plain ? 0 : value);
+    };
+    return (plain) => {
+        const changed = plain !== current;
+        if (!changed && (!plain || ++since < RESCAN_FRAMES)) return trimmed;
+        since = 0;
+        for (const e of app.world.getEntitiesWithComponents([MeshRenderer])) {
+            const material = app.world.get(e, MeshRenderer).material;
+            if (!material || authored.has(material)) continue;
+            authored.set(material, FINISH.flatMap((name) => {
+                const value = Material.getUniform(material, name);
+                return typeof value === 'number' && value > 0 ? [[name, value] as [string, number]] : [];
+            }));
+            if (!changed && plain) set(material, true);
+        }
+        if (changed) for (const material of authored.keys()) set(material, plain);
+        current = plain;
+        trimmed = plain ? [...authored.values()].reduce((sum, layers) => sum + layers.length, 0) : 0;
+        return trimmed;
+    };
+};
+
 const look = (name: Look): Option[] => [
     { caption: 'ON', pick: (c) => { c.off = c.off.filter((l) => l !== name); }, on: (c) => !c.off.includes(name) },
     { caption: 'OFF', pick: (c) => { if (!c.off.includes(name)) c.off.push(name); }, on: (c) => c.off.includes(name) },
@@ -68,7 +116,7 @@ const ROWS: Row[] = [
     { title: 'VIGNETTE', options: look('vignette') },
 ];
 
-export const graphics = { open: false, level: '', scale: 1, msaa: 1, antialiasing: '', ssao: false, skipped: [] as readonly string[] };
+export const graphics = { open: false, level: '', scale: 1, msaa: 1, antialiasing: '', ssao: false, skipped: [] as readonly string[], trimmed: 0, applying: false };
 (globalThis as { __spaceGraphics?: typeof graphics }).__spaceGraphics = graphics;
 
 const LEVEL_NAMES: Record<QualityLevel, string> = { low: 'LOW', medium: 'MEDIUM', high: 'HIGH' };
@@ -78,19 +126,17 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
     const textures = kit.textures;
     const choices = read();
     const quality = () => app.getResource(Quality);
+    const finish = finisher(app);
     const apply = (): void => {
         const q = quality();
-        if (!q) return;
-        q.setMode(choices.mode);
-        q.setPreferences({
-            ...(choices.renderScale !== undefined ? { renderScale: choices.renderScale } : {}),
-            ...(choices.antialiasing !== undefined ? { antialiasing: choices.antialiasing } : {}),
-            ...(choices.ssao !== undefined ? { ssao: choices.ssao } : {}),
-            skipEffects: [...choices.off],
-        });
+        if (q) applyChoices(q, choices);
     };
     apply();
 
+    const veil = solid(root, 'SettingsVeil', { left: 0, top: 0, right: 0, bottom: 0 }, rgb(0x000000));
+    const veilText = label(root, 'SettingsVeilText', { left: 0, top: VEIL_TEXT.top, width: VEIL_TEXT.w, height: 20 }, { size: 12, color: rgb(HAZE), align: TextAlign.Center, spacing: 3 });
+    fade(veil, 0);
+    fade(veilText, 0);
     const opener = node(root, 'SettingsOpen', { right: OPENER.right, top: OPENER.top, width: BUTTON.w, height: BUTTON.h });
     const openerCap = sliced(opener, 'SettingsOpenCap', { left: 0, top: 0, width: BUTTON.w, height: BUTTON.h }, textures.keycap, 9, rgb(ICE, 0.55));
     const openerText = label(opener, 'SettingsOpenText', { left: 0, top: 0, width: BUTTON.w, height: BUTTON.h - 2 }, { size: 10, color: rgb(HAZE), align: TextAlign.Center, spacing: 1.4, content: 'SETTINGS' });
@@ -118,7 +164,7 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
     const closeText = label(panel, 'SettingsCloseText', { left: PANEL.w - BUTTON.w - 24, top: closeY, width: BUTTON.w, height: BUTTON.h - 2 }, { size: 10, color: rgb(HAZE), align: TextAlign.Center, spacing: 1.4, content: 'CLOSE' });
     fade(panel, 0);
 
-    let open = false, escape = false, key = false;
+    let open = false, escape = false, key = false, watch = 0, quiet = 0, shade = 0;
     const inside = (p: { left: number; top: number } | null, x: number, y: number, w: number, h: number): boolean => !!p && p.left >= x && p.left <= x + w && p.top >= y && p.top <= y + h;
     const show = (on: boolean): void => {
         open = on;
@@ -137,7 +183,22 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
             graphics.antialiasing = p.antialiasing;
             graphics.ssao = p.ssao;
             graphics.skipped = p.skipEffects;
+            graphics.trimmed = finish(graphics.level === 'low');
         }
+        const pending = pendingShaders(app);
+        if (watch > 0) {
+            watch--;
+            if (pending > 0) { graphics.applying = true; watch = 0; quiet = 0; }
+        }
+        if (graphics.applying) {
+            quiet = pending === 0 ? quiet + 1 : 0;
+            if (quiet >= SETTLED_FRAMES) graphics.applying = false;
+            say(veilText, pending > 0 ? `APPLYING GRAPHICS  ·  ${pending} SHADER${pending === 1 ? '' : 'S'} TO COMPILE` : 'APPLYING GRAPHICS');
+        }
+        shade += ((graphics.applying ? 1 : 0) - shade) * Math.min(1, frame.dt * 8);
+        fade(veil, shade * 0.94);
+        fade(veilText, shade);
+        place(veilText, (frame.across - VEIL_TEXT.w) / 2, VEIL_TEXT.top);
         const openerX = frame.across - OPENER.right - BUTTON.w;
         const overOpener = inside(frame.pointer, openerX, OPENER.top, BUTTON.w, BUTTON.h);
         ink(openerCap, open ? rgb(AMBER, 0.95) : rgb(ICE, overOpener ? 0.95 : 0.55), UIVisual);
@@ -160,6 +221,7 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
                 option.pick(choices);
                 keep(choices);
                 apply();
+                watch = WATCH_FRAMES;
             }
             const lit = option.on(choices);
             ink(cell.cap, lit ? rgb(AMBER, 0.95) : rgb(ICE, over ? 0.95 : 0.55), UIVisual);

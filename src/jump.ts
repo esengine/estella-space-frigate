@@ -21,4 +21,4 @@ export function jumpAt(t: number): JumpState {
     };
 }
 
-export const nextSystem = (now: number, count: number): number => (now + 1) % count;
+export const nextSystem = (now: number): number => now + 1;

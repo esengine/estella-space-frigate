@@ -6,7 +6,7 @@ import { Planet, registerPlanetProvider } from 'esengine/terrain';
 import { GROUND_ID, GROUND_VERSION, groundRange, groundSample, groundWorkerSource } from './planetGround';
 import { helm, mulQuat, type Quat, type Vec } from './helm';
 import { ship } from './shipState';
-import { SYSTEMS } from './systems';
+import { systemAt } from './worlds';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
 
@@ -29,13 +29,12 @@ export const GROUNDS: Readonly<Record<number, Ground>> = {
     4: { world: 'ocean', radius: 56000, seed: 5, colors: [rgb(0.3, 0.42, 0.2), rgb(0.72, 0.66, 0.5), rgb(0.93, 0.95, 0.98), rgb(0.33, 0.31, 0.29)], sea: rgb(0.05, 0.24, 0.4), fog: rgb(0.62, 0.74, 0.86), haze: 1.3, fogDensity: 0.00009, ambient: rgb(0.9, 0.95, 1.0), skyFog: 0.6 },
 };
 
-const KINDS_NOW: readonly number[] = [0, 1, 2];
 export const groundOf = (system: number): Ground | null => {
-    const row = SYSTEMS[system] as { surface?: { kind?: number }; name?: string } | undefined;
-    const ground = GROUNDS[fall.kind >= 0 ? fall.kind : row?.surface?.kind ?? KINDS_NOW[system] ?? 0];
+    const here = systemAt(system);
+    const ground = GROUNDS[fall.kind >= 0 ? fall.kind : here.surface.kind];
     if (!ground) return null;
     let seed = ground.seed;
-    for (const ch of row?.name ?? '') seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) | 0;
+    for (const ch of `${here.name}:${system}`) seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) | 0;
     return { ...ground, seed };
 };
 
@@ -51,6 +50,8 @@ export const PLANETFALL = {
     skyReflection: 0.3,
     descent: -0.16,
     gasFloor: 0.995,
+    entryShell: 1.03,
+    skim: 1.006,
     surge: 7,
 };
 
@@ -82,7 +83,7 @@ function register(): void {
     registerPlanetProvider({
         id: GROUND_ID,
         versions: [GROUND_VERSION],
-        range: (_seed, _version, _radius) => [-900, 2300],
+        range: () => groundRange(''),
         workerSource: groundWorkerSource(),
         sample: (region) => groundSample(region),
     });
@@ -106,13 +107,12 @@ const levelFacing = (yaw: number, pitch: number): Quat =>
     mulQuat({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, { x: -Math.sin(pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) });
 
 export interface PlanetfallHooks {
-    parts: (world: World, system: number) => Entity[];
+    parts: (world: World) => Entity[];
     hideSpace: (world: World, hidden: boolean) => void;
 }
 
 export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: number, drift: number) => void {
     register();
-    let shownFor = -1;
     let surface: Entity | null = null;
     let lens: Record<string, number> | null = null;
     let daylight: { intensity: number; reflectionScale: number; color: Color } | null = null;
@@ -130,21 +130,18 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     };
     let graded = false;
 
-    const spacePlanet = (world: World): { centre: Vec; radius: number; air: number } => {
-        const here = SYSTEMS[ship.system]!;
-        const body = hooks.parts(world, ship.system)[0]!;
-        const t = world.get(body, Transform);
-        return { centre: { ...t.position }, radius: here.radius, air: here.radius * 1.03 };
+    const spacePlanet = (world: World): { centre: Vec; radius: number; air: number; entry: number } => {
+        const here = systemAt(ship.system);
+        const t = world.get(hooks.parts(world)[0]!, Transform);
+        return { centre: { ...t.position }, radius: here.radius, air: here.radius * here.air, entry: here.radius * Math.max(here.air, PLANETFALL.entryShell) };
     };
 
     const moveParts = (world: World, by: Vec): void => {
-        for (const part of hooks.parts(world, ship.system)) {
-            world.update(part, Transform, (t) => { t.position = add(t.position, by); });
-        }
+        for (const part of hooks.parts(world)) world.update(part, Transform, (t) => { t.position = add(t.position, by); });
     };
 
     const placeParts = (world: World, centre: Vec): void => {
-        for (const part of hooks.parts(world, ship.system)) world.update(part, Transform, (t) => { t.position = { ...centre }; });
+        for (const part of hooks.parts(world)) world.update(part, Transform, (t) => { t.position = { ...centre }; });
     };
 
     const grade = (world: World, ground: Ground | null, centre: Vec, altitude: number, inAir: number): void => {
@@ -217,12 +214,8 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     };
 
     return (world, dt, drift) => {
-        if (shownFor !== ship.system && fall.stage === 'space') {
-            shownFor = ship.system;
-            placeParts(world, SYSTEMS[ship.system]!.at);
-        }
+        const here = systemAt(ship.system);
         const ground = groundOf(ship.system);
-        const here = SYSTEMS[ship.system]!;
         fall.landable = ground !== null;
         fall.body = here.body;
         const step = scale(helm.forward, -drift);
@@ -234,7 +227,12 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             fall.altitude = fall.distance - p.radius;
             fall.target = p.centre;
             fall.planet = ship.away ? null : p.centre;
-            if (fall.stage === 'space' && ship.jump < 0 && fall.distance < p.air) {
+            if (fall.stage === 'entry' && !ship.away && fall.distance < p.radius * PLANETFALL.skim) {
+                moveParts(world, scale(p.centre, (p.radius * PLANETFALL.skim) / fall.distance - 1));
+                fall.distance = p.radius * PLANETFALL.skim;
+                fall.altitude = fall.distance - p.radius;
+            }
+            if (fall.stage === 'space' && ship.jump < 0 && fall.distance < (ground ? p.entry : p.air)) {
                 if (ground) {
                     fall.stage = 'entry';
                     fall.t = 0;
@@ -242,7 +240,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
                     fall.note = `ATMOSPHERIC ENTRY   ${here.body}`;
                 } else if (fall.distance < p.radius / PLANETFALL.gasFloor + (p.air - p.radius) * 0.4) {
                     moveParts(world, scale(p.centre, (p.radius / PLANETFALL.gasFloor + (p.air - p.radius) * 0.4) / fall.distance - 1));
-                    if (!fall.warned) fall.note = `${here.body} IS A GAS GIANT   NO SURFACE TO REACH`;
+                    if (!fall.warned) fall.note = `${here.body} IS ${here.surface.kind === 1 ? 'AN ICE' : 'A GAS'} GIANT   NO SURFACE TO REACH`;
                     fall.warned = true;
                 }
             }
@@ -310,7 +308,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
                 dropSurface(world);
                 hooks.hideSpace(world, false);
                 ambient(world, null);
-                placeParts(world, scale(below, here.radius * 1.03 * 1.25));
+                placeParts(world, scale(below, here.radius * Math.max(here.air, PLANETFALL.entryShell) * 1.25));
                 grade(world, null, { x: 0, y: 0, z: 0 }, 0, 0);
             }
             if (fall.t >= PLANETFALL.exit) { fall.stage = 'space'; fall.t = 0; fall.cover = 0; }

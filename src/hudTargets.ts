@@ -9,7 +9,7 @@ import { RAIDER } from './raiderMind';
 import { fall } from './planetfall';
 import { foes } from './raiders';
 import { ship } from './shipState';
-import { SYSTEMS } from './systems';
+import { systemAt } from './worlds';
 
 const HULL = [{ x: 0, y: 0, z: 52 }, { x: 0, y: 0, z: -52 }, { x: 24, y: 0, z: -40 }, { x: -24, y: 0, z: -40 }, { x: 0, y: 16, z: -20 }, { x: 0, y: -10, z: 0 }, { x: 14, y: 0, z: 20 }, { x: -14, y: 0, z: 20 }];
 const MINOR = 6;
@@ -230,7 +230,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         say(waypointRange, reach(away));
         say(waypointEta, ship.speed > 1 ? `ETA ${stamp((away * METRES) / ship.speed)}` : 'ETA  HOLDING');
 
-        const globe = SYSTEMS[ship.system]!;
+        const globe = systemAt(ship.system);
         say(bodyName, globe.body);
         const centre = fall.planet ?? globe.at;
         say(bodyRange, `ALTITUDE ${spaced(Math.round(((Math.hypot(centre.x, centre.y, centre.z) - globe.radius) * METRES) / 100) * 100)} KM`);
