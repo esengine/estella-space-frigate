@@ -58,7 +58,7 @@ export function createRaiders(app: App): (world: World, dt: number) => void {
         const speed = ship.speed * FIELD_DRIFT, way = { x: helm.forward.x * speed, y: helm.forward.y * speed, z: helm.forward.z * speed };
         const flying = foes.list.filter((foe) => foe.alive);
 
-        if (ship.jump >= 0) {
+        if (ship.jump >= 0 || ship.away) {
             for (const foe of flying) park(world, foe);
             for (const bolt of bolts) bolt.live = false;
             foes.due = Infinity;

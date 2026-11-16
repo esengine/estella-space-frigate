@@ -18,6 +18,7 @@ export const ship = {
     stings: [] as { at: { x: number; y: number; z: number }; weight: number }[],
     gap: Infinity,
     closest: Infinity,
+    away: false,
 };
 
 export const TOP_SPEED = 420;

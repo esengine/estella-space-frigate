@@ -7,7 +7,7 @@ import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
 import { METRES, helm, stepHelm } from './helm';
 import {
-    ALERT, AMBER, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, rgb, stamp,
+    ALERT, AMBER, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
 } from './hudKit';
 import { guns } from './gunnery';
@@ -18,6 +18,7 @@ import { buildScope } from './hudScope';
 import { installHudEffects } from './hudEffects';
 import { buildTargets } from './hudTargets';
 import { JUMP } from './jump';
+import { fall } from './planetfall';
 import { foes } from './raiders';
 import { MAJOR_FROM, ROCKS, ship } from './shipState';
 import { SYSTEMS } from './systems';
@@ -29,7 +30,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -41,7 +42,7 @@ export function installHud(app: App): void {
         if (world.findEntityByName('Camera') === null) return;
         const moved = stepHelm({
             ahead: input.isKeyDown('KeyW'), astern: input.isKeyDown('KeyS'), port: input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft'), starboard: input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight'),
-            climb: input.isKeyDown('KeyE') || input.isKeyDown('ArrowUp'), dive: input.isKeyDown('KeyQ') || input.isKeyDown('ArrowDown'), steady: input.isKeyDown('KeyX'), approach: input.isKeyDown('KeyV'), align: input.isKeyDown('KeyB'), level: input.isKeyDown('KeyZ'),
+            climb: input.isKeyDown('KeyE') || input.isKeyDown('ArrowUp'), dive: input.isKeyDown('KeyQ') || input.isKeyDown('ArrowDown'), steady: input.isKeyDown('KeyX'), approach: input.isKeyDown('KeyV'), align: input.isKeyDown('KeyB'), level: input.isKeyDown('KeyZ'), planet: input.isKeyDown('KeyP'),
         }, Math.min(time.delta, 0.05));
         if (majors.length === 0) {
             for (let i = MAJOR_FROM; i < ROCKS; i++) { const e = world.findEntityByName(`Rock${i}`); if (e !== null) majors.push(e); }
@@ -260,10 +261,12 @@ function build(app: App, world: World, { textures, fonts }: Loaded): (dt: number
         const test = clamp((age - 0.6) / 1.6, 0, 1), sweep = Math.sin(Math.PI * test), settle = test * test * (3 - 2 * test);
         const shown = (actual: number): number => sweep * (1 - settle) + actual * settle;
 
-        say(clock, `${SYSTEMS[ship.system]!.name} SYSTEM   T+ ${stamp(ship.time)}`);
+        const world_ = ship.away ? `${fall.body}   ALT ${reach(Math.max(fall.altitude, 0))}` : Number.isFinite(fall.altitude) ? `${fall.body} ${reach(Math.max(fall.altitude, 0))}` : `${SYSTEMS[ship.system]!.name} SYSTEM`;
+        say(clock, `${world_}   T+ ${stamp(ship.time)}`);
+        if (fall.note) { log.say(fall.note, AMBER); fall.note = ''; }
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
         const lean = Math.round((helm.lean * 180) / Math.PI);
-        say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? 'ALIGNING TO GATE' : helm.mode === 'level' ? 'COMING LEVEL' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
+        say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? 'ALIGNING TO GATE' : helm.mode === 'level' ? 'COMING LEVEL' : helm.mode === 'planet' ? 'PLANET APPROACH' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
         ink(helmLine, helm.mode === 'manual' ? rgb(HAZE, 0.9) : rgb(AMBER));
         if (helm.arrived) {
             log.say(mining.hold > 0 ? `DELIVERED ${mining.hold.toFixed(1)} T   NAV ${pad(helm.leg, 2)} ${helm.gateName}` : `GATE REACHED   NAV ${pad(helm.leg, 2)} ${helm.gateName}`, AMBER);

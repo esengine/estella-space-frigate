@@ -72,6 +72,8 @@ export function buildHelm(kit: Kit, probe: TargetProbe): Desk {
     control('Close', right, rowAt(1), BUTTON.w, BUTTON.h, 'V   CLOSE', () => engage('approach'), () => helm.mode === 'approach');
     control('Level', right, rowAt(2), BUTTON.w, BUTTON.h, 'Z   LEVEL', () => engage('level'), () => helm.mode === 'level');
     control('Steady', right, rowAt(3), BUTTON.w, BUTTON.h, 'X   STEADY', () => steady(), () => false);
+    control('Planet', right, rowAt(4), BUTTON.w, BUTTON.h, 'P   PLANET', () => engage('planet'), () => helm.mode === 'planet', () => !ship.away);
+    control('Orbit', right, rowAt(4), BUTTON.w, BUTTON.h, 'P   TO ORBIT', () => engage('planet'), () => helm.mode === 'planet', () => ship.away);
     const cruiseHints = header('Hints', -420, RUDDER.top + RUDDER.h + 14, 840, 'W S  ENGINE      A D  RUDDER      Q E  PITCH      Z  LEVEL      CLICK  MOUSE LOOK      1 - 6  VIEWS      SPACE  TOUR      G  COMBAT');
     const combatHints = header('CombatHints', -420, RUDDER.top + RUDDER.h + 14, 840, 'DRAG  AIM      SPACE OR CLICK  FIRE      TWICE  SALVO      T  LOCK      L  FACE IT      C  AUTO FIRE      A D Q E  STEER      G  LEAVE COMBAT');
 

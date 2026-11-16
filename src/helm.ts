@@ -47,7 +47,7 @@ function toward(from: Quat, to: Quat, share: number): Quat {
     return { x: q.x / l, y: q.y / l, z: q.z / l, w: q.w / l };
 }
 
-export type HelmMode = 'manual' | 'approach' | 'align' | 'level';
+export type HelmMode = 'manual' | 'approach' | 'align' | 'level' | 'planet';
 
 export const helm = {
     yaw: 0, pitch: 0, roll: 0, lean: 0, yawRate: 0, pitchRate: 0, rollRate: 0,
@@ -67,9 +67,11 @@ export const helm = {
     arrivals: 0,
     arrived: false,
     aim: null as Vec | null,
+    target: null as Vec | null,
+    surge: 1,
 };
 
-export interface HelmKeys { ahead: boolean; astern: boolean; port: boolean; starboard: boolean; climb: boolean; dive: boolean; steady: boolean; approach: boolean; align: boolean; level: boolean }
+export interface HelmKeys { ahead: boolean; astern: boolean; port: boolean; starboard: boolean; climb: boolean; dive: boolean; steady: boolean; approach: boolean; align: boolean; level: boolean; planet?: boolean }
 
 const held: Record<string, number> = {};
 
@@ -94,6 +96,7 @@ export function setElevation(order: number): void { helm.elevation = within(orde
 export function steady(): void { helm.rudder = 0; helm.elevation = 0; helm.mode = 'manual'; }
 export function engage(mode: HelmMode): void {
     if (mode === 'approach' && !helm.aim) return;
+    if (mode === 'planet' && !helm.target) return;
     helm.mode = helm.mode === mode ? 'manual' : mode;
     if (helm.mode === 'manual') steady();
 }
@@ -109,11 +112,13 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
     if (tapped('approach', keys.approach, dt)) engage('approach');
     if (tapped('align', keys.align, dt)) engage('align');
     if (tapped('level', keys.level, dt)) engage('level');
+    if (tapped('planet', keys.planet ?? false, dt)) engage('planet');
+    if (helm.mode === 'planet' && !helm.target) steady();
     if (helm.mode === 'approach' && !helm.aim) steady();
     if (helm.mode === 'approach' && helm.aim && Math.hypot(helm.aim.x, helm.aim.y, helm.aim.z) < STANDOFF) { steady(); setEngine(0); }
 
     let want = { yaw: -helm.rudder * TURN_RATE, pitch: helm.elevation * PITCH_RATE, roll: 0 };
-    const to = helm.mode === 'approach' ? helm.aim : helm.mode === 'align' ? helm.gate : null;
+    const to = helm.mode === 'approach' ? helm.aim : helm.mode === 'align' ? helm.gate : helm.mode === 'planet' ? helm.target : null;
     if (to) {
         const ahead = turnBack(helm.level, to);
         want = { yaw: within(Math.atan2(ahead.x, ahead.z) * 1.4, TURN_RATE), pitch: within(Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z) || 1e-6) * 1.4, PITCH_RATE), roll: 0 };
@@ -145,11 +150,11 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
     helm.pitch = Math.asin(Math.max(-1, Math.min(1, helm.forward.y)));
     helm.lean = Math.atan2(turnBy(helm.level, { x: 1, y: 0, z: 0 }).y, turnBy(helm.level, { x: 0, y: 1, z: 0 }).y);
 
-    const run = ship.speed * FIELD_DRIFT * dt;
+    const run = ship.speed * FIELD_DRIFT * dt * helm.surge;
     const moved = { x: -helm.forward.x * run, y: -helm.forward.y * run, z: -helm.forward.z * run };
-    helm.gate = { x: helm.gate.x + moved.x, y: helm.gate.y + moved.y, z: helm.gate.z + moved.z };
+    if (!ship.away) helm.gate = { x: helm.gate.x + moved.x, y: helm.gate.y + moved.y, z: helm.gate.z + moved.z };
     helm.arrived = false;
-    if (Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z) < GATE_REACH) {
+    if (!ship.away && Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z) < GATE_REACH) {
         helm.arrived = true;
         helm.arrivals++;
         helm.leg = (helm.leg % 9) + 1;

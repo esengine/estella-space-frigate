@@ -11,6 +11,7 @@ import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { installLoading, loading } from './loading';
 import { installSky } from './sky';
+import { createPlanetfall, fall } from './planetfall';
 import { SYSTEMS } from './systems';
 
 const PLUMES = [
@@ -55,7 +56,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, motes: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: SYSTEMS[0].name as string, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0 };
         app.insertResource(Playthrough, { facts });
         installSky();
         installLoading(app);
@@ -90,6 +91,33 @@ addPlugin({
         const gunnery = createGunnery(app);
         const impacts = createImpacts(app);
         const raiders = createRaiders(app);
+        const parked = new Map<Entity, { x: number; y: number; z: number }>();
+        const spaceOnly = (world: World): Entity[] => {
+            const out: Entity[] = [];
+            for (let i = 0; ; i++) { const e = world.findEntityByName(`Rock${i}`); if (e === null) break; out.push(e); }
+            return out;
+        };
+        const planetfall = createPlanetfall({
+            parts: (world, system) => SYSTEMS[system]!.parts.map((part) => get(world, part)),
+            hideSpace: (world, hidden) => {
+                SYSTEMS.forEach((each, i) => {
+                    for (const part of each.parts) world.update(get(world, part), MeshRenderer, (m) => { m.enabled = !hidden && i === ship.system; });
+                });
+                for (const e of spaceOnly(world)) {
+                    if (hidden) {
+                        const at = world.get(e, Transform).position;
+                        parked.set(e, { ...at });
+                        world.update(e, Transform, (t) => { t.position = { x: at.x + 1e6, y: at.y + 1e6, z: at.z + 1e6 }; });
+                    } else {
+                        const at = parked.get(e);
+                        if (at) world.update(e, Transform, (t) => { t.position = { ...at }; });
+                    }
+                }
+                if (!hidden) parked.clear();
+                for (const name of GATES) world.update(get(world, name), Transform, (t) => { const size = hidden ? 0.0001 : 1; t.scale = { x: size, y: size, z: size }; });
+                for (let i = 0; i < motes; i++) world.update(get(world, `Mote${i}`), MeshRenderer, (m) => { m.enabled = !hidden; });
+            },
+        });
 
         const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
         const light = (world: World, name: string, way: { x: number; y: number; z: number }, color: { r: number; g: number; b: number; a: number }, intensity: number): void => {
@@ -290,9 +318,13 @@ addPlugin({
             facts.fov = world.get(camera, Camera).fov;
             facts.planets = SYSTEMS.map((each) => (world.get(get(world, each.parts[0]), MeshRenderer).enabled ? 1 : 0)).join('');
 
-            const cruise = ship.speed * FIELD_DRIFT * dt, drift = cruise * (1 + JUMP.rush * leap.rush);
+            const cruise = ship.speed * FIELD_DRIFT * dt * helm.surge, drift = cruise * (1 + JUMP.rush * leap.rush);
             const leavingField = ship.jump >= 0 && !leap.swapped, past = leavingField ? drift : cruise;
-            impacts(world, dt, cruise, past, leavingField);
+            planetfall(world, dt, drift);
+            facts.fall = fall.stage;
+            facts.altitude = Number.isFinite(fall.altitude) ? fall.altitude : 9999999;
+            facts.cover = fall.cover;
+            if (!ship.away) impacts(world, dt, cruise, past, leavingField);
             raiders(world, dt);
             facts.foes = foes.list.filter((foe) => foe.alive).length;
             facts.kills = foes.kills;
@@ -361,7 +393,7 @@ addPlugin({
                 motes = 0;
                 for (let e = world.findEntityByName('Mote0'); e !== null; e = world.findEntityByName(`Mote${++motes}`)) moteSizes.push(world.get(e, Transform).scale.x);
             }
-            for (let i = 0; i < motes; i++) {
+            for (let i = 0; i < (ship.away ? 0 : motes); i++) {
                 const e = get(world, `Mote${i}`);
                 const t = world.get(e, Transform);
                 const wrap = (v: number, half: number): number => (leavingField ? v : v < -half ? v + half * 2 * Math.ceil((-half - v) / (half * 2)) : v > half ? v - half * 2 * Math.ceil((v - half) / (half * 2)) : v);

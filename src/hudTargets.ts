@@ -6,6 +6,7 @@ import { METRES, helm, turnBy } from './helm';
 import { ALERT, AMBER, DESIGN, HAZE, ICE, KEPT_CLEAR, contactName, ease, hullBlocks, keptClear, pad, reach, sameRoom, rgb, spaced, stamp, towardOnScreen, type Frame, type Kit, type Log, type Rock } from './hudKit';
 import { MINING, mining, rockClass } from './hudMining';
 import { RAIDER } from './raiderMind';
+import { fall } from './planetfall';
 import { foes } from './raiders';
 import { ship } from './shipState';
 import { SYSTEMS } from './systems';
@@ -219,7 +220,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const clear = keptClear(box.width, world.get(marker, UINode).insetLeft.value, 64, anchor.onScreen);
         if (!sameRoom(anchor.edgeInsets, clear)) world.update(marker, UIWorldAnchor, (anchored) => { anchored.edgeInsets = clear; });
         place(callout, world.get(marker, UINode).insetLeft.value > box.width - 380 ? -246 : 86, 2);
-        const quiet = ship.jump >= 0;
+        const quiet = ship.jump >= 0 || ship.away;
         fade(callout, guns.view || quiet ? 0 : 1);
         fade(bracket, anchor.clamped || quiet ? 0 : 1);
         fade(diamond, anchor.clamped || quiet ? 0 : 1);
@@ -231,10 +232,11 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
 
         const globe = SYSTEMS[ship.system]!;
         say(bodyName, globe.body);
-        say(bodyRange, `ALTITUDE ${spaced(Math.round(((Math.hypot(globe.at.x, globe.at.y, globe.at.z) - globe.radius) * METRES) / 100) * 100)} KM`);
-        if (frame.lens && ship.jump < 0) {
+        const centre = fall.planet ?? globe.at;
+        say(bodyRange, `ALTITUDE ${spaced(Math.round(((Math.hypot(centre.x, centre.y, centre.z) - globe.radius) * METRES) / 100) * 100)} KM`);
+        if (frame.lens && ship.jump < 0 && !ship.away) {
             const lens = frame.lens;
-            const q = lens.rotation, from = lens.position, c = globe.at, radius = globe.radius;
+            const q = lens.rotation, from = lens.position, c = centre, radius = globe.radius;
             const up = { x: 2 * (q.x * q.y - q.w * q.z), y: 1 - 2 * (q.x * q.x + q.z * q.z), z: 2 * (q.y * q.z + q.w * q.x) };
             const d = { x: c.x - from.x, y: c.y - from.y, z: c.z - from.z };
             const far = Math.hypot(d.x, d.y, d.z) || 1;
