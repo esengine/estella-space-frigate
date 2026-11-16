@@ -3,40 +3,13 @@ import type { Color, Entity, PostProcessVolumeData, World } from 'esengine';
 
 type PostProcessEffectData = PostProcessVolumeData['effects'][number];
 import { Planet, registerPlanetProvider } from 'esengine/terrain';
+import { groundFor, heightAt, type Ground } from './grounds';
 import { GROUND_ID, GROUND_VERSION, groundRange, groundSample, groundWorkerSource } from './planetGround';
 import { helm, mulQuat, type Quat, type Vec } from './helm';
 import { ship } from './shipState';
 import { systemAt } from './worlds';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
-
-export interface Ground {
-    world: string;
-    radius: number;
-    seed: number;
-    colors: [Color, Color, Color, Color];
-    sea: Color | null;
-    fog: Color;
-    haze: number;
-    fogDensity: number;
-    ambient: Color;
-    skyFog: number;
-}
-
-export const GROUNDS: Readonly<Record<number, Ground>> = {
-    2: { world: 'desert', radius: 52000, seed: 11, colors: [rgb(0.6, 0.34, 0.2), rgb(0.42, 0.22, 0.14), rgb(0.8, 0.63, 0.47), rgb(0.24, 0.16, 0.13)], sea: null, fog: rgb(0.8, 0.56, 0.36), haze: 3.2, fogDensity: 0.00016, ambient: rgb(1.0, 0.68, 0.46), skyFog: 0.95 },
-    3: { world: 'lava', radius: 46000, seed: 23, colors: [rgb(0.11, 0.1, 0.1), rgb(0.2, 0.12, 0.09), rgb(0.42, 0.38, 0.35), rgb(0.07, 0.06, 0.06)], sea: rgb(1.0, 0.36, 0.06), fog: rgb(0.55, 0.32, 0.22), haze: 4.5, fogDensity: 0.0002, ambient: rgb(1.0, 0.58, 0.42), skyFog: 0.95 },
-    4: { world: 'ocean', radius: 56000, seed: 5, colors: [rgb(0.3, 0.42, 0.2), rgb(0.72, 0.66, 0.5), rgb(0.93, 0.95, 0.98), rgb(0.33, 0.31, 0.29)], sea: rgb(0.05, 0.24, 0.4), fog: rgb(0.62, 0.74, 0.86), haze: 1.3, fogDensity: 0.00009, ambient: rgb(0.9, 0.95, 1.0), skyFog: 0.6 },
-};
-
-export const groundOf = (system: number): Ground | null => {
-    const here = systemAt(system);
-    const ground = GROUNDS[fall.kind >= 0 ? fall.kind : here.surface.kind];
-    if (!ground) return null;
-    let seed = ground.seed;
-    for (const ch of `${here.name}:${system}`) seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) | 0;
-    return { ...ground, seed };
-};
 
 export const PLANETFALL = {
     entry: 3.4,
@@ -72,7 +45,6 @@ export const fall = {
     centre: { x: 0, y: 0, z: 0 } as Vec,
     target: null as Vec | null,
     planet: null as Vec | null,
-    kind: -1,
     warned: false,
 };
 
@@ -97,11 +69,7 @@ const smooth = (a: number, b: number, v: number): number => {
     return t * t * (3 - 2 * t);
 };
 
-export function groundUnder(ground: Ground, up: Vec): number {
-    const [lo, hi] = groundRange(ground.world);
-    const got = groundSample({ world: ground.world, seed: ground.seed, radius: ground.radius, directions: new Float32Array([up.x, up.y, up.z]), count: 1 }).heights[0]!;
-    return Math.min(Math.max(got, lo), hi);
-}
+export const groundUnder = (ground: Ground, up: Vec): number => heightAt(ground.world, ground.seed, ground.radius, up);
 
 const levelFacing = (yaw: number, pitch: number): Quat =>
     mulQuat({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, { x: -Math.sin(pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) });
@@ -154,7 +122,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             uniforms: {
                 u_planetRadius: ground?.radius ?? 0, u_planetX: centre.x, u_planetY: centre.y, u_planetZ: centre.z,
                 u_unitsPerKm: PLANETFALL.unitsPerKm, u_altitude: Math.min(Math.max(altitude / PLANETFALL.unitsPerKm, 0), 20),
-                u_intensity: 1.15 * inAir, u_haze: ground?.haze ?? 1, u_clouds: ground?.world === 'ocean' ? 0.42 : 0.12, u_cloudBase: 2.4, u_cloudThickness: 1.6,
+                u_intensity: 1.15 * inAir, u_haze: ground?.haze ?? 1, u_clouds: ground?.clouds ?? 0.12, u_cloudBase: 2.4, u_cloudThickness: 1.6,
                 u_lightScene: 1, u_panorama: 0, u_groundAlbedo: 0.25, u_sunBrightness: 30, u_stars: 0.6, u_followSun: 1,
             },
         };
@@ -215,7 +183,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
 
     return (world, dt, drift) => {
         const here = systemAt(ship.system);
-        const ground = groundOf(ship.system);
+        const ground = groundFor(here);
         fall.landable = ground !== null;
         fall.body = here.body;
         const step = scale(helm.forward, -drift);
@@ -267,7 +235,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
                 fall.ground = groundUnder(ground, { x: 0, y: 1, z: 0 });
                 fall.centre = { x: 0, y: -(ground.radius + fall.ground + PLANETFALL.startAbove), z: 0 };
                 ensureSurface(world, ground);
-                fall.note = `${here.body}   ${ground.world === 'ocean' ? 'ISLAND CHAIN' : ground.world === 'lava' ? 'LAVA PLAIN' : 'HIGHLAND DESERT'}   GROUND MAPPED`;
+                fall.note = `${here.body}   ${ground.site}   GROUND MAPPED`;
             }
             if (fall.t >= PLANETFALL.entry) { fall.stage = 'surface'; fall.t = 0; }
         }

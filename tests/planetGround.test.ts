@@ -9,7 +9,7 @@ const around = (n: number): Float32Array => {
     return dirs;
 };
 
-describe.each(['desert', 'lava', 'ocean'])('the ground of %s', (world) => {
+describe.each(['desert', 'lava', 'ocean', 'frozen', 'terran'])('the ground of %s', (world) => {
     const region = { world, seed: 7, radius: 50000, directions: around(4000), count: 4000 };
 
     it('stays inside the range the GPU encodes it over, and is not flat', () => {

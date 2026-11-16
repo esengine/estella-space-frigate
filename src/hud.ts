@@ -31,7 +31,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;

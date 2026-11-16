@@ -48,7 +48,8 @@ export function groundSample(region: GroundRegion): { heights: Float32Array; pai
         const t = Math.min(Math.max((v - a) / (b - a), 0), 1);
         return t * t * (3 - 2 * t);
     };
-    const style = region.world === 'ocean' ? 1 : region.world === 'lava' ? 2 : 0;
+    const style = region.world === 'ocean' ? 1 : region.world === 'lava' ? 2 : region.world === 'frozen' ? 3 : region.world === 'terran' ? 4 : 0;
+    const bands = [[0.42, 0.8, 1150, 1600, 40, 420], [0.55, 0.95, 600, 1000, -40, 120], [0.55, 0.95, 600, 1000, 40, 420], [0.5, 0.9, 900, 1400, 80, 500], [0.5, 0.9, 900, 1300, -30, 90]][style]!;
     const r = region.radius;
     const height = (dx: number, dy: number, dz: number): number => {
         const x = dx * r, y = dy * r, z = dz * r;
@@ -60,6 +61,19 @@ export function groundSample(region: GroundRegion): { heights: Float32Array; pai
             const crest = ridged(wx / 2600, wy / 2600, wz / 2600, 6);
             const swell = fbm(wx / 900, wy / 900, wz / 900, 4);
             return -520 + 600 * isle + 1300 * crest * crest * isle + 60 * swell;
+        }
+        if (style === 3) {
+            const sheet = smooth(-0.3, 0.4, land);
+            const range = ridged(wx / 5200, wy / 5200, wz / 5200, 6);
+            const line = 1 - Math.abs(noise(wx / 2400 + 7.1, wy / 2400, wz / 2400 - 3.3));
+            const crevasse = 1 - Math.abs(fbm(wx / 700, wy / 700, wz / 700, 4));
+            return -200 + 420 * sheet + 140 * Math.pow(line, 14) + 1400 * range * range * smooth(0.05, 0.45, land) + 40 * fbm(wx / 500, wy / 500, wz / 500, 3) - 90 * Math.pow(crevasse, 14);
+        }
+        if (style === 4) {
+            const continent = smooth(-0.2, 0.12, land);
+            const hills = fbm(wx / 2400, wy / 2400, wz / 2400, 5);
+            const range = ridged(wx / 4600, wy / 4600, wz / 4600, 6);
+            return -650 + 820 * continent + 220 * hills * continent + 1800 * range * range * smooth(0.08, 0.45, land) + 30 * fbm(wx / 400, wy / 400, wz / 400, 3);
         }
         if (style === 2) {
             const flow = ridged(wx / 3000, wy / 3000, wz / 3000, 6);
@@ -90,10 +104,10 @@ export function groundSample(region: GroundRegion): { heights: Float32Array; pai
         const bx = dy * az - dz * ay, by = dz * ax - dx * az, bz = dx * ay - dy * ax;
         const hu = height(dx + ax * reach, dy + ay * reach, dz + az * reach), hv = height(dx + bx * reach, dy + by * reach, dz + bz * reach);
         const slope = Math.hypot(hu - h, hv - h) / 6;
-        const rock = smooth(style === 0 ? 0.42 : 0.55, style === 0 ? 0.8 : 0.95, slope);
+        const rock = smooth(bands[0]!, bands[1]!, slope);
         const fleck = fbm(dx * r / 260, dy * r / 260, dz * r / 260, 3);
-        const peak = smooth(style === 0 ? 1150 : 600, style === 0 ? 1600 : 1000, h + 120 * fleck) * (1 - rock * 0.8);
-        const low = smooth(style === 1 ? -40 : 40, style === 1 ? 120 : 420, h + 160 * fleck) * (1 - peak) * (1 - rock);
+        const peak = smooth(bands[2]!, bands[3]!, h + 120 * fleck) * (1 - rock * 0.8);
+        const low = smooth(bands[4]!, bands[5]!, h + 160 * fleck) * (1 - peak) * (1 - rock);
         const base = (1 - rock) * (1 - peak) * (1 - low);
         const sum = base + low + peak + rock || 1;
         paint[i * 4] = base / sum;
