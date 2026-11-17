@@ -15,6 +15,7 @@ export interface Situation {
     stopped: boolean;
     away: boolean;
     gate: string;
+    refit?: string;
 }
 
 export interface Advice { stage: Stage; text: string; cue: string; urgent: boolean }
@@ -44,7 +45,7 @@ export function deliver(tonnes: number, time: number): boolean {
 export function advise(s: Situation): Advice {
     const stage = stageOf(s.hold);
     const say = (text: string, cue = '', urgent = cue !== ''): Advice => ({ stage, text, cue, urgent });
-    if (stage === 'done') return say('CONTRACT COMPLETE   THE SHIP IS YOURS');
+    if (stage === 'done') return s.refit === undefined ? say('CONTRACT COMPLETE   THE SHIP IS YOURS') : s.refit === '' ? say('CONTRACT COMPLETE   PRESS U TO CLAIM A FREE REFIT', 'Refit') : say(`REFIT FITTED   ${s.refit}`);
     if (stage === 'return') {
         if (s.away) return say('LEAVE THE PLANET   PRESS P FOR ORBIT', 'Orbit');
         if (s.mode !== 'align') return say(`ORE ABOARD   PRESS B TO STEER FOR ${s.gate}`, 'Gate');

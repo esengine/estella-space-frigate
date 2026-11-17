@@ -162,7 +162,7 @@ describe('the space frigate\'s music, as a recipe', () => {
 });
 
 describe('what the space frigate sounds like, from its state', () => {
-    const still: ShipSound = { throttle: 0.5, order: 0.5, rudder: 0, elevation: 0, mode: 'manual', arrivals: 0, firing: false, heat: 0, overheated: false, broken: 0, shots: 0, jumps: 0, impacts: 0, blow: 0, foeShots: 0, stung: 0, kills: 0, contracts: 0 };
+    const still: ShipSound = { throttle: 0.5, order: 0.5, rudder: 0, elevation: 0, mode: 'manual', arrivals: 0, firing: false, heat: 0, overheated: false, broken: 0, shots: 0, jumps: 0, impacts: 0, blow: 0, foeShots: 0, stung: 0, kills: 0, contracts: 0, refits: 0 };
     const names = (now: Partial<ShipSound>, before: Partial<ShipSound> = {}): string[] => cuesBetween({ ...still, ...before }, { ...still, ...now }).map((cue) => cue.sound);
 
     it('the engine is never silent, and louder and higher the more it is driven', () => {
@@ -221,6 +221,8 @@ describe('what the space frigate sounds like, from its state', () => {
         expect(names({ arrivals: 1 })).toEqual(['arrival']);
         expect(names({ arrivals: 1, contracts: 1 })).toEqual(['arrival', 'arrival']);
         expect(names({ arrivals: 2, contracts: 1 }, { arrivals: 1, contracts: 1 })).toEqual(['arrival']);
+        expect(names({ refits: 1 })).toEqual(['arrival']);
+        expect(names({ refits: 1 }, { refits: 1 })).toEqual([]);
         expect(names({ overheated: true })).toEqual(['alarm']);
         expect(names({ overheated: true }, { overheated: true })).toEqual([]);
         expect(names({ broken: 3 }, { broken: 2 })).toEqual(['rockBreak']);
