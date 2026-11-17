@@ -18,6 +18,7 @@ export enum DockRefusal {
     DOCK_REFUSAL_TOO_FAST = 3,
     DOCK_REFUSAL_NO_BERTH_FREE = 4,
     DOCK_REFUSAL_MANEUVERING = 6,
+    DOCK_REFUSAL_NOT_SAVED = 7,
 }
 
 export enum Mooring {
@@ -881,7 +882,7 @@ export const DockReply = {
         if (o.mooring != null) m.mooring = jInt(o.mooring, "DockReply.mooring", -2147483648, 2147483647);
         return m;
     },
-    shape: "DockReply{1:bool docked,2:DockRefusal why,3:uint32 berth,4:Mooring mooring};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
+    shape: "DockReply{1:bool docked,2:DockRefusal why,3:uint32 berth,4:Mooring mooring};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6,DOCK_REFUSAL_NOT_SAVED=7};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
     encode(m: DockReply): Uint8Array { const w = new Writer(); DockReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): DockReply { return DockReply.read(new Reader(bytes), bytes.length); },
 };
@@ -1160,7 +1161,7 @@ export const StateEvent = {
         if (o.hold != null) m.hold = jInt(o.hold, "StateEvent.hold", -2147483648, 2147483647);
         return m;
     },
-    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move,13:uint32 berth,14:Mooring mooring,15:DockRefusal hold};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6}",
+    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move,13:uint32 berth,14:Mooring mooring,15:DockRefusal hold};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6,DOCK_REFUSAL_NOT_SAVED=7}",
     encode(m: StateEvent): Uint8Array { const w = new Writer(); StateEvent.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): StateEvent { return StateEvent.read(new Reader(bytes), bytes.length); },
 };

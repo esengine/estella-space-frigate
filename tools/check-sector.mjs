@@ -336,7 +336,7 @@ try {
     pass(`every one of the ${sums.seen} states sent while both pilots were in added up to exactly ten tonnes`);
 
     // ==== The station: carry it, dock, and put it in a warehouse of one's own ================================
-    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, MANEUVERING = 6, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
+    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, MANEUVERING = 6, DOCK_NOT_SAVED = 7, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
     const ledger = [];
     /** A line in the books: where every gram is, by the server's own account, and that they are ten tonnes. */
     const note = async (event) => {
@@ -754,9 +754,20 @@ try {
     await wait(20000);
     like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned', here: false });
     await occupied('A has been gone 20 s: still kept');
+    // Found in review: stopped and started twenty seconds after she went, the berth is due when it was due, not thirty seconds from the start.
+    const dueBefore = (await books()).berths.find((berth) => berth.id === keptBerth).lapses;
+    assert.ok(Math.abs(dueBefore - (goneAt + SECTOR.station.reserveMs)) < 1500, `due at ${dueBefore}, she went at ${goneAt}`);
+    await restart('kill');
+    assert.equal((await books()).berths.find((berth) => berth.id === keptBerth).lapses, dueBefore, 'the time it is due is in the save');
+    like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned', here: false });
+    await occupied(`killed and started ${((Date.now() - goneAt) / 1000).toFixed(0)} s after A went: still kept, due at the same time`);
+    await restart('gently');
+    assert.equal((await books()).berths.find((berth) => berth.id === keptBerth).lapses, dueBefore);
+    assert.ok(Date.now() - goneAt < 28000, 'the two restarts were over before the berth was due');
     await until('the berth to be given up', async () => (await mine('pilot-a')).mooring === 'none', 20000);
     const freedAfter = (Date.now() - goneAt) / 1000;
-    assert.ok(freedAfter >= 28 && freedAfter <= 34, `given up after ${freedAfter.toFixed(1)} s`);
+    assert.ok(freedAfter >= 29 && freedAfter <= 32.5, `given up ${freedAfter.toFixed(1)} s after she went`);
+    await until('B to be back', async () => b.session.state === 'ready' && (await mine('pilot-b')).here, 20000);
     assert.equal(await occupied(`A has been gone ${freedAfter.toFixed(0)} s: given up`), keptBerth === 1 ? '1:-:none 2:pilot-b:docked' : '1:pilot-b:docked 2:-:none');
     // B, docked and signed out for longer than that, keeps hers.
     b.session.close();
@@ -767,7 +778,59 @@ try {
     b = await pilot(CREDS.b);
     assert.deepEqual([a.welcome.berth, a.welcome.mooring, b.welcome.berth, b.welcome.mooring], [0, M.NONE, lies.b, M.DOCKED]);
     const closing = await note('A is back with no berth; B is back in hers');
-    pass(`a berth only kept survives a dropped link and a killed server, and is given up ${freedAfter.toFixed(0)} s after its pilot has gone; a docked ship keeps her berth however long her pilot is away`);
+    pass(`a berth only kept survives a dropped link and a killed server, and is given up ${freedAfter.toFixed(1)} s after its pilot has gone though the server was killed and started and then stopped and started twenty seconds in; a docked ship keeps her berth however long her pilot is away`);
+
+    // ---- Found in review: a ship reaches her berth while the disk refuses every write ------------------------------------------
+    const lieNext = (await books()).berths.find((berth) => berth.pilot === '').id;
+    const everDocked = () => a.states > 0 && a.state.docked;
+    const bringIn = async () => {
+        like(await a.api.dock({ dock: true }), { berth: lieNext, mooring: M.ASSIGNED });
+        await haul(a, 'pilot-a', false);
+        await until('A to lie in her berth', async () => { const now = await mine('pilot-a'); return now.arrived || now.mooring === 'docked'; }, 90000);
+    };
+    await rm(`${data}.bak`, { force: true, recursive: true });
+    await mkdir(`${data}.bak`);
+    let saidDocked = false;
+    const watching = setInterval(() => { saidDocked ||= everDocked() || a.state?.mooring === M.DOCKED; }, 20);
+    await bringIn();
+    await wait(3000);
+    const waitingIn = await mine('pilot-a');
+    // She lies exactly in her berth, and the server does not say she is docked: nothing on the disk has her there.
+    assert.deepEqual([at(waitingIn.flight.pos), waitingIn.mooring, waitingIn.docked, waitingIn.arrived, waitingIn.hold], [[...berthFor(lieNext).at], 'docking', false, true, 'NOT SAVED']);
+    assert.deepEqual([a.state.mooring, a.state.docked, a.state.hold], [M.DOCKING, false, DOCK_NOT_SAVED]);
+    assert.equal((await health()).saving, 'failing');
+    like(await move(a, 'pilot-a', false, 1), { ok: false, why: NOT_DOCKED }, 'in her berth, not yet written down');
+    like(await a.api.dock({ dock: true }), { docked: false, mooring: M.DOCKING });
+    assert.equal(JSON.parse(await readFile(data, 'utf8')).pilots['pilot-a'].berth, 0, 'the disk has her with no berth');
+    await occupied('A lies in her berth while the disk refuses writes: not called docked');
+    assert.equal(saidDocked, false, 'she was never told she had docked');
+    // Killed like that: she comes back with no berth, which is what she had been told.
+    await restart('kill');
+    like(await mine('pilot-a'), { berth: 0, mooring: 'none', docked: false });
+    await occupied('killed while the disk refused writes: A has no berth, and was never told she had one to lie in');
+    await ready(a, b);
+    // Again, and this time the disk mends while she waits: the write that succeeds is what docks her.
+    await bringIn();
+    await wait(1500);
+    like(await mine('pilot-a'), { mooring: 'docking', docked: false, arrived: true });
+    assert.equal(saidDocked, false);
+    await rm(`${data}.bak`, { recursive: true });
+    const mendedAt = Date.now();
+    await until('A to be told she is docked', () => a.state.docked && a.state.mooring === M.DOCKED, 5000);
+    clearInterval(watching);
+    const toldAfter = Date.now() - mendedAt;
+    // Told, and killed that instant: the save that docked her brings her back docked.
+    assert.deepEqual([JSON.parse(await readFile(data, 'utf8')).pilots['pilot-a'].berth], [lieNext], 'the disk had her in the berth before she was told');
+    await restart('kill');
+    const kept2 = await mine('pilot-a');
+    assert.deepEqual([kept2.mooring, kept2.berth, kept2.docked, at(kept2.flight.pos)], ['docked', lieNext, true, [...berthFor(lieNext).at]]);
+    await occupied('the disk mended, A was told she had docked, and the server was killed that instant: she is in her berth');
+    await ready(a, b);
+    like(await move(a, 'pilot-a', false, 1), { ok: true }, 'and her warehouse is open');
+    like(await move(a, 'pilot-a', true, 1), { ok: true });
+    await until('saving to be well again', async () => (await health()).saving === 'ok', 5000);
+    await note('A reaches a berth while the disk refuses writes, and again as it mends');
+    pass(`a ship that reaches her berth while the disk refuses writes lies there and is not called docked, with her warehouse shut; killed then, she comes back with no berth, as she had been told; when the disk mends she is told ${toldAfter} ms later, and killed that instant she comes back docked`);
 
     await mkdir(path.join(engine, 'output/space-frigate/sector'), { recursive: true });
     await writeFile(path.join(engine, 'output/space-frigate/sector', `ledger-${WIRE}.json`), JSON.stringify({ wire: WIRE, totalT: TOTAL / GRAMS, lines: ledger, crashes }, null, 1));

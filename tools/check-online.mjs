@@ -93,7 +93,7 @@ async function client(name, account, token, within = context) {
             link: o.link, why: o.why, name: o.name, pos: o.pos, cargo: o.cargo, remaining: o.rock.remaining, total: o.rock.total, mining: o.mining, refusal: o.refusal,
             others: o.others.map((p) => ({ account: p.account, p: p.p, mining: p.mining, cargo: p.cargo })), pilots: h.pilots.map((p) => ({ ...p })),
             fix: { ...o.fix }, ahead: o.ahead, waiting: o.waiting, speed: h.ship.speed, throttle: h.ship.throttle, order: h.helm.order, rudder: h.helm.rudder, yawRate: h.helm.yawRate, yaw: h.helm.yaw,
-            cue: h.contract.cue, mooring: o.mooring, berth: o.berth, holdWhy: o.hold, berthMark: { ...h.berthMark }, docked: o.docked, stored: o.stored, move: { ...o.move }, dock: { ...o.dock }, range: Math.hypot(h.helm.gate.x, h.helm.gate.y, h.helm.gate.z), mode: h.helm.mode, spots: { ...h.stationSpots }, gateName: h.helm.gateName,
+            cue: h.contract.cue, numbered: o.numbered, welcomes: o.welcomes, mooring: o.mooring, berth: o.berth, holdWhy: o.hold, berthMark: { ...h.berthMark }, docked: o.docked, stored: o.stored, move: { ...o.move }, dock: { ...o.dock }, range: Math.hypot(h.helm.gate.x, h.helm.gate.y, h.helm.gate.z), mode: h.helm.mode, spots: { ...h.stationSpots }, gateName: h.helm.gateName,
             hold: h.mining.hold, firing: h.mining.firing, armed: h.mining.armed, selected: h.selected, locked: h.locked, text: h.contract.text, system: h.ship.system, jumps: h.ship.jumps,
         };
     });
@@ -343,13 +343,15 @@ try {
     // Where the two ends put each ship while the station has her, against where the server has her at the moment of the look. The
     // station moves her 16 units a second and a window hears of it a link late and eases to it, so what is drawn trails the server
     // by a few units along her way; a frigate is 111 long and 48 across, and the frame she goes down into has 10 to spare each side.
-    const agreed = { looks: 0, own: [], other: [], aside: [], nearest: Infinity, openedEarly: 0 };
+    const agreed = { looks: 0, own: [], other: [], aside: [], nearest: Infinity, openedEarly: 0, quietUntil: 0 };
     const compare = async () => {
         const [la, lb, ships] = [await a.seen(), await b.seen(), await books()];
         for (const [id, me, them] of [['pilot-a', la, lb], ['pilot-b', lb, la]]) {
             const ship = ships[id], truth = tuple(ship.flight.pos);
             if (me.mooring !== 'docked' && me.spots.store) agreed.openedEarly++;
             if (ship.mooring !== 'docking' && ship.mooring !== 'undocking') continue;
+            // A picture taken of a window holds its frames up for the better part of a second, which a window running by itself never does: the looks just after one are of that, and are left out.
+            if (Date.now() < agreed.quietUntil) continue;
             const drawn = them.pilots.find((p) => p.account === id), lie = BERTHS[ship.berth];
             agreed.looks++;
             agreed.own.push(far(me.pos, truth));
@@ -385,9 +387,9 @@ try {
         await a.pace(); await b.pace();
         const [la, lb] = await compare();
         const done = [await follow(a, la), await follow(b, lb)];
-        if (!shot.asked && la.mooring === 'assigned' && lb.mooring === 'assigned') { shot.asked = true; await occupied('both asked from where they mined'); await a.shoot('5-a-berth-kept'); await b.shoot('5-b-berth-kept'); }
-        if (!shot.way && Date.now() - runBegan > 20000) { shot.way = true; await a.shoot('5-a-on-the-way-to-her-approach'); }
-        if (!shot.in && la.mooring === 'docking' && lb.mooring === 'docking') { shot.in = true; await occupied('both in the station\'s hands, coming in'); await a.shoot('6-a-coming-in'); await b.shoot('6-b-coming-in'); }
+        if (!shot.asked && la.mooring === 'assigned' && lb.mooring === 'assigned') { shot.asked = true; await occupied('both asked from where they mined'); await a.shoot('5-a-berth-kept'); await b.shoot('5-b-berth-kept'); agreed.quietUntil = Date.now() + 1200; }
+        if (!shot.way && Date.now() - runBegan > 20000) { shot.way = true; await a.shoot('5-a-on-the-way-to-her-approach'); agreed.quietUntil = Date.now() + 1200; }
+        if (!shot.in && la.mooring === 'docking' && lb.mooring === 'docking') { shot.in = true; await occupied('both in the station\'s hands, coming in'); await a.shoot('6-a-coming-in'); await b.shoot('6-b-coming-in'); agreed.quietUntil = Date.now() + 1200; }
         // In the station's hands she tries her helm, her engine and her warehouse: none of them is hers yet.
         if (!triedEarly && la.mooring === 'docking') { triedEarly = true; await a.tap('KeyW'); await a.tap('KeyD'); await a.tap('KeyJ'); }
         if (done[0] && done[1]) break;
@@ -436,26 +438,8 @@ try {
     expect('five presses of TAKE while the first is out took one tonne, and B took one of her own', ships['pilot-a'].cargo === 1e6 && ships['pilot-a'].stored === carried.a - 1e6 && ships['pilot-b'].cargo === 1e6 && ships['pilot-b'].stored === carried.b - 1e6, { a: [ships['pilot-a'].cargo, ships['pilot-a'].stored], b: [ships['pilot-b'].cargo, ships['pilot-b'].stored] });
     await note('A presses TAKE five times and B once: a tonne each comes back');
 
-    // Told it succeeded, then the server is killed. Both come back in their berths, with the same hold and warehouse.
-    sectorServer.kill('SIGKILL'); await sectorServer.gone; sectorServer = null;
-    await both(a, b, 1000);
-    await startSector();
-    const afterKill = await books();
-    const keptBerths = await occupied('the server was killed and started again, before anyone is back');
-    await a.until('A to be back at her berth', (s) => s.link === 'online' && s.mooring === 'docked' && s.others.length === 1, 30000);
-    await b.until('B to be back at her berth', (s) => s.link === 'online' && s.mooring === 'docked', 30000);
-    await both(a, b, 1500);
-    sa = await a.seen(); sb = await b.seen();
-    expect('the server killed after it said so: both are still in their own berths with the same hold and warehouse, on the server and on the glass', afterKill['pilot-a'].cargo === 1e6 && afterKill['pilot-a'].stored === carried.a - 1e6 && afterKill['pilot-b'].stored === carried.b - 1e6 && afterKill['pilot-a'].mooring === 'docked' && afterKill['pilot-a'].berth === lies.a && afterKill['pilot-b'].mooring === 'docked' && afterKill['pilot-b'].berth === lies.b && far(tuple(afterKill['pilot-a'].flight.pos), BERTHS[lies.a].at) === 0 && sa.berth === lies.a && sb.berth === lies.b && sa.cargo === 1e6 && sa.stored === carried.a - 1e6 && sb.stored === carried.b - 1e6 && far(sa.pos, BERTHS[lies.a].at) < 0.5 && far(sb.pos, BERTHS[lies.b].at) < 0.5, { berths: keptBerths, server: afterKill['pilot-a'], a: [sa.cargo, sa.stored, sa.mooring, sa.berth], b: [sb.cargo, sb.stored, sb.mooring, sb.berth] });
-    await note('the server is killed and started: holds, warehouses and berths as they were');
-
-    // A's window is reloaded where she lies: the same ship in the same berth.
-    await a.open();
-    await a.until('A to be back in her berth after a reload', (s) => s.link === 'online' && s.mooring === 'docked' && s.others.length === 1, 30000);
-    await both(a, b, 1200);
-    sa = await a.seen();
-    expect('reloaded where she lies, she is in the same berth with her warehouse open', sa.berth === lies.a && far(sa.pos, BERTHS[lies.a].at) < 0.5 && !!sa.spots.store && (await occupied('A reloaded her window')) === keptBerths, { berth: sa.berth, pos: sa.pos });
-
+    // From here to open space nobody signs in again and the server is not touched: the helm that comes back is the one that went in.
+    const signedIn = { a: (await a.seen()).welcomes, b: (await b.seen()).welcomes };
     // Both cast off at once. The warehouse shuts with the key: the order that follows it in the same breath is refused.
     agreed.looks = 0; agreed.own = []; agreed.other = []; agreed.aside = []; agreed.nearest = Infinity;
     const stored = { a: (await books())['pilot-a'].stored, b: (await books())['pilot-b'].stored };
@@ -475,7 +459,7 @@ try {
         if (told.A[told.A.length - 1] !== la.text) told.A.push(la.text);
         // On the way out she works her helm and her engine; neither is hers until she is let go.
         if (la.mooring === 'undocking' && Date.now() - acted.A > 1500) { acted.A = Date.now(); await a.tap('KeyW'); await a.tap('KeyA'); }
-        if (!shotOut && la.mooring === 'undocking' && Date.now() - runBegan > 0 && (await books())['pilot-a'].flight.pos.y > 100) { shotOut = true; await a.shoot('8-a-going-out'); await b.shoot('8-b-going-out'); }
+        if (!shotOut && la.mooring === 'undocking' && Date.now() - runBegan > 0 && (await books())['pilot-a'].flight.pos.y > 100) { shotOut = true; await a.shoot('8-a-going-out'); await b.shoot('8-b-going-out'); agreed.quietUntil = Date.now() + 1200; }
         if (la.mooring === 'none' && lb.mooring === 'none') break;
         await wait(20);
     }
@@ -488,15 +472,63 @@ try {
     expect('let go, both windows have their ships where the server has them, and the helm that did nothing on the way out is hers again', far(sa.pos, tuple(ships['pilot-a'].flight.pos)) < 2 && far(drawnOf(sb, 'pilot-a'), tuple(ships['pilot-a'].flight.pos)) < 2 && far(drawnOf(sa, 'pilot-b'), tuple(ships['pilot-b'].flight.pos)) < 2 && sa.order === 0 && sa.gateName === 'KESTREL ANCHORAGE' && told.A.some((t) => /CAST OFF   WAREHOUSE SHUT/.test(t)), { a: sa.pos, server: ships['pilot-a'].flight.pos, order: sa.order, gate: sa.gateName });
     await a.shoot('9-a-let-go');
     await b.shoot('9-b-let-go');
+    // Found in review: let go, her helm's orders must go on from the number they had reached, or the server drops every one.
+    const letGo = { a: ships['pilot-a'], b: ships['pilot-b'], numbered: [sa.numbered, sb.numbered] };
     await a.engine(0.5); await b.engine(0.5);
-    await both(a, b, 4000);
-    sa = await a.seen(); ships = await books();
-    expect('both sail away under their own helms, each with the tonne she took', ships['pilot-a'].flight.speed > 20 && ships['pilot-b'].flight.speed > 20 && ships['pilot-a'].cargo === 1e6 && ships['pilot-b'].cargo === 1e6 && sa.speed > 20, { speed: [ships['pilot-a'].flight.speed, ships['pilot-b'].flight.speed], cargo: [ships['pilot-a'].cargo, ships['pilot-b'].cargo] });
+    await both(a, b, 5000);
+    sa = await a.seen(); sb = await b.seen(); ships = await books();
+    measured.helmAfterCastOff = {
+        signedInAgain: [sa.welcomes - signedIn.a, sb.welcomes - signedIn.b],
+        lastOrderTakenBefore: [letGo.a.taken, letGo.b.taken], lastOrderTakenAfter: [ships['pilot-a'].taken, ships['pilot-b'].taken], flownUpTo: [ships['pilot-a'].ack, ships['pilot-b'].ack], clientNumbered: [sa.numbered, sb.numbered],
+        serverSpeed: [+ships['pilot-a'].flight.speed.toFixed(1), +ships['pilot-b'].flight.speed.toFixed(1)], sailed: [+far(tuple(ships['pilot-a'].flight.pos), tuple(letGo.a.flight.pos)).toFixed(1), +far(tuple(ships['pilot-b'].flight.pos), tuple(letGo.b.flight.pos)).toFixed(1)],
+    };
+    expect('in the same sign-in, with no restart, from her berth to open space: let go, five seconds at half ahead and the server has flown both ships on orders numbered past the last it had', sa.welcomes === signedIn.a && sb.welcomes === signedIn.b && letGo.a.taken > 100 && letGo.b.taken > 100 && letGo.numbered[0] >= letGo.a.taken && letGo.numbered[1] >= letGo.b.taken && ships['pilot-a'].taken > letGo.a.taken + 100 && ships['pilot-b'].taken > letGo.b.taken + 100 && ships['pilot-a'].ack > letGo.a.taken + 100 && ships['pilot-b'].ack > letGo.b.taken + 100 && ships['pilot-a'].flight.speed > 120 && ships['pilot-b'].flight.speed > 120 && measured.helmAfterCastOff.sailed[0] > 60 && measured.helmAfterCastOff.sailed[1] > 60 && far(sa.pos, tuple(ships['pilot-a'].flight.pos)) < TOP * 0.8, measured.helmAfterCastOff);
+    expect('both sail away under their own helms, each with the tonne she took', ships['pilot-a'].cargo === 1e6 && ships['pilot-b'].cargo === 1e6 && sa.speed > 20 && sb.speed > 20, { speed: [sa.speed, sb.speed], cargo: [ships['pilot-a'].cargo, ships['pilot-b'].cargo] });
     await note('both sail away with a tonne aboard each');
+    await a.shoot('10-a-sailing-away');
+    await b.shoot('10-b-sailing-away');
+
+    // ---- Back in, to be killed and reloaded where they lie ----------------------------------------
+    // Each has a tonne aboard, so the glass asks for a berth again; they follow it in as before.
+    for (const one of [a, b]) await one.engine(0);
+    await both(a, b, 3000);
+    for (const end = Date.now() + 300000; Date.now() < end;) {
+        await a.pace(); await b.pace();
+        const done = [await follow(a, await a.seen()), await follow(b, await b.seen())];
+        if (done[0] && done[1]) break;
+        await wait(20);
+    }
+    await both(a, b, 1500);
+    sa = await a.seen(); sb = await b.seen(); ships = await books();
+    const lies2 = { a: ships['pilot-a'].berth, b: ships['pilot-b'].berth };
+    expect('with ore aboard again both asked, came in and docked a second time in the same sign-in', sa.mooring === 'docked' && sb.mooring === 'docked' && lies2.a !== lies2.b && lies2.a > 0 && lies2.b > 0 && sa.welcomes === signedIn.a && far(tuple(ships['pilot-a'].flight.pos), BERTHS[lies2.a].at) === 0 && far(tuple(ships['pilot-b'].flight.pos), BERTHS[lies2.b].at) === 0, { lies2, a: sa.mooring, b: sb.mooring });
+    await occupied('both docked a second time');
+
+    // Told it succeeded, then the server is killed. Both come back in their berths, with the same hold and warehouse.
+    sectorServer.kill('SIGKILL'); await sectorServer.gone; sectorServer = null;
+    await both(a, b, 1000);
+    await startSector();
+    const afterKill = await books();
+    const keptBerths = await occupied('the server was killed and started again, before anyone is back');
+    await a.until('A to be back at her berth', (s) => s.link === 'online' && s.mooring === 'docked' && s.others.length === 1, 30000);
+    await b.until('B to be back at her berth', (s) => s.link === 'online' && s.mooring === 'docked', 30000);
+    await both(a, b, 1500);
+    sa = await a.seen(); sb = await b.seen();
+    expect('the server killed after it said so: both are still in their own berths with the same hold and warehouse, on the server and on the glass', afterKill['pilot-a'].cargo === 1e6 && afterKill['pilot-a'].stored === carried.a - 1e6 && afterKill['pilot-b'].stored === carried.b - 1e6 && afterKill['pilot-a'].mooring === 'docked' && afterKill['pilot-a'].berth === lies2.a && afterKill['pilot-b'].mooring === 'docked' && afterKill['pilot-b'].berth === lies2.b && far(tuple(afterKill['pilot-a'].flight.pos), BERTHS[lies2.a].at) === 0 && sa.berth === lies2.a && sb.berth === lies2.b && sa.cargo === 1e6 && sa.stored === carried.a - 1e6 && sb.stored === carried.b - 1e6 && far(sa.pos, BERTHS[lies2.a].at) < 0.5 && far(sb.pos, BERTHS[lies2.b].at) < 0.5, { berths: keptBerths, server: afterKill['pilot-a'], a: [sa.cargo, sa.stored, sa.mooring, sa.berth], b: [sb.cargo, sb.stored, sb.mooring, sb.berth] });
+    await note('the server is killed and started: holds, warehouses and berths as they were');
+
+    // A's window is reloaded where she lies: the same ship in the same berth.
+    await a.open();
+    await a.until('A to be back in her berth after a reload', (s) => s.link === 'online' && s.mooring === 'docked' && s.others.length === 1, 30000);
+    await both(a, b, 1200);
+    sa = await a.seen();
+    expect('reloaded where she lies, she is in the same berth with her warehouse open', sa.berth === lies2.a && far(sa.pos, BERTHS[lies2.a].at) < 0.5 && !!sa.spots.store && (await occupied('A reloaded her window')) === keptBerths, { berth: sa.berth, pos: sa.pos });
+
     measured.ledger = ledger;
     measured.occupancy = occupancy;
-    await a.shoot('10-a-sailing-away');
+    await a.shoot('11-a-back-in-her-berth');
     await a.page.close(); await b.page.close();
+
 } catch (err) {
     problems.push(String(err?.stack ?? err));
 } finally {

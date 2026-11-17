@@ -41,6 +41,8 @@ export const online = {
     hold: '' as DockRefusal,
     /** The last answer to asking to dock, and when: '' is that she may. */
     dock: { asking: false, why: '' as DockRefusal, at: 0 },
+    /** The number of the last helm order given this sign-in. */
+    numbered: 0,
     /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
     move: { seq: 0, op: '', withdraw: false, grams: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
     /** The number the server will take for this pilot's next order to move ore. */
@@ -78,9 +80,9 @@ export function configureOnline(search: string): void {
 }
 
 /** Taking the helm of a ship that is where the server has her: the world is shifted to her at once, not sailed there. */
-function take(truth: Flight): void {
+function take(truth: Flight, how: { signedIn: boolean; from?: number } = { signedIn: true }): void {
     const from = predictor.show().pos;
-    predictor.take(truth);
+    predictor.take(truth, how);
     const leap: Vec3 = [truth.pos.x - from.x, truth.pos.y - from.y, truth.pos.z - from.z];
     online.leap = online.leap ? [online.leap[0] + leap[0], online.leap[1] + leap[1], online.leap[2] + leap[2]] : leap;
     drawn = { ...truth.pos };
@@ -99,6 +101,7 @@ export function flyOnline(dt: number, orders: Orders): { shown: Flight; jets: { 
         api.steer({ orders: predictor.drain().map((one) => ({ seq: one.seq, ...one.orders })) }, { retries: 0, timeoutMs: 3000 }).catch(() => undefined);
     }
     online.ahead = predictor.ahead();
+    online.numbered = predictor.numbered();
     const shown = predictor.show();
     const went = { x: shown.pos.x - drawn.x, y: shown.pos.y - drawn.y, z: shown.pos.z - drawn.z };
     drawn = { ...shown.pos };
@@ -161,7 +164,8 @@ export function connectOnline(): void {
         online.othersAt = Date.now();
         online.waiting = state.waiting;
         // Let go by the station: the helm is hers again from exactly where the server left her, with nothing of the old prediction.
-        if (inHand(was) && !inHand(online.mooring)) take(fromFlight(state.flight));
+        // It is the same sign-in, so her orders go on from the number they had reached: the server would drop a count begun again.
+        if (inHand(was) && !inHand(online.mooring)) take(fromFlight(state.flight), { signedIn: false, from: state.ack });
         else predictor.settle(fromFlight(state.flight), state.ack, state.waiting);
     });
     made.onState((state, reason) => {

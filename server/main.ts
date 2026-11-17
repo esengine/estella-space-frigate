@@ -25,7 +25,7 @@ try {
     console.error(`[sector] not started: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(err instanceof NoSave ? 3 : 4);
 }
-const sector = createSector(saved);
+const sector = createSector(saved, undefined, { keeper: true });
 // A check stops the server at a named point to see what a crash there leaves: SECTOR_CRASH=before-write | mid-write | after-write.
 const CRASH = process.env.SECTOR_CRASH ?? '';
 const crash = (point: string): void => { if (CRASH === point) { console.log(`[sector] stopped dead at ${point}`); process.exit(86); } };
@@ -40,7 +40,8 @@ const failedToWrite = (err: unknown): void => {
     if (saving.failures === 1 || saving.failures % 30 === 0) console.error(`[sector] could not write the save (${saving.failures}): ${saving.last}`);
 };
 const save = (): boolean => {
-    try { writeSave(file, sector.save()); sector.takeDirty(); wrote(); return true; } catch (err) { sector.markDirty(); failedToWrite(err); return false; }
+    // What was written is handed back to the sector: a ship that had reached her berth is docked from the write that has her there.
+    try { const written = sector.save(); sector.takeDirty(); writeSave(file, written); sector.committed(written); wrote(); return true; } catch (err) { sector.markDirty(); failedToWrite(err); return false; }
 };
 
 /** A seat is one sign-in. An account has one at a time, and only the seat it has now may fly the ship or work her beam. */
@@ -108,6 +109,7 @@ contract.serve(host, {
         const got = sector.transfer(ctx.playerId, ask.seq, ask.op, ask.withdraw, ask.grams, (after) => {
             crash('before-write');
             try { writeSave(file, after, () => crash('mid-write')); } catch (err) { failedToWrite(err); throw err; }
+            sector.committed(after);
             wrote();
             crash('after-write');
         });
@@ -125,7 +127,7 @@ const http = createServer((req, res) => {
     // The server's own account of each ship, for a check to read beside what the clients believe.
     if (req.url === '/pilots') {
         const out: Record<string, unknown> = {};
-        for (const id of ['pilot-a', 'pilot-b']) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, docked: s.you.docked, berth: s.you.berth, mooring: s.you.mooring, hold: s.you.hold, nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
+        for (const id of ['pilot-a', 'pilot-b']) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, docked: s.you.docked, berth: s.you.berth, mooring: s.you.mooring, hold: s.you.hold, arrived: s.you.arrived, taken: sector.taken(id), nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
         out.berths = sector.berths();
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(out));
@@ -138,13 +140,16 @@ const wss = new WebSocketServer({ server: http, path: '/sector', maxPayload: 16 
 wss.on('connection', (socket) => acceptWebSocket(host, socket));
 await new Promise<void>((resolve, reject) => { http.once('error', reject); http.listen(port, bind, () => resolve()); });
 
-let last = Date.now(), unsaved = 0;
+let last = Date.now(), unsaved = 0, pressed = 0;
 const loop = setInterval(() => {
     const now = Date.now();
     sector.step(now - last);
     unsaved += now - last;
     last = now;
     if (unsaved >= SECTOR.saveMs) { unsaved = 0; if (sector.isDirty()) save(); }
+    // A ship has reached her berth and no save has her there: it is written now, not at the next second, and while the disk
+    // refuses it is tried again four times a second. She is told she is docked only by the write that succeeds.
+    else if (sector.unwritten() && now - pressed >= 250) { pressed = now; save(); }
     for (const id of seated.keys()) {
         const state = sector.stateFor(id);
         contract.push(host as unknown as SessionHost<never>, id, 'state', {

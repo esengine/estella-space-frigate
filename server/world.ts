@@ -29,6 +29,12 @@ export interface SavedPilot {
     q: Quat4;
     /** The last few answers, so that an order asked again straight away is told what it was told. Being forgotten here undoes nothing. */
     ops: Transfer[];
+    /**
+     * When a berth that is only kept for her is given up, in milliseconds of the clock on the wall: set the moment her pilot
+     * goes, and 0 while her pilot is at her helm or nothing is only kept. It is a time and not a count, so that a server stopped
+     * and started gives the berth up when it would have, and not thirty seconds after it came back.
+     */
+    lapses?: number;
 }
 
 export interface Saved {
@@ -49,14 +55,18 @@ const ORDERS_A_CALL = 32;
  * that has dropped out of it is refused as expired, never done a second time, because its number is behind `moves`.
  */
 export const ANSWERS_KEPT = 8;
+/** A ship in her berth that no save has yet: her glass is told so once it has lasted this long, which a working disk never takes. */
+const UNSAVED_SAID_MS = 400;
 
 interface Pilot {
     account: Account; cargo: number; stored: number; moves: number; ops: Transfer[]; flight: Flight; here: boolean;
     berth: number; mooring: Mooring;
     /** While the station has her in hand: which leg of the way in or out she is on, and the way she is being moved, for others to draw her by. */
     leg: number; vel: Vec;
-    /** How long her pilot has been gone while a berth is only kept for her, and what stands between her and being taken in hand. */
-    gone: number; hold: DockRefusal;
+    /** When a berth only kept for her is given up, on the wall's clock (0: not while things stand as they do), and what stands between her and being taken in hand. */
+    lapses: number; hold: DockRefusal;
+    /** Lying in her berth at the end of the way in, and for how long, while no save yet says so: -1 when that is not how she is. */
+    arrived: number;
     orders: Orders; waiting: { seq: number; orders: Orders }[]; taken: number; ack: number; starved: number; dropped: number;
     wantsMine: boolean; mining: boolean; why: Refusal;
 }
@@ -81,6 +91,7 @@ export function auditSave(saved: Saved): string {
         if (!MOORINGS.includes(pilot.mooring) || !whole(pilot.berth) || (pilot.mooring === 'none') !== (pilot.berth === 0) || (pilot.berth !== 0 && !berthOf(pilot.berth))) return `pilot ${id} has a berth the station does not have, or none where she should`;
         if (pilot.berth !== 0 && taken.has(pilot.berth)) return `berth ${pilot.berth} is held by two pilots`;
         if (pilot.berth !== 0) taken.add(pilot.berth);
+        if (pilot.lapses !== undefined && (!whole(pilot.lapses) || (pilot.lapses !== 0 && pilot.mooring !== 'assigned'))) return `pilot ${id} has a berth due to be given up that is not one only kept`;
         for (const op of pilot.ops) if (typeof op?.op !== 'string' || typeof op.ok !== 'boolean' || !whole(op.cargo) || !whole(op.stored) || !whole(op.seq) || op.seq < 1 || op.seq > pilot.moves) return `pilot ${id} has an order to move ore this server did not write`;
         held += pilot.cargo + pilot.stored;
     }
@@ -111,10 +122,17 @@ export function tug(f: Flight, to: Vec, facing: Quat, dt: number): { there: bool
     return { there: far <= reach && share >= 1, vel: dt > 0 ? { x: (f.pos.x - from.x) / dt, y: (f.pos.y - from.y) / dt, z: (f.pos.z - from.z) / dt } : STILL };
 }
 
-export function createSector(saved: Saved = freshSave(), accounts: readonly Account[] = TEST_ACCOUNTS) {
+/**
+ * `clock` is the wall's clock when the sector is made, after which the sector keeps time by what `step` is told has passed.
+ * `keeper` says there is a disk under this sector: then a ship that reaches her berth is not called docked until a save that
+ * has her there is written and `committed`. Without one (a sector that lives in memory) she is docked as she arrives.
+ */
+export function createSector(saved: Saved = freshSave(), accounts: readonly Account[] = TEST_ACCOUNTS, opts: { clock?: () => number; keeper?: boolean } = {}) {
     const fault = auditSave(saved);
     if (fault) throw new Error(fault);
     let remaining = saved.rock.remaining, tick = 0, turn = 0, dirty = false, owed = 0, failed = '';
+    let wall = (opts.clock ?? Date.now)();
+    const keeper = opts.keeper === true;
     const pilots = new Map<string, Pilot>();
     accounts.forEach((account, i) => {
         const kept = saved.pilots[account.id];
@@ -126,9 +144,12 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         const lie = berthOf(berth);
         if (lie && (mooring === 'docking' || mooring === 'docked')) { mooring = 'docked'; flight = atRest(point(lie.at), HEADING); }
         else if (lie && mooring === 'undocking') { mooring = 'none'; berth = 0; flight = atRest(point(lie.approach), HEADING); }
+        // Nobody is at a helm when a server starts. A berth only kept lapses when its save says; one saved while its pilot was
+        // still there (the server was killed under her) has thirty seconds from now, which is the soonest she can have gone.
+        const lapses = mooring === 'assigned' ? (kept?.lapses || wall + SECTOR.station.reserveMs) : 0;
         pilots.set(account.id, {
             account, cargo: kept?.cargo ?? 0, stored: kept?.stored ?? 0, moves: kept?.moves ?? 0, ops: kept ? kept.ops.map((op) => ({ ...op })) : [],
-            flight, here: false, berth, mooring, leg: 0, vel: STILL, gone: 0, hold: '',
+            flight, here: false, berth, mooring, leg: 0, vel: STILL, lapses, hold: '', arrived: -1,
             orders: { ...NO_ORDERS }, waiting: [], taken: 0, ack: 0, starved: 0, dropped: 0, wantsMine: false, mining: false, why: 'NOT MINING',
         });
     });
@@ -145,7 +166,8 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
      */
     const enter = (id: string): void => {
         const pilot = pilots.get(id)!;
-        pilot.here = true; pilot.wantsMine = false; pilot.mining = false; pilot.why = 'NOT MINING'; pilot.gone = 0;
+        pilot.here = true; pilot.wantsMine = false; pilot.mining = false; pilot.why = 'NOT MINING';
+        if (pilot.lapses !== 0) { pilot.lapses = 0; dirty = true; }
         pilot.waiting = []; pilot.taken = 0; pilot.ack = 0; pilot.orders = { ...NO_ORDERS };
     };
 
@@ -156,7 +178,8 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     const leave = (id: string): void => {
         const pilot = pilots.get(id);
         if (!pilot) return;
-        pilot.here = false; pilot.wantsMine = false; pilot.mining = false; pilot.why = 'NOT MINING'; pilot.gone = 0;
+        pilot.here = false; pilot.wantsMine = false; pilot.mining = false; pilot.why = 'NOT MINING';
+        if (pilot.mooring === 'assigned') { pilot.lapses = Math.round(wall) + SECTOR.station.reserveMs; dirty = true; }
         pilot.waiting = []; pilot.orders = { ...NO_ORDERS };
     };
 
@@ -190,7 +213,7 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         const held = new Set([...pilots.values()].map((pilot) => pilot.berth));
         return SECTOR.station.berths.find((berth) => !held.has(berth.id))?.id ?? 0;
     };
-    const release = (pilot: Pilot): void => { pilot.berth = 0; pilot.mooring = 'none'; pilot.leg = 0; pilot.vel = STILL; pilot.gone = 0; pilot.hold = ''; dirty = true; };
+    const release = (pilot: Pilot): void => { pilot.berth = 0; pilot.mooring = 'none'; pilot.leg = 0; pilot.vel = STILL; pilot.lapses = 0; pilot.hold = ''; pilot.arrived = -1; dirty = true; };
 
     /**
      * Asking the station for a berth, or giving one up.
@@ -208,7 +231,7 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
             if (pilot.mooring !== 'none') return answer('');
             const berth = freeBerth();
             if (!berth) return answer('NO BERTH FREE');
-            pilot.berth = berth; pilot.mooring = 'assigned'; pilot.gone = 0; pilot.hold = 'TOO FAR';
+            pilot.berth = berth; pilot.mooring = 'assigned'; pilot.lapses = 0; pilot.hold = 'TOO FAR';
             dirty = true;
             return answer('');
         }
@@ -290,6 +313,8 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         for (const pilot of pilots.values()) {
             const lie = berthOf(pilot.berth);
             if (pilot.mooring === 'docked') { pilot.vel = STILL; continue; }
+            // At the end of the way in and not yet written down: she lies there, and waits.
+            if (pilot.arrived >= 0) { pilot.vel = STILL; continue; }
             if (lie && (pilot.mooring === 'docking' || pilot.mooring === 'undocking')) {
                 const way = pilot.mooring === 'docking' ? [lie.approach, lie.over, lie.at] : [lie.over, lie.approach];
                 const moved = tug(pilot.flight, point(way[pilot.leg]!), HEADING, FLIGHT_TICK);
@@ -297,7 +322,9 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
                 if (moved.there) pilot.leg++;
                 if (pilot.leg >= way.length) {
                     pilot.flight = atRest(point(way[way.length - 1]!), HEADING);
-                    if (pilot.mooring === 'docking') { pilot.mooring = 'docked'; pilot.leg = 0; pilot.vel = STILL; }
+                    // With a disk under the sector she is not docked until the disk says she is in her berth: see `committed`.
+                    if (pilot.mooring === 'docking' && keeper) { pilot.arrived = 0; pilot.vel = STILL; }
+                    else if (pilot.mooring === 'docking') { pilot.mooring = 'docked'; pilot.leg = 0; pilot.vel = STILL; }
                     else { release(pilot); pilot.orders = { ...NO_ORDERS }; pilot.waiting = []; }
                 }
                 dirty = true;
@@ -355,13 +382,14 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     const step = (ms: number): void => {
         tick++;
         const passed = Number.isFinite(ms) ? Math.min(250, Math.max(0, ms)) : 0, seconds = passed / 1000;
+        // The wall's clock is not held back as the flying is: a berth lapses when it was due, however the server's steps fell.
+        wall += Number.isFinite(ms) ? Math.max(0, ms) : 0;
         owed += seconds;
         while (owed >= FLIGHT_TICK) { owed -= FLIGHT_TICK; fly(); }
         dig(seconds);
         for (const pilot of pilots.values()) {
-            if (pilot.mooring !== 'assigned' || pilot.here) { pilot.gone = 0; continue; }
-            pilot.gone += passed;
-            if (pilot.gone >= SECTOR.station.reserveMs) release(pilot);
+            if (pilot.arrived >= 0) pilot.arrived += passed;
+            if (pilot.mooring === 'assigned' && !pilot.here && pilot.lapses !== 0 && wall >= pilot.lapses) release(pilot);
         }
     };
 
@@ -388,7 +416,8 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
             tick, rock: remaining, flight: copyFlight(pilot.flight), ack: pilot.ack, waiting: pilot.waiting.length, starved: pilot.starved, dropped: pilot.dropped,
             you: {
                 p: tuple(pilot.flight.pos), cargo: pilot.cargo, stored: pilot.stored, docked: pilot.mooring === 'docked', berth: pilot.berth, mooring: pilot.mooring,
-                hold: pilot.mooring === 'assigned' ? pilot.hold : '' as DockRefusal, next: pilot.moves + 1, mining: pilot.mining, why: pilot.why, station: stationRange(pilot.flight),
+                // In her berth and not yet called docked: said at once to a check, and to her glass only once it has lasted.
+                hold: pilot.mooring === 'assigned' ? pilot.hold : pilot.arrived >= UNSAVED_SAID_MS ? 'NOT SAVED' : '' as DockRefusal, arrived: pilot.arrived >= 0, next: pilot.moves + 1, mining: pilot.mining, why: pilot.why, station: stationRange(pilot.flight),
             },
             others: [...pilots.values()].filter((other) => other !== pilot && other.here).map(view),
         };
@@ -399,7 +428,7 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         out.rock.remaining = remaining;
         for (const pilot of pilots.values()) {
             const l = pilot.flight.level;
-            out.pilots[pilot.account.id] = { cargo: pilot.cargo, stored: pilot.stored, berth: pilot.berth, mooring: pilot.mooring, moves: pilot.moves, p: tuple(pilot.flight.pos), q: [l.x, l.y, l.z, l.w], ops: pilot.ops.map((op) => ({ ...op })) };
+            out.pilots[pilot.account.id] = { cargo: pilot.cargo, stored: pilot.stored, berth: pilot.berth, mooring: pilot.mooring, moves: pilot.moves, p: tuple(pilot.flight.pos), q: [l.x, l.y, l.z, l.w], ops: pilot.ops.map((op) => ({ ...op })), lapses: pilot.mooring === 'assigned' ? pilot.lapses : 0 };
         }
         return out;
     };
@@ -411,14 +440,34 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         return { remaining, held, stored, total: SECTOR.rock.total };
     };
 
+    /**
+     * `written` is on the disk. A ship lying at the end of her way in, whom it has in that berth, is docked from now: were the
+     * server to stop this instant it would come back with her there. Until a save has her, she is not called docked, her
+     * warehouse stays shut, and `unwritten` says a save is wanted at once.
+     */
+    const committed = (written: Saved): void => {
+        for (const pilot of pilots.values()) {
+            if (pilot.arrived < 0) continue;
+            const kept = written.pilots[pilot.account.id];
+            if (!kept || kept.berth !== pilot.berth || (kept.mooring !== 'docking' && kept.mooring !== 'docked')) continue;
+            pilot.mooring = 'docked'; pilot.leg = 0; pilot.arrived = -1; pilot.vel = STILL;
+            dirty = true;
+        }
+    };
+    const unwritten = (): boolean => [...pilots.values()].some((pilot) => pilot.arrived >= 0);
+
     /** Who has each berth, by the station's own account: for a check to read. */
     const berths = () => SECTOR.station.berths.map((berth) => {
         const holder = [...pilots.values()].find((pilot) => pilot.berth === berth.id);
-        return { id: berth.id, pilot: holder?.account.id ?? '', mooring: holder?.mooring ?? 'none' as Mooring, here: holder?.here ?? false };
+        return { id: berth.id, pilot: holder?.account.id ?? '', mooring: holder?.mooring ?? 'none' as Mooring, here: holder?.here ?? false, lapses: holder?.lapses ?? 0, arrived: (holder?.arrived ?? -1) >= 0 };
     });
 
     return {
-        login, enter, leave, steer, mine, dock, transfer, step, welcome, stateFor, save, ore, berths,
+        login, enter, leave, steer, mine, dock, transfer, step, welcome, stateFor, save, ore, berths, committed, unwritten,
+        /** The highest helm order taken from this pilot's seat. */
+        taken: (id: string): number => pilots.get(id)?.taken ?? 0,
+        /** The wall's clock as the sector has it. */
+        now: (): number => wall,
         here: (id: string): boolean => pilots.get(id)?.here === true,
         takeDirty: (): boolean => { const was = dirty; dirty = false; return was; },
         /** Something changed that is not on disk yet, or a write of it failed: it is written again until it is. */

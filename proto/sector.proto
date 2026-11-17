@@ -24,6 +24,7 @@ enum DockRefusal {
   reserved 5;
   // The station has her in hand and will not be interrupted.
   DOCK_REFUSAL_MANEUVERING = 6;
+  DOCK_REFUSAL_NOT_SAVED = 7;
 }
 
 // Where a ship stands with the station.

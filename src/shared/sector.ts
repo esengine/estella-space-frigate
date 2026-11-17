@@ -78,9 +78,10 @@ export const inHand = (mooring: Mooring): boolean => mooring === 'docking' || mo
 
 /**
  * Why a ship has no berth, or is not yet taken in hand. '' is that nothing is in the way. MANEUVERING: the station has her in
- * hand and will not be interrupted.
+ * hand and will not be interrupted. NOT SAVED: she lies in her berth and the station has not been able to write that down, so
+ * it does not yet call her docked; it is trying again.
  */
-export type DockRefusal = '' | 'TOO FAR' | 'TOO FAST' | 'NO BERTH FREE' | 'MANEUVERING';
+export type DockRefusal = '' | 'TOO FAR' | 'TOO FAST' | 'NO BERTH FREE' | 'MANEUVERING' | 'NOT SAVED';
 
 /**
  * Why ore did not move between a hold and a warehouse. '' is that it did.

@@ -43,11 +43,17 @@ export function createPredictor() {
         return shown;
     };
 
-    /** Taking the helm: the ship is where the server has her, and orders count from 1 again. */
-    const take = (truth: Flight): void => {
+    /**
+     * Taking the helm: the ship is where the server has her. A new sign-in counts its orders from 1, because the server
+     * counts a new seat's from 1. Within one sign-in the count only ever goes up: given her helm back by the station, she
+     * carries on from the number she had reached (`from`, the last the server took, if that is further on), since the server
+     * drops any number at or below one it has taken.
+     */
+    const take = (truth: Flight, how: { signedIn: boolean; from?: number } = { signedIn: true }): void => {
         flight = copyFlight(truth);
         hand = null;
-        pending = []; outbox = []; seq = 0; owed = 0; pace = 1;
+        pending = []; outbox = []; owed = 0; pace = 1;
+        seq = how.signedIn ? 0 : Math.max(seq, Number.isInteger(how.from) ? how.from! : 0);
         offPos = { x: 0, y: 0, z: 0 }; offTurn = { ...IDENTITY };
     };
 
@@ -97,6 +103,8 @@ export function createPredictor() {
         const want = 1 + Math.max(-PACE_MOST, Math.min(PACE_MOST, (WAITING_AIM - waiting) * 0.012));
         pace += (want - pace) * 0.15;
         pending = pending.filter((one) => one.seq > ack);
+        // The server never takes a number at or below one it has taken, so this count is never left behind its.
+        if (Number.isInteger(ack) && ack > seq) seq = ack;
         const replayed = copyFlight(truth);
         for (const one of pending) stepFlight(replayed, one.orders, FLIGHT_TICK);
         const off = { x: flight.pos.x - replayed.pos.x, y: flight.pos.y - replayed.pos.y, z: flight.pos.z - replayed.pos.z };
@@ -118,6 +126,8 @@ export function createPredictor() {
 
     return {
         show, take, advance, settle, fix,
+        /** The number of the last order given: it only goes up while one sign-in lasts. */
+        numbered: (): number => seq,
         /** The orders numbered since the last call, to send. */
         drain: (most = 32): Numbered[] => outbox.splice(0, most),
         unsent: (): number => outbox.length,

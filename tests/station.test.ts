@@ -2,6 +2,7 @@ import { createSector, freshSave, auditSave, tug, type Account, type Saved, type
 import { GRAMS, SECTOR, approach, berthOf, mayDock, type Vec3 } from '../src/shared/sector';
 import { FLIGHT_TICK, atRest, turnBy, type Flight } from '../src/shared/steer';
 import { TOP_SPEED } from '../src/shipState';
+import { createPredictor } from '../src/shared/predict';
 
 const A = 'pilot-a', B = 'pilot-b';
 const TOTAL = SECTOR.rock.total, STATION = SECTOR.station, TICK = FLIGHT_TICK * 1000;
@@ -89,7 +90,7 @@ describe('the station\'s berths', () => {
         // The two ask in the same instant: the second gets the other berth; a third gets none.
         expect(s.dock(B, true)).toEqual({ docked: false, why: '', berth: 2, mooring: 'assigned' });
         expect(s.dock('pilot-c', true)).toEqual({ docked: false, why: 'NO BERTH FREE', berth: 0, mooring: 'none' });
-        expect(s.berths()).toEqual([{ id: 1, pilot: A, mooring: 'assigned', here: true }, { id: 2, pilot: B, mooring: 'assigned', here: true }]);
+        expect(s.berths()).toMatchObject([{ id: 1, pilot: A, mooring: 'assigned', here: true }, { id: 2, pilot: B, mooring: 'assigned', here: true }]);
         // A second sign-in as the same pilot is the same pilot: the same berth, and no other.
         s.enter(A); s.enter(A);
         expect(s.dock(A, true)).toMatchObject({ berth: 1 });
@@ -272,7 +273,7 @@ describe('the station\'s berths', () => {
         expect(half.pilots[B]).toMatchObject({ berth: 2, mooring: 'docking' });
         expect(auditSave(half)).toBe('');
         const back = createSector(half);
-        expect(back.berths()).toEqual([{ id: 1, pilot: A, mooring: 'docked', here: false }, { id: 2, pilot: B, mooring: 'docked', here: false }]);
+        expect(back.berths()).toMatchObject([{ id: 1, pilot: A, mooring: 'docked', here: false }, { id: 2, pilot: B, mooring: 'docked', here: false }]);
         back.enter(A); back.enter(B);
         expect(at(back, A)).toEqual([...ONE.at]);
         expect(at(back, B)).toEqual([...TWO.at]);
@@ -286,7 +287,8 @@ describe('the station\'s berths', () => {
         expect(you(out, A)).toMatchObject({ mooring: 'none', berth: 0 });
         expect(at(out, A)).toEqual([...ONE.approach]);
         expect(fouls(out.stateFor(A).flight)).toBe(false);
-        // A berth that was only kept is kept across a restart, and its thirty seconds start again.
+        // A berth that was only kept, in a save with no time for giving it up (the server was killed with her pilot still there),
+        // is kept across the restart for thirty seconds from it: she cannot have gone sooner than that.
         const kept = createSector(placed({ [A]: { berth: 2, mooring: 'assigned' } }));
         expect(kept.berths()[1]).toMatchObject({ pilot: A, mooring: 'assigned' });
         run(kept, 29);
@@ -347,5 +349,144 @@ describe('the station\'s berths', () => {
         expect(say({ distance: 30, speed: 60 }).text).toMatch(/HOLD HER HERE/);
         expect(berthOf(1)).toBe(ONE);
         expect(berthOf(9)).toBeNull();
+    });
+});
+
+describe('what the review of the berths found', () => {
+    it('the helm is hers again after a cast-off in the same sign-in: her orders go on from the number they had reached, and the server flies them', () => {
+        // The game's own link, as src/online.ts keeps it: a predictor numbering the helm's orders, and a sector flying them.
+        const s = createSector(placed({ [A]: { p: near(ONE, [0, 0, 400]), q: [0, 1, 0, 0], cargo: 2 * GRAMS } }));
+        s.enter(A);
+        const p = createPredictor();
+        p.take(s.welcome(A).flight);
+        let mooring = you(s, A).mooring, helm = { order: 0.25, rudder: 0, elevation: 0, roll: 0 }, sent: number[] = [];
+        const frame = (): void => {
+            p.advance(FLIGHT_TICK, helm, true, mooring === 'docking' || mooring === 'docked' || mooring === 'undocking');
+            const out = p.drain();
+            sent.push(...out.map((one) => one.seq));
+            s.steer(A, out.map((one) => ({ seq: one.seq, ...one.orders })));
+            s.step(TICK);
+            const state = s.stateFor(A), was = mooring;
+            mooring = state.you.mooring;
+            const held = (m: string): boolean => m === 'docking' || m === 'docked' || m === 'undocking';
+            if (held(was) && !held(mooring)) p.take(state.flight, { signedIn: false, from: state.ack }); else p.settle(state.flight, state.ack, state.waiting);
+        };
+        // Under her own helm to the approach point, where she is taken in hand and brought in.
+        s.dock(A, true);
+        for (let n = 0; n < 30 * 120 && mooring !== 'docked'; n++) { helm = { ...helm, order: mooring === 'assigned' && far(at(s, A), ONE.approach) > 60 ? 0.25 : 0 }; frame(); }
+        expect(mooring).toBe('docked');
+        const before = p.numbered();
+        expect(before).toBeGreaterThan(100);
+        expect(s.taken(A)).toBe(before);
+        // Cast off, and at her helm the moment she is let go: no sign-in, no restart.
+        s.dock(A, false);
+        helm = { ...helm, order: 0 };
+        for (let n = 0; n < 30 * 60 && mooring !== 'none'; n++) frame();
+        expect(mooring).toBe('none');
+        expect(at(s, A)).toEqual([...ONE.approach]);
+        sent = [];
+        helm = { order: 0.5, rudder: 0, elevation: 0, roll: 0 };
+        for (let n = 0; n < 150; n++) frame();
+        // Five seconds at half ahead: every order was numbered past the last the server had, and it flew them.
+        expect(Math.min(...sent)).toBe(before + 1);
+        // A client's clock is paced a few parts in a hundred to the server's, so 150 frames is 150 orders give or take.
+        expect(s.taken(A)).toBeGreaterThanOrEqual(before + 145);
+        expect(s.taken(A)).toBeLessThanOrEqual(before + 158);
+        expect(s.taken(A)).toBe(p.numbered());
+        expect(s.stateFor(A).ack).toBeGreaterThan(before + 140);
+        expect(s.stateFor(A).flight.speed).toBeGreaterThan(TOP_SPEED * 0.4);
+        expect(far(at(s, A), ONE.approach)).toBeGreaterThan(60);
+        expect(far([p.show().pos.x, p.show().pos.y, p.show().pos.z], at(s, A))).toBeLessThan(5);
+        // A new sign-in is the one time the count starts again, because the server's does.
+        s.leave(A); s.enter(A);
+        p.take(s.welcome(A).flight);
+        expect(p.numbered()).toBe(0);
+        expect(s.taken(A)).toBe(0);
+    });
+
+    it('a berth only kept is given up thirty seconds after its pilot went, by the clock on the wall, however the server was stopped and started meanwhile', () => {
+        const s = createSector(placed({ [A]: { p: [0, 0, 0] } }));
+        s.enter(A);
+        s.dock(A, true);
+        expect(s.save().pilots[A]!.lapses).toBe(0);
+        const wentAt = s.now();
+        s.leave(A);
+        expect(s.save().pilots[A]!.lapses).toBe(Math.round(wentAt) + STATION.reserveMs);
+        run(s, 20);
+        // Stopped twenty seconds after she went, and started at once: twelve seconds more is past the thirty.
+        const saved = JSON.parse(JSON.stringify(s.save())) as Saved;
+        expect(auditSave(saved)).toBe('');
+        const stoppedAt = s.now();
+        const back = createSector(saved, undefined, { clock: () => stoppedAt });
+        run(back, 9.5);
+        expect(back.berths()[0]).toMatchObject({ pilot: A, mooring: 'assigned' });
+        run(back, 0.6);
+        expect(back.berths()[0]).toMatchObject({ pilot: '', mooring: 'none' });
+        expect(back.now() - wentAt).toBeLessThan(STATION.reserveMs + 200);
+        // Down for longer than was left: given up on the first step back.
+        const late = createSector(saved, undefined, { clock: () => stoppedAt + 15_000 });
+        late.step(TICK);
+        expect(late.berths()[0]!.pilot).toBe('');
+        // Started again and again, each time with five seconds run: it is still thirty seconds in all, not thirty from the last start.
+        let hopping = createSector(saved, undefined, { clock: () => stoppedAt });
+        for (let hop = 0; hop < 2; hop++) {
+            run(hopping, 4.5);
+            expect(hopping.berths()[0]!.pilot).toBe(A);
+            const at = hopping.now();
+            hopping = createSector(JSON.parse(JSON.stringify(hopping.save())), undefined, { clock: () => at });
+        }
+        run(hopping, 1.2);
+        expect(hopping.berths()[0]!.pilot).toBe('');
+        // Back before it lapses, she keeps it, nothing is due any more, and going again starts thirty seconds afresh.
+        const home = createSector(saved, undefined, { clock: () => stoppedAt });
+        home.enter(A);
+        expect(home.save().pilots[A]!.lapses).toBe(0);
+        run(home, 40);
+        expect(home.berths()[0]!.pilot).toBe(A);
+        // A save that says a berth is due to be given up when it is not one only kept is not one this server wrote.
+        const bad = JSON.parse(JSON.stringify(saved)) as Saved;
+        bad.pilots[A]!.mooring = 'docked';
+        expect(auditSave(bad)).toMatch(/due to be given up/);
+    });
+
+    it('with a disk under the sector a ship in her berth is not docked until a save has her there, and is docked by the write that does', () => {
+        const s = createSector(placed({ [A]: { p: near(ONE, [5, 0, 0]), cargo: 2 * GRAMS } }), undefined, { keeper: true });
+        s.enter(A);
+        const beforeBerth = JSON.parse(JSON.stringify(s.save())) as Saved;
+        s.dock(A, true);
+        run(s, 60);
+        // She lies in her berth, and no save says so: not docked, warehouse shut, and a save is wanted now.
+        expect(at(s, A)).toEqual([...ONE.at]);
+        expect(you(s, A)).toMatchObject({ mooring: 'docking', docked: false, arrived: true, hold: 'NOT SAVED' });
+        expect(s.unwritten()).toBe(true);
+        expect(s.transfer(A, 1, 'too-early-1', false, 1 * GRAMS)).toMatchObject({ ok: false, why: 'NOT DOCKED' });
+        expect(s.dock(A, false)).toMatchObject({ why: 'MANEUVERING', mooring: 'docking' });
+        // The disk refuses for a long while: she waits where she is, and is told why.
+        run(s, 30);
+        expect(you(s, A)).toMatchObject({ mooring: 'docking', docked: false, hold: 'NOT SAVED' });
+        expect(at(s, A)).toEqual([...ONE.at]);
+        // A write of something older, which does not have her in the berth, confirms nothing.
+        s.committed(beforeBerth);
+        expect(you(s, A).mooring).toBe('docking');
+        // Killed now, what is on the disk is the older save: she has no berth, and was never told she had docked.
+        const lost = createSector(beforeBerth, undefined, { keeper: true });
+        expect(lost.berths()[0]!.pilot).toBe('');
+        // The write that succeeds has her there, and would bring her back docked; from that write she is docked.
+        const written = JSON.parse(JSON.stringify(s.save())) as Saved;
+        expect(written.pilots[A]).toMatchObject({ berth: 1, mooring: 'docking', p: [...ONE.at] });
+        const recovered = createSector(written, undefined, { keeper: true });
+        recovered.enter(A);
+        expect(you(recovered, A)).toMatchObject({ mooring: 'docked', docked: true, berth: 1 });
+        expect(at(recovered, A)).toEqual([...ONE.at]);
+        s.committed(written);
+        expect(you(s, A)).toMatchObject({ mooring: 'docked', docked: true, arrived: false, hold: '' });
+        expect(s.unwritten()).toBe(false);
+        expect(s.transfer(A, 2, 'now-docked-1', false, 1 * GRAMS)).toMatchObject({ ok: true, stored: 1 * GRAMS });
+        // A working disk is quicker than her glass is told anything: for the first moments nothing is said to be wrong.
+        const quick = createSector(placed({ [A]: { p: near(ONE, [5, 0, 0]) } }), undefined, { keeper: true });
+        quick.enter(A);
+        quick.dock(A, true);
+        for (let n = 0; n < 30 * 60 && !quick.unwritten(); n++) quick.step(TICK);
+        expect(you(quick, A)).toMatchObject({ mooring: 'docking', arrived: true, hold: '' });
     });
 });

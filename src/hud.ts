@@ -454,7 +454,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
             if (inHand(online.mooring) && (helm.order !== 0 || helm.mode !== 'manual')) { setEngine(0); steady(); }
             if (online.link !== 'online') { advice.cue = ''; advice.urgent = true; advice.text = online.link === 'refused' ? `SECTOR REFUSED YOU   ${online.why}` : online.link === 'lost' ? 'LINK LOST   CALLING THE SECTOR AGAIN' : 'CALLING THE SECTOR'; }
             else if (online.mooring === 'docked') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = dock.said.good; advice.text = dock.said.text || `DOCKED IN BERTH ${online.berth}`; }
-            else if (online.mooring === 'docking') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = false; advice.text = `THE ANCHORAGE HAS HER   BRINGING HER IN TO BERTH ${online.berth}`; }
+            else if (online.mooring === 'docking') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = false; advice.text = online.hold === 'NOT SAVED' ? `IN BERTH ${online.berth}   THE ANCHORAGE CANNOT RECORD IT YET   WAREHOUSE SHUT   TRYING AGAIN` : `THE ANCHORAGE HAS HER   BRINGING HER IN TO BERTH ${online.berth}`; advice.urgent = online.hold === 'NOT SAVED'; }
             else if (online.mooring === 'undocking') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = false; advice.text = `CAST OFF   WAREHOUSE SHUT   THE ANCHORAGE IS TAKING HER OUT OF BERTH ${online.berth}`; }
             else if (online.mooring === 'assigned') {
                 // A berth is kept for her: the helm is talked to its approach point, which is where the waypoint now is. When she is

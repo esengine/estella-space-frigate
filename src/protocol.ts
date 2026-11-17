@@ -41,7 +41,7 @@ export const fromRefusal = (why: pb.Refusal): Refusal => (Object.keys(REFUSALS) 
 
 const DOCKS: Record<DockRefusal, pb.DockRefusal> = {
     '': pb.DockRefusal.DOCK_REFUSAL_NONE, 'TOO FAR': pb.DockRefusal.DOCK_REFUSAL_TOO_FAR, 'TOO FAST': pb.DockRefusal.DOCK_REFUSAL_TOO_FAST,
-    'NO BERTH FREE': pb.DockRefusal.DOCK_REFUSAL_NO_BERTH_FREE, 'MANEUVERING': pb.DockRefusal.DOCK_REFUSAL_MANEUVERING,
+    'NO BERTH FREE': pb.DockRefusal.DOCK_REFUSAL_NO_BERTH_FREE, 'MANEUVERING': pb.DockRefusal.DOCK_REFUSAL_MANEUVERING, 'NOT SAVED': pb.DockRefusal.DOCK_REFUSAL_NOT_SAVED,
 };
 const MOORED: Record<Mooring, pb.Mooring> = {
     none: pb.Mooring.MOORING_NONE, assigned: pb.Mooring.MOORING_ASSIGNED, docking: pb.Mooring.MOORING_DOCKING, docked: pb.Mooring.MOORING_DOCKED, undocking: pb.Mooring.MOORING_UNDOCKING,
