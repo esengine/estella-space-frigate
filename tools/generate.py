@@ -41,7 +41,7 @@ def run(*args):
 def stamp(path, kind=None, importer=None):
     meta_path = Path(str(path) + '.meta')
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {'version': '2.0', 'type': kind, 'importer': importer or {}}
-    meta['uuid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'estella/examples/space-frigate/' + str(Path(path).relative_to(ROOT))))
+    meta['uuid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'estella/examples/space-frigate/' + Path(path).relative_to(ROOT).as_posix()))
     if importer:
         meta['importer'] = {**meta.get('importer', {}), **importer}
     meta_path.write_text(json.dumps(meta, indent=2) + '\n')
@@ -851,6 +851,10 @@ def make_materials():
                                         'u_falloff': 1.8, 'u_fade': 2.0, 'u_diamonds': 4, 'u_knots': 1.0, 'u_flicker': 0.14}},
         'warp': {'version': '1.0', 'type': 'material', 'shader': 'warp.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                  'properties': {'u_core': {'r': 0.8, 'g': 0.93, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.1, 'g': 0.3, 'b': 1.0, 'a': 1}, 'u_strength': 1, 'u_cover': 0, 'u_travel': 0, 'u_flash': 0, 'u_half': WARP['half']}},
+        'entry': {'version': '1.0', 'type': 'material', 'shader': 'entry.esshader', 'blendMode': 0, 'depthTest': True, 'depthWrite': False, 'cull': 0,
+                  'properties': {'u_hot': {'r': 1.0, 'g': 0.9, 'b': 0.7, 'a': 1}, 'u_ember': {'r': 1.0, 'g': 0.3, 'b': 0.05, 'a': 1}, 'u_mist': {'r': 0.9, 'g': 0.94, 'b': 1.0, 'a': 1},
+                                 'u_heat': 0, 'u_cloud': 0, 'u_travel': 0, 'u_glow': 2.4, 'u_half': WARP['half'],
+                                 'u_eye': [0, 40, -160], 'u_look': [0, 0, 1], 'u_hull': [42, 56, 76], 'u_hullAt': [0, 10, 2], 'u_near': 1, 'u_far': 30000}},
         'plume': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                   'properties': {'u_core': {'r': 0.25, 'g': 0.5, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.03, 'g': 0.14, 'b': 0.7, 'a': 1}, 'u_strength': 1.2, 'u_length': 11,
                                  'u_falloff': 2.6, 'u_fade': 1.6, 'u_diamonds': 0, 'u_knots': 0, 'u_flicker': 0.08}},
@@ -876,7 +880,7 @@ def make_materials():
         path = MAT / f'{name}.esmaterial'
         path.write_text(json.dumps(doc, indent=2) + '\n')
         stamp(path, 'material')
-    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'planet', 'shield', 'streak'):
+    for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'entry', 'planet', 'shield', 'streak'):
         stamp(MAT / f'{name}.esshader', 'shader')
     stamp(ROOT / 'assets/fx/puff.esimage', 'imageSource')
     for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'turret', 'guns')):
@@ -1068,6 +1072,8 @@ def make_scene():
     add('Atmosphere', [transform(HOME['at'], None, (HOME['radius'] * HOME['air'],) * 3), mesh('shell', 'assets/materials/world-air.esmaterial', None, False, False, True, False, LAYERS['far'])])
     add('Ring', [transform(HOME['at'], look((0, 0, 0), HOME['ring']['normal']), (HOME['radius'] * HOME['ring']['outer'],) * 3),
                  mesh('gate-field', 'assets/materials/world-ring.esmaterial', None, False, False, False, False, LAYERS['far'])])
+    # The air she falls through on her way down to a world: the jump tunnel's sheath, drawn as burning air and then as cloud.
+    add('Entry', [transform((0, 0, 0), None, (0.001,) * 3), mesh('warp', 'assets/materials/entry.esmaterial', None, False, False, False, False, LAYERS['tunnel'])], ship)
     SCENE.write_text(json.dumps({'version': 4, 'name': 'SpaceFrigate', 'entities': entities}, indent=1) + '\n')
     stamp(SCENE, 'scene')
     boot = [{'id': 0, 'name': 'BootCamera', 'parent': None, 'children': [], 'visible': True, 'components': [

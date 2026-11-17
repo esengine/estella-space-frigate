@@ -9,7 +9,7 @@ const seed = Number(process.argv[3] ?? 1);
 const out = path.join(root, `planet-${kind}-${seed}`);
 const angle = process.platform === 'win32' ? 'd3d11' : process.platform === 'darwin' ? 'metal' : 'swiftshader';
 await mkdir(out, { recursive: true });
-const server = await serveHost(path.join(root, 'web'));
+const server = await serveHost(path.join(root, process.env.SPACE_WEB ?? 'web'));
 const browser = await chromium.launch({ headless: true, args: [`--use-angle=${angle}`, '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'] });
 const problems = [];
 const findings = [];
@@ -28,7 +28,9 @@ try {
     await page.evaluate(() => window.__estellaCooked.setPaused(true));
     const step = (n) => page.evaluate((frames) => window.__estellaCooked.step(frames), n);
     const facts = () => page.evaluate(() => window.__estellaCooked.facts());
-    const fall = () => page.evaluate(() => { const f = window.__spaceHud.fall, h = window.__spaceHud.helm; return { stage: f.stage, altitude: f.altitude, distance: f.distance, cover: f.cover, heat: f.heat, ground: f.ground, body: f.body, mode: h.mode, surge: h.surge, climb: h.forward.y }; });
+    const fov = () => page.evaluate(() => window.__estellaCooked.facts().fov);
+    const eye = () => page.evaluate(() => { const f = window.__estellaCooked.facts(); return { x: f.camSlide, y: f.camTilt * 100, z: 0 }; });
+    const fall = () => page.evaluate(() => { const f = window.__spaceHud.fall, h = window.__spaceHud.helm; return { stage: f.stage, altitude: f.altitude, distance: f.distance, cover: f.cover, heat: f.heat, shake: f.shake, ground: f.ground, body: f.body, mode: h.mode, surge: h.surge, climb: h.forward.y }; });
     const tap = async (key) => { await page.keyboard.down(key); await step(2); await page.keyboard.up(key); await step(2); };
     const drawn = () => page.evaluate(() => {
         const canvas = document.querySelector('canvas');
@@ -89,11 +91,33 @@ try {
         await until('the planet comes close enough to enter', (f) => f.altitude < 1200, 60 * 150);
         await shoot('2-close');
         await until('she enters the atmosphere', (f) => f.stage === 'entry', 60 * 60);
-        await step(40);
-        await shoot('3-entry-heat');
-        await until('the entry covers the view as the ground is made', (f) => f.cover > 0.9, 60 * 6);
+        // The way down: the air heats and shakes her, the view opens, the cloud deck closes over her, and she breaks out under it.
+        const calm = { ...(await fall()), fov: await fov(), eye: await eye() };
+        await step(70);
+        await shoot('3a-air-heating');
+        await step(70);
+        const hot = { ...(await fall()), fov: await fov() };
+        // How far the camera is thrown about from one frame to the next while the air has her.
+        let thrown = 0, before = await eye();
+        for (let n = 0; n < 24; n++) { await step(1); const now = await eye(); thrown = Math.max(thrown, Math.hypot(now.x - before.x, now.y - before.y, now.z - before.z)); before = now; }
+        await shoot('3b-entry-heat');
+        expect('entering, the air heats, the view opens and the camera is shaken', hot.heat > 0.8 && hot.shake > 0.6 && hot.fov > calm.fov + 3 && thrown > 0.15 && hot.cover < 0.3, { calm: [calm.heat, calm.shake, calm.fov], hot: [hot.heat, hot.shake, hot.fov, hot.cover], thrown });
+        await until('the cloud deck starts to close over her', (f) => f.cover > 0.45, 60 * 6);
+        await shoot('3c-cloud-closing');
+        await until('the entry covers the view as the ground is made', (f) => f.cover > 0.97, 60 * 6);
+        const blind = await fall();
+        await shoot('3d-in-the-cloud');
+        expect('the ground is made while cloud is all there is to see', blind.stage === 'entry' && blind.cover > 0.97, blind);
+        await until('the cloud tears open', (f) => f.cover < 0.6 && f.stage !== 'space', 60 * 6);
+        await shoot('3e-breaking-out');
         await until('she comes out over the ground', (f) => f.stage === 'surface', 60 * 6);
         const low = await fall();
+        await step(60 * 4);
+        const settled = { ...(await fall()), fov: await fov() };
+        let still = 0;
+        before = await eye();
+        for (let n = 0; n < 24; n++) { await step(1); const now = await eye(); still = Math.max(still, Math.hypot(now.x - before.x, now.y - before.y, now.z - before.z)); before = now; }
+        expect('under the cloud the shaking dies away, the heat is gone and the view is as it was', settled.shake < 0.02 && settled.heat < 0.01 && settled.cover === 0 && Math.abs(settled.fov - calm.fov) < 1.5 && still < thrown * 0.2, { settled: [settled.shake, settled.heat, settled.cover, settled.fov], still, thrown });
         expect('above ground at the altitude she is put at', low.altitude > 1200 && low.altitude < 2600, low);
         await step(30);
         await shoot('4-over-ground');

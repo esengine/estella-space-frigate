@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "entry.esshader",
+  "blendMode": 0,
+  "depthTest": true,
+  "depthWrite": false,
+  "cull": 0,
+  "properties": {
+    "u_hot": {
+      "r": 1.0,
+      "g": 0.9,
+      "b": 0.7,
+      "a": 1
+    },
+    "u_ember": {
+      "r": 1.0,
+      "g": 0.3,
+      "b": 0.05,
+      "a": 1
+    },
+    "u_mist": {
+      "r": 0.9,
+      "g": 0.94,
+      "b": 1.0,
+      "a": 1
+    },
+    "u_heat": 0,
+    "u_cloud": 0,
+    "u_travel": 0,
+    "u_glow": 2.4,
+    "u_half": 2600.0,
+    "u_eye": [
+      0,
+      40,
+      -160
+    ],
+    "u_look": [
+      0,
+      0,
+      1
+    ],
+    "u_hull": [
+      42,
+      56,
+      76
+    ],
+    "u_near": 1,
+    "u_far": 30000,
+    "u_hullAt": [
+      0,
+      10,
+      2
+    ]
+  }
+}

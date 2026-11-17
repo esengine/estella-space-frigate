@@ -341,7 +341,8 @@
     160,
     162,
     164,
-    166
+    166,
+    230
    ],
    "visible": true,
    "components": [
@@ -954,7 +955,7 @@
       "rotation": {
        "x": 0.0,
        "y": 0,
-       "z": -0.7071067811865475,
+       "z": -0.7071067811865476,
        "w": 0.7071067811865476
       }
      }
@@ -1124,7 +1125,7 @@
       "rotation": {
        "x": 0.0,
        "y": 0,
-       "z": 0.7071067811865475,
+       "z": 0.7071067811865476,
        "w": 0.7071067811865476
       }
      }
@@ -1628,7 +1629,7 @@
       "rotation": {
        "x": 0.0,
        "y": 0,
-       "z": -0.7071067811865475,
+       "z": -0.7071067811865476,
        "w": 0.7071067811865476
       }
      }
@@ -1798,7 +1799,7 @@
       "rotation": {
        "x": 0.0,
        "y": 0,
-       "z": 0.7071067811865475,
+       "z": 0.7071067811865476,
        "w": 0.7071067811865476
       }
      }
@@ -5977,7 +5978,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -6098,7 +6099,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -6386,7 +6387,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -6507,7 +6508,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -6795,7 +6796,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -6916,7 +6917,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -7204,7 +7205,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -7325,7 +7326,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -7619,7 +7620,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -7740,7 +7741,7 @@
        "z": 5.75
       },
       "rotation": {
-       "x": 0.7071067811865475,
+       "x": 0.7071067811865476,
        "y": 0,
        "z": 0.0,
        "w": 0.7071067811865476
@@ -9891,7 +9892,7 @@
       "rotation": {
        "x": -0.6219418082732401,
        "y": 0.49881235720459144,
-       "z": -0.5262653312361992,
+       "z": -0.5262653312361993,
        "w": 0.295667753670678
       },
       "scale": {
@@ -9987,10 +9988,10 @@
        "z": 229.99371881402922
       },
       "rotation": {
-       "x": -0.2387163063948158,
-       "y": -0.5773517940727969,
-       "z": -0.7299082581248122,
-       "w": -0.27733259033756097
+       "x": -0.23871630639481586,
+       "y": -0.577351794072797,
+       "z": -0.7299082581248123,
+       "w": -0.277332590337561
       },
       "scale": {
        "x": 8.045085505987203,
@@ -10330,9 +10331,9 @@
        "z": 96.44621377819351
       },
       "rotation": {
-       "x": -0.5109984218572793,
-       "y": 0.7421976526508842,
-       "z": 0.41871057159521274,
+       "x": -0.5109984218572794,
+       "y": 0.7421976526508843,
+       "z": 0.4187105715952128,
        "w": -0.11271519193656851
       },
       "scale": {
@@ -10379,10 +10380,10 @@
        "z": 431.91970489250946
       },
       "rotation": {
-       "x": 0.9283091960567827,
-       "y": 0.002635806985156505,
-       "z": 0.33918130763299814,
-       "w": 0.152286340787072
+       "x": 0.9283091960567826,
+       "y": 0.0026358069851565046,
+       "z": 0.3391813076329981,
+       "w": 0.15228634078707198
       },
       "scale": {
        "x": 16.53872495057526,
@@ -10428,10 +10429,10 @@
        "z": 42.272651441503115
       },
       "rotation": {
-       "x": 0.37547378847717866,
-       "y": -0.9196936175183127,
-       "z": -0.10576987144780631,
-       "w": -0.04467458289216328
+       "x": 0.37547378847717877,
+       "y": -0.9196936175183128,
+       "z": -0.10576987144780632,
+       "w": -0.04467458289216329
       },
       "scale": {
        "x": 4.305810654785129,
@@ -10529,7 +10530,7 @@
        "x": -0.6844475113696278,
        "y": -0.6345920273847344,
        "z": 0.31375819804879934,
-       "w": 0.1742996159399844
+       "w": 0.17429961593998436
       },
       "scale": {
        "x": 4.620238037920244,
@@ -10624,10 +10625,10 @@
        "z": -860.4858984765996
       },
       "rotation": {
-       "x": -0.6381639722473226,
-       "y": -0.27107822518331315,
-       "z": 0.6591723112873394,
-       "w": 0.29112747103131753
+       "x": -0.6381639722473225,
+       "y": -0.2710782251833131,
+       "z": 0.6591723112873393,
+       "w": 0.2911274710313175
       },
       "scale": {
        "x": 5.473981618672588,
@@ -10673,10 +10674,10 @@
        "z": 68.6588746402902
       },
       "rotation": {
-       "x": -0.6415211359119286,
-       "y": 0.16699318582552242,
-       "z": -0.12541876765359508,
-       "w": 0.738128742690843
+       "x": -0.6415211359119287,
+       "y": 0.16699318582552244,
+       "z": -0.1254187676535951,
+       "w": 0.7381287426908432
       },
       "scale": {
        "x": 11.12950880280393,
@@ -10722,10 +10723,10 @@
        "z": -646.5766811179514
       },
       "rotation": {
-       "x": 0.1660834254586807,
-       "y": -0.6338325442076532,
-       "z": -0.6431043845886125,
-       "w": 0.39634499140782176
+       "x": 0.16608342545868066,
+       "y": -0.6338325442076531,
+       "z": -0.6431043845886124,
+       "w": 0.3963449914078217
       },
       "scale": {
        "x": 27.817426478609466,
@@ -10767,7 +10768,7 @@
      "data": {
       "position": {
        "x": 501.9872134411024,
-       "y": -111.31936241465357,
+       "y": -111.31936241465355,
        "z": -201.66177751306515
       },
       "rotation": {
@@ -10815,13 +10816,13 @@
      "type": "Transform",
      "data": {
       "position": {
-       "x": 470.14567131047096,
+       "x": 470.1456713104709,
        "y": 79.36085977679706,
        "z": -532.2886536405442
       },
       "rotation": {
        "x": -0.5032973303697067,
-       "y": -0.5632546734296267,
+       "y": -0.5632546734296268,
        "z": 0.1605325653956937,
        "w": 0.6353465712112469
       },
@@ -10969,7 +10970,7 @@
       "rotation": {
        "x": 0.5653795943836623,
        "y": 0.08252306730142528,
-       "z": 0.5744504739232652,
+       "z": 0.5744504739232651,
        "w": -0.5861249957364607
       },
       "scale": {
@@ -11016,10 +11017,10 @@
        "z": -625.872118828288
       },
       "rotation": {
-       "x": -0.9163227463925623,
-       "y": -0.3516127170518183,
-       "z": -0.13720520671430272,
-       "w": 0.13377538227011587
+       "x": -0.9163227463925622,
+       "y": -0.35161271705181824,
+       "z": -0.1372052067143027,
+       "w": 0.13377538227011584
       },
       "scale": {
        "x": 14.160576723221602,
@@ -11209,7 +11210,7 @@
       "position": {
        "x": 752.5477830412024,
        "y": -184.28750385698933,
-       "z": 582.548292372195
+       "z": 582.5482923721949
       },
       "rotation": {
        "x": 0.5503001128467755,
@@ -11362,7 +11363,7 @@
        "x": 0.25628153667138825,
        "y": 0.25935949012773196,
        "z": -0.5393020255216527,
-       "w": 0.7590821787595051
+       "w": 0.7590821787595053
       },
       "scale": {
        "x": 10.059387567697456,
@@ -11408,10 +11409,10 @@
        "z": 688.3368785340506
       },
       "rotation": {
-       "x": -0.17552401908360193,
-       "y": 0.4115930111869692,
-       "z": 0.33472640533434456,
-       "w": -0.829301359843773
+       "x": -0.1755240190836019,
+       "y": 0.41159301118696917,
+       "z": 0.3347264053343445,
+       "w": -0.8293013598437728
       },
       "scale": {
        "x": 9.126547974286494,
@@ -11459,7 +11460,7 @@
       "rotation": {
        "x": 0.014213299766960357,
        "y": -0.77920238882012,
-       "z": -0.3751362495614838,
+       "z": -0.3751362495614837,
        "w": 0.5019107626179151
       },
       "scale": {
@@ -11556,7 +11557,7 @@
       },
       "rotation": {
        "x": 0.4773697580843582,
-       "y": -0.2867392145962108,
+       "y": -0.28673921459621077,
        "z": -0.8146964308458211,
        "w": 0.1617666913994031
       },
@@ -11849,10 +11850,10 @@
        "z": -1836.5999002264539
       },
       "rotation": {
-       "x": 0.48608170048659477,
+       "x": 0.4860817004865947,
        "y": -0.8058531428830895,
-       "z": 0.309926284713942,
-       "w": 0.13517022823432642
+       "z": 0.30992628471394196,
+       "w": 0.1351702282343264
       },
       "scale": {
        "x": 220.10751935612006,
@@ -12090,11 +12091,11 @@
      "data": {
       "position": {
        "x": -1687.5603395240773,
-       "y": -583.156479769299,
+       "y": -583.1564797692989,
        "z": 1301.723413769679
       },
       "rotation": {
-       "x": 0.7066902330446829,
+       "x": 0.7066902330446828,
        "y": -0.6100089469100948,
        "z": -0.0796983850340023,
        "w": -0.34946554426990506
@@ -12383,6 +12384,239 @@
   },
   {
    "id": 221,
+   "name": "Station",
+   "parent": null,
+   "children": [
+    222,
+    223,
+    224,
+    225,
+    226
+   ],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": -120000,
+       "z": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 222,
+   "name": "StationCore",
+   "parent": 221,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station.esmaterial",
+      "texture": "assets/models/station_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 223,
+   "name": "StationWing0",
+   "parent": 221,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 224,
+   "name": "StationWing1",
+   "parent": 221,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": 0.7071067811865476,
+       "z": 0,
+       "w": 0.7071067811865476
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 225,
+   "name": "StationWing2",
+   "parent": 221,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": -0.7071067811865476,
+       "z": 0,
+       "w": 0.7071067811865476
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 226,
+   "name": "StationWing3",
+   "parent": 221,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": 1.0,
+       "z": 0,
+       "w": 6.123233995736766e-17
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-bay.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-bay.esmaterial",
+      "texture": "assets/models/station-bay_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 227,
    "name": "Planet",
    "parent": null,
    "children": [],
@@ -12424,7 +12658,7 @@
    ]
   },
   {
-   "id": 222,
+   "id": 228,
    "name": "Atmosphere",
    "parent": null,
    "children": [],
@@ -12466,7 +12700,7 @@
    ]
   },
   {
-   "id": 223,
+   "id": 229,
    "name": "Ring",
    "parent": null,
    "children": [],
@@ -12514,110 +12748,9 @@
    ]
   },
   {
-   "id": 224,
-   "name": "Station",
-   "parent": null,
-   "children": [
-    225,
-    226,
-    227,
-    228,
-    229
-   ],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": -120000,
-       "z": 0
-      }
-     }
-    }
-   ]
-  },
-  {
-   "id": 225,
-   "name": "StationCore",
-   "parent": 224,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/station.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/station.esmaterial",
-      "texture": "assets/models/station_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 226,
-   "name": "StationWing0",
-   "parent": 224,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/station-wing.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/station-wing.esmaterial",
-      "texture": "assets/models/station-wing_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 227,
-   "name": "StationWing1",
-   "parent": 224,
+   "id": 230,
+   "name": "Entry",
+   "parent": 5,
    "children": [],
    "visible": true,
    "components": [
@@ -12629,18 +12762,17 @@
        "y": 0,
        "z": 0
       },
-      "rotation": {
-       "x": 0,
-       "y": 0.7071067811865476,
-       "z": 0,
-       "w": 0.7071067811865476
+      "scale": {
+       "x": 0.001,
+       "y": 0.001,
+       "z": 0.001
       }
      }
     },
     {
      "type": "MeshRenderer",
      "data": {
-      "mesh": "assets/models/station-wing.esmesh",
+      "mesh": "assets/models/warp.esmesh",
       "color": {
        "r": 1,
        "g": 1,
@@ -12648,100 +12780,12 @@
        "a": 1
       },
       "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
+      "lit": false,
+      "opaque": false,
+      "cullBackfaces": false,
       "castShadows": false,
-      "material": "assets/models/station-wing.esmaterial",
-      "texture": "assets/models/station-wing_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 228,
-   "name": "StationWing2",
-   "parent": 224,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      },
-      "rotation": {
-       "x": 0,
-       "y": -0.7071067811865476,
-       "z": 0,
-       "w": 0.7071067811865476
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/station-wing.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/station-wing.esmaterial",
-      "texture": "assets/models/station-wing_color.png"
-     }
-    }
-   ]
-  },
-  {
-   "id": 229,
-   "name": "StationWing3",
-   "parent": 224,
-   "children": [],
-   "visible": true,
-   "components": [
-    {
-     "type": "Transform",
-     "data": {
-      "position": {
-       "x": 0,
-       "y": 0,
-       "z": 0
-      },
-      "rotation": {
-       "x": 0,
-       "y": 1.0,
-       "z": 0,
-       "w": 6.123233995736766e-17
-      }
-     }
-    },
-    {
-     "type": "MeshRenderer",
-     "data": {
-      "mesh": "assets/models/station-bay.esmesh",
-      "color": {
-       "r": 1,
-       "g": 1,
-       "b": 1,
-       "a": 1
-      },
-      "enabled": true,
-      "lit": true,
-      "opaque": true,
-      "cullBackfaces": true,
-      "castShadows": false,
-      "material": "assets/models/station-bay.esmaterial",
-      "texture": "assets/models/station-bay_color.png"
+      "layer": 1,
+      "material": "assets/materials/entry.esmaterial"
      }
     }
    ]

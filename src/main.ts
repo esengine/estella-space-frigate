@@ -13,7 +13,7 @@ import { driveShip } from './shared/steer';
 import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
-import { createPlanetfall, fall } from './planetfall';
+import { PLANETFALL, createPlanetfall, fall } from './planetfall';
 import { graphics } from './hudSettings';
 import { KINDS, galaxy, ringSun, systemAt, voyageSeed } from './worlds';
 import { readyKind, showKind } from './planetKinds';
@@ -34,6 +34,8 @@ const PLANET_MATERIAL = 'assets/materials/world-planet.esmaterial';
 // The long lines belong to a jump, which gets them by itself from the speed it runs the field past at.
 const DUST = { from: 0.3, full: 1, rate: 150, glow: 1.9 } as const;
 const SPEED_WIDEN = 4;
+/** The most the air shakes the camera and the hull on the way down to a world: radians, and units. */
+const SHAKE = { pitch: 0.011, yaw: 0.008, roll: 0.016, slide: 0.7, hullRoll: 0.035, hullNod: 0.022, hullSlide: 0.45 };
 const STROBES = [
     { name: 'StrobeMast', size: 0.55, every: 1.7, flashes: 2 },
     { name: 'StrobeKeel', size: 0.5, every: 1.3, flashes: 1 },
@@ -63,7 +65,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0, shake: 0, heat: 0, camSlide: 0, camTilt: 0 };
         galaxy.seed = voyageSeed((globalThis as { location?: { search?: string } }).location?.search ?? '', Math.random);
         configureOnline((globalThis as { location?: { search?: string } }).location?.search ?? '');
         if (online.enabled) { helm.fixed = true; foes.peace = true; }
@@ -102,6 +104,7 @@ addPlugin({
         let travel = 0;
         let wide = FOV;
         let open = false;
+let veiled = false, fallen = 0;
         const gunnery = createGunnery(app);
         const impacts = createImpacts(app);
         const raiders = createRaiders(app);
@@ -294,12 +297,26 @@ addPlugin({
             const { eye, target } = eyeOf(orbit);
             const camera = get(world, 'Camera');
             const cam = { position: turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] }), rotation: mulQuat(helm.frame, lookRotation(eye, target)) };
+            // Falling through air she is shaken: a few rates at once that never fall into step, so it reads as buffeting and not as a hum.
+            const rattle = fall.shake;
+            const jolt = rattle <= 0.002 ? { a: 0, b: 0, c: 0 } : {
+                a: (Math.sin(clock * 61.3) + 0.6 * Math.sin(clock * 37.7 + 1.3) + 0.35 * Math.sin(clock * 97.1 + 4.1)) / 1.95,
+                b: (Math.sin(clock * 53.9 + 2.2) + 0.6 * Math.sin(clock * 29.3 + 0.4) + 0.35 * Math.sin(clock * 83.7 + 5.0)) / 1.95,
+                c: (Math.sin(clock * 44.1 + 0.9) + 0.6 * Math.sin(clock * 71.9 + 3.3) + 0.35 * Math.sin(clock * 19.7 + 1.7)) / 1.95,
+            };
+            if (rattle > 0.002) {
+                const pitch = jolt.a * SHAKE.pitch * rattle, yaw = jolt.b * SHAKE.yaw * rattle, lean = jolt.c * SHAKE.roll * rattle;
+                cam.rotation = mulQuat(cam.rotation, { x: pitch / 2, y: yaw / 2, z: lean / 2, w: Math.sqrt(Math.max(0, 1 - (pitch * pitch + yaw * yaw + lean * lean) / 4)) });
+                const push = turnBy(cam.rotation, { x: jolt.b * SHAKE.slide * rattle, y: jolt.a * SHAKE.slide * rattle, z: 0 });
+                cam.position = { x: cam.position.x + push.x, y: cam.position.y + push.y, z: cam.position.z + push.z };
+                facts.camSlide = jolt.b * SHAKE.slide * rattle; facts.camTilt = pitch;
+            } else { facts.camSlide = 0; facts.camTilt = 0; }
             world.update(camera, Transform, (t) => { t.position = cam.position; t.rotation = cam.rotation; });
 
-            const roll = Math.sin(clock * 0.31) * 0.012, nod = Math.sin(clock * 0.23 + 1.3) * 0.006;
+            const roll = Math.sin(clock * 0.31) * 0.012 + jolt.c * SHAKE.hullRoll * rattle, nod = Math.sin(clock * 0.23 + 1.3) * 0.006 + jolt.a * SHAKE.hullNod * rattle;
             const hull = {
                 rotation: mulQuat(helm.attitude, { x: Math.sin(nod / 2), y: 0, z: Math.sin(roll / 2), w: Math.cos(nod / 2) * Math.cos(roll / 2) }),
-                position: { x: 0, y: Math.sin(clock * 0.19) * 0.35, z: 0 },
+                position: { x: jolt.b * SHAKE.hullSlide * rattle, y: Math.sin(clock * 0.19) * 0.35 + jolt.c * SHAKE.hullSlide * rattle, z: 0 },
             };
             world.update(get(world, 'Ship'), Transform, (t) => { t.rotation = hull.rotation; t.position = hull.position; });
 
@@ -342,7 +359,7 @@ addPlugin({
                 if (leap.over) ship.jump = -1;
             }
             pace += (clamp(ship.speed / TOP_SPEED, 0, 1) - pace) * Math.min(1, dt * 1.5);
-            const tunnel = leap.tunnel, fov = FOV + SPEED_WIDEN * pace * pace + JUMP.widen * leap.stretch;
+            const tunnel = leap.tunnel, fov = FOV + SPEED_WIDEN * pace * pace + JUMP.widen * leap.stretch + PLANETFALL.widen * fall.heat;
             if (Math.abs(fov - wide) > 0.01) {
                 wide = fov;
                 world.update(camera, Camera, (c) => { c.fov = fov; });
@@ -351,6 +368,29 @@ addPlugin({
                 open = tunnel > 0;
                 world.update(get(world, 'Warp'), Transform, (t) => { const size = open ? 1 : 0.001; t.scale = { x: size, y: size, z: size }; });
             }
+            // The air on the way down to a world, and up out of one: burning first, then cloud. It streams past faster the hotter it is.
+            const veil = tunnel <= 0 && Math.max(fall.heat, fall.cover) > 0.004;
+            if (veil !== veiled) {
+                veiled = veil;
+                world.update(get(world, 'Entry'), Transform, (t) => { const size = veil ? 1 : 0.001; t.scale = { x: size, y: size, z: size }; });
+            }
+            if (veil) {
+                fallen = (fallen + dt * (700 + 1500 * fall.heat + 1100 * fall.cover)) % 100000;
+                const air = world.get(get(world, 'Entry'), MeshRenderer).material;
+                Material.setUniform(air, 'u_heat', fall.heat);
+                Material.setUniform(air, 'u_cloud', fall.cover);
+                Material.setUniform(air, 'u_travel', fallen);
+                // Where the camera is and which way it looks, as the sheath has it: in the hull's own frame, which is the sheath's.
+                const from = turnBack(hull.rotation, { x: cam.position.x - hull.position.x, y: cam.position.y - hull.position.y, z: cam.position.z - hull.position.z });
+                const sightline = turnBack(hull.rotation, turnBy(helm.frame, { x: (target[0] - eye[0]) / far, y: (target[1] - eye[1]) / far, z: (target[2] - eye[2]) / far }));
+                const glass = world.get(camera, Camera);
+                Material.setUniform(air, 'u_eye', from);
+                Material.setUniform(air, 'u_look', sightline);
+                Material.setUniform(air, 'u_near', glass.nearPlane);
+                Material.setUniform(air, 'u_far', glass.farPlane);
+            }
+            facts.shake = fall.shake;
+            facts.heat = fall.heat;
             if (open) {
                 const field = world.get(get(world, 'Warp'), MeshRenderer).material;
                 Material.setUniform(field, 'u_cover', tunnel);

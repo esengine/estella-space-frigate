@@ -13,8 +13,9 @@ import { systemAt } from './worlds';
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
 
 export const PLANETFALL = {
-    entry: 3.4,
-    swap: 2.1,
+    // The way down takes this long: the air heats and she shakes, the cloud deck closes over her (and the ground is made behind it at `swap`), and she breaks out below it.
+    entry: 6.6,
+    swap: 4.3,
     exit: 2.4,
     startAbove: 1900,
     floor: 70,
@@ -28,6 +29,13 @@ export const PLANETFALL = {
     entryShell: 1.03,
     skim: 1.006,
     surge: 7,
+    // How hard the air shakes her at its worst (1 is the most the camera gives), and how much the view opens as she is pulled in.
+    // The air round her is drawn within a ball about the hull (the Entry sheath), so on the way down the planet is held clear of
+    // that ball: entry begins no nearer than `entryAbove` over it, and until the ground is made it comes no nearer than `holdAbove`.
+    entryAbove: 210,
+    holdAbove: 165,
+    buffet: 1,
+    widen: 6,
 };
 
 export type FallStage = 'space' | 'entry' | 'surface' | 'exit';
@@ -35,8 +43,10 @@ export type FallStage = 'space' | 'entry' | 'surface' | 'exit';
 export const fall = {
     stage: 'space' as FallStage,
     t: 0,
+    /** How much of the view is cloud, the heat of the air on her hull, and how hard she is being shaken: each 0 to 1. */
     cover: 0,
     heat: 0,
+    shake: 0,
     distance: Infinity,
     altitude: Infinity,
     ground: 0,
@@ -116,7 +126,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     const spacePlanet = (world: World): { centre: Vec; radius: number; air: number; entry: number } => {
         const here = systemAt(ship.system);
         const t = world.get(hooks.parts(world)[0]!, Transform);
-        return { centre: { ...t.position }, radius: here.radius, air: here.radius * here.air, entry: here.radius * Math.max(here.air, PLANETFALL.entryShell) };
+        return { centre: { ...t.position }, radius: here.radius, air: here.radius * here.air, entry: Math.max(here.radius * Math.max(here.air, PLANETFALL.entryShell), here.radius + PLANETFALL.entryAbove) };
     };
 
     const moveParts = (world: World, by: Vec): void => {
@@ -163,9 +173,10 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     const flare = (): Record<string, number> => {
         const base = lens ?? {};
         return {
-            u_exposure: (base.u_exposure ?? 0) + 2.6 * fall.cover + 0.7 * fall.heat,
+            // The cloud itself is drawn round her (the Entry sheath); the lens only brightens a little inside it.
+            u_exposure: (base.u_exposure ?? 0) + 0.7 * fall.cover + 0.6 * fall.heat,
             u_temperature: (base.u_temperature ?? 0) + 0.55 * fall.heat,
-            u_saturation: (base.u_saturation ?? 1) * (1 - 0.35 * fall.cover),
+            u_saturation: (base.u_saturation ?? 1) * (1 - 0.25 * fall.cover),
         };
     };
 
@@ -210,9 +221,10 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             fall.altitude = fall.distance - p.radius;
             fall.target = p.centre;
             fall.planet = ship.away ? null : p.centre;
-            if (fall.stage === 'entry' && !ship.away && fall.distance < p.radius * PLANETFALL.skim) {
-                moveParts(world, scale(p.centre, (p.radius * PLANETFALL.skim) / fall.distance - 1));
-                fall.distance = p.radius * PLANETFALL.skim;
+            const nearest = Math.max(p.radius * PLANETFALL.skim, p.radius + PLANETFALL.holdAbove);
+            if (fall.stage === 'entry' && !ship.away && fall.distance < nearest) {
+                moveParts(world, scale(p.centre, nearest / fall.distance - 1));
+                fall.distance = nearest;
                 fall.altitude = fall.distance - p.radius;
             }
             if (fall.stage === 'space' && ship.jump < 0 && fall.distance < (ground ? p.entry : p.air)) {
@@ -232,8 +244,11 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
 
         if (fall.stage === 'entry' && ground) {
             fall.t += dt;
-            fall.heat = smooth(0, 1.4, fall.t) * (1 - smooth(PLANETFALL.swap + 0.3, PLANETFALL.entry, fall.t));
-            fall.cover = smooth(PLANETFALL.swap - 0.9, PLANETFALL.swap, fall.t) * (1 - smooth(PLANETFALL.swap + 0.15, PLANETFALL.entry, fall.t));
+            // The air catches fire first and builds; the cloud deck comes up through it, closes, and tears open again below. She is
+            // shaken hardest where the two meet, and the shaking dies away once she is under the cloud.
+            fall.heat = smooth(0, 2.4, fall.t) * (1 - smooth(PLANETFALL.swap - 0.4, PLANETFALL.swap + 0.9, fall.t));
+            fall.cover = smooth(PLANETFALL.swap - 1.9, PLANETFALL.swap - 0.25, fall.t) * (1 - smooth(PLANETFALL.swap + 0.3, PLANETFALL.entry - 0.1, fall.t));
+            fall.shake = PLANETFALL.buffet * Math.min(1, 0.2 * smooth(0, 0.8, fall.t) + 0.8 * fall.heat + 0.55 * fall.cover) * (1 - 0.6 * smooth(PLANETFALL.swap + 0.3, PLANETFALL.entry, fall.t));
             if (fall.t >= PLANETFALL.swap && !ship.away) {
                 ship.away = true;
                 fall.planet = null;
@@ -272,6 +287,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             grade(world, ground, fall.centre, above, inAir);
             if (fall.stage === 'surface') {
                 fall.heat *= Math.exp(-dt * 2);
+                fall.shake *= Math.exp(-dt * 1.3);
                 if (fall.altitude > PLANETFALL.leaveAbove && helm.forward.x * up.x + helm.forward.y * up.y + helm.forward.z * up.z > 0) {
                     fall.stage = 'exit';
                     fall.t = 0;
@@ -284,6 +300,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             fall.t += dt;
             const half = PLANETFALL.exit * 0.5;
             fall.cover = smooth(0, half, fall.t) * (1 - smooth(half + 0.1, PLANETFALL.exit, fall.t));
+            fall.shake = 0.45 * PLANETFALL.buffet * fall.cover;
             if (fall.t >= half && ship.away) {
                 const d = length(fall.centre) || 1;
                 const below = scale(fall.centre, 1 / d);
@@ -296,7 +313,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             }
             if (fall.t >= PLANETFALL.exit) { fall.stage = 'space'; fall.t = 0; fall.cover = 0; }
         }
-        if (fall.stage === 'space') { fall.cover = 0; fall.heat *= Math.exp(-dt * 3); }
+        if (fall.stage === 'space') { fall.cover = 0; fall.heat *= Math.exp(-dt * 3); fall.shake *= Math.exp(-dt * 3); }
         if (!ship.away) {
             const lit = fall.heat > 0.002 || fall.cover > 0.002;
             if (lit || graded) tone(world);
