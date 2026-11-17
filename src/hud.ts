@@ -15,6 +15,11 @@ import { guns } from './gunnery';
 import { buildGunnery } from './hudGunnery';
 import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
+import { buildRefit } from './hudRefit';
+import { installSector, pilotsSeen } from './hudSector';
+import { online } from './online';
+import { tonnage } from './shared/sector';
+import { refit } from './refit';
 import { buildSettings } from './hudSettings';
 import { buildScope } from './hudScope';
 import { installHudEffects } from './hudEffects';
@@ -32,7 +37,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, contract: contract, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -51,6 +56,7 @@ export function installHud(app: App): void {
             for (let i = MAJOR_FROM; i < ROCKS; i++) { const e = world.findEntityByName(`Rock${i}`); if (e !== null) majors.push(e); }
         }
         for (const e of majors) world.update(e, Transform, (t) => { t.position = { x: t.position.x + moved.x, y: t.position.y + moved.y, z: t.position.z + moved.z }; });
+        if (online.enabled && !ship.away) online.pos = [online.pos[0] - moved.x, online.pos[1] - moved.y, online.pos[2] - moved.z];
     }, { name: 'space-frigate:helm' }));
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input), Query(Transform, Contact)], (world, time, input, seen) => {
         if (update) {
@@ -215,14 +221,16 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
     const desk = buildHelm(kit, targets.probe);
     const settings = buildSettings(app, kit);
     const battery = buildGunnery(kit, log, targets.probe);
+    const yard = buildRefit(kit, log);
+    const sector = installSector(kit, rocks);
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
     const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
     const JOB = { w: 480, h: 134, top: 26, bar: 440 };
     const job = sliced(root, 'Contract', { left: 0, top: JOB.top, width: JOB.w, height: JOB.h }, textures.plate, 26);
-    label(job, 'ContractTitle', { left: 20, top: 12, width: 200, height: 14 }, { size: 10, color: rgb(AMBER), spacing: 2.6, content: 'CONTRACT' });
+    const jobTitle = label(job, 'ContractTitle', { left: 20, top: 12, width: 240, height: 14 }, { size: 10, color: rgb(AMBER), spacing: 2.6, content: 'CONTRACT' });
     const jobState = label(job, 'ContractState', { right: 20, top: 12, width: 220, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 2.2, align: TextAlign.Right });
-    label(job, 'ContractGoal', { left: 20, top: 30, width: JOB.bar, height: 20 }, { size: 14, color: rgb(ICE), spacing: 1.2, content: `MINE ${CONTRACT.goal} T OF ORE AND DELIVER IT TO THE GATE` });
+    const jobGoal = label(job, 'ContractGoal', { left: 20, top: 30, width: JOB.bar, height: 20 }, { size: 14, color: rgb(ICE), spacing: 1.2, content: `MINE ${CONTRACT.goal} T OF ORE AND DELIVER IT TO THE GATE` });
     const jobHold = label(job, 'ContractHold', { left: 20, top: 55, width: 200, height: 16 }, { size: 11, color: rgb(HAZE), spacing: 1.6 });
     const jobDelivered = label(job, 'ContractDelivered', { right: 20, top: 55, width: 240, height: 16 }, { size: 11, color: rgb(HAZE), spacing: 1.6, align: TextAlign.Right });
     image(job, 'ContractTrack', { left: 20, top: 76, width: JOB.bar, height: 6 }, textures.barTrack, rgb(ICE));
@@ -407,8 +415,10 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         hot = fast;
 
         settings(frame);
+        yard.update(frame);
         desk.update(frame);
         battery(frame);
+        sector(frame);
         targets.update(frame);
         if (frame.click && !looking && !touched && Device.capabilities().pointerLock) void Device.pointerLock(true);
         mine(frame);
@@ -422,15 +432,31 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
 
         const picked = targets.probe.selected >= 0 ? rocks[targets.probe.selected]! : null;
         const advice = advise({
-            hold: mining.hold,
+            hold: online.enabled ? 0 : mining.hold,
             target: picked === null ? 'none' : picked.foe !== undefined ? 'raider' : picked.big ? 'major' : 'rock',
             locked: targets.probe.locked,
             inRange: picked !== null && Math.hypot(picked.at.x, picked.at.y, picked.at.z) <= MINING.range,
             armed: mining.armed, firing: mining.firing, reason: mining.reason, combat: guns.view,
-            mode: helm.mode, stopped: helm.order <= 0, away: ship.away, gate: helm.gateName,
+            mode: helm.mode, stopped: helm.order <= 0, away: ship.away, gate: helm.gateName, refit: refit.result,
         });
+        if (online.enabled) {
+            const other = online.others[0];
+            if (online.link !== 'online') { advice.cue = ''; advice.urgent = true; advice.text = online.link === 'refused' ? `SECTOR REFUSED YOU   ${online.why}` : online.link === 'lost' ? 'LINK LOST   CALLING THE SECTOR AGAIN' : 'CALLING THE SECTOR'; }
+            else if (online.rock.remaining <= 0) { advice.cue = ''; advice.urgent = false; advice.text = 'THE ROCK IS MINED OUT'; }
+            else if (mining.firing) advice.text = `MINING THE SHARED ROCK   ${tonnage(online.rock.remaining)} T LEFT`;
+            say(jobTitle, `SECTOR   ${online.sector}`);
+            say(jobGoal, `SHARED ROCK 01     ${tonnage(online.rock.remaining)} / ${tonnage(online.rock.total)} T LEFT`);
+            say(jobState, online.link === 'online' ? `${online.name}   ONLINE` : online.link === 'refused' ? 'REFUSED' : online.link === 'lost' ? 'LINK LOST' : 'CONNECTING');
+            ink(jobState, online.link === 'online' ? rgb(ICE) : rgb(AMBER));
+            say(jobHold, `YOUR HOLD   ${tonnage(online.cargo)} T`);
+            ink(jobHold, mining.firing ? rgb(AMBER) : rgb(ICE));
+            say(jobDelivered, other ? `${other.name}   ${tonnage(other.cargo)} T` : 'NO OTHER PILOT HERE');
+            ink(jobDelivered, other?.mining ? rgb(AMBER) : rgb(HAZE));
+            fill(jobAboard, 0);
+            fill(jobDone, Math.round(clamp(online.rock.total > 0 ? online.rock.remaining / online.rock.total : 0, 0, 1) * 200) / 200);
+        }
         contract.stage = advice.stage; contract.cue = advice.cue; contract.text = advice.text;
-        if (state.booted && briefed < 0) { briefed = ship.time; log.say(`CONTRACT ACCEPTED   MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`, AMBER); }
+        if (state.booted && briefed < 0 && !online.enabled) { briefed = ship.time; log.say(`CONTRACT ACCEPTED   MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`, AMBER); }
         if (advice.stage !== stage) {
             if (advice.stage === 'return') log.say(`CONTRACT ORE ABOARD   RETURN TO ${helm.gateName}`, AMBER);
             stage = advice.stage;
@@ -438,23 +464,26 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         const blink = 0.72 + 0.28 * Math.sin(ship.time * 6);
         place(job, across / 2 - JOB.w / 2, JOB.top);
         fade(job, ease((age - 0.25) / 0.6));
-        say(jobState, advice.stage === 'done' ? 'COMPLETE' : advice.stage === 'return' ? 'RETURN TO GATE' : 'IN PROGRESS');
-        ink(jobState, advice.stage === 'done' ? rgb(ICE) : advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
-        say(jobHold, `IN HOLD   ${mining.hold.toFixed(1)} T`);
-        ink(jobHold, advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
-        say(jobDelivered, `DELIVERED   ${contract.delivered.toFixed(1)} / ${CONTRACT.goal} T`);
-        ink(jobDelivered, advice.stage === 'done' ? rgb(ICE) : rgb(HAZE));
-        fill(jobAboard, Math.round(clamp((contract.delivered + mining.hold) / CONTRACT.goal, 0, 1) * 40) / 40);
-        ink(jobAboard, rgb(AMBER, 0.55), UIVisual);
-        fill(jobDone, Math.round(clamp(contract.delivered / CONTRACT.goal, 0, 1) * 40) / 40);
+        if (!online.enabled) {
+            say(jobState, advice.stage === 'done' ? 'COMPLETE' : advice.stage === 'return' ? 'RETURN TO GATE' : 'IN PROGRESS');
+            ink(jobState, advice.stage === 'done' ? rgb(ICE) : advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
+            say(jobHold, `IN HOLD   ${mining.hold.toFixed(1)} T`);
+            ink(jobHold, advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
+            say(jobDelivered, `DELIVERED   ${contract.delivered.toFixed(1)} / ${CONTRACT.goal} T`);
+            ink(jobDelivered, advice.stage === 'done' ? rgb(ICE) : rgb(HAZE));
+            fill(jobAboard, Math.round(clamp((contract.delivered + mining.hold) / CONTRACT.goal, 0, 1) * 40) / 40);
+            ink(jobAboard, rgb(AMBER, 0.55), UIVisual);
+            fill(jobDone, Math.round(clamp(contract.delivered / CONTRACT.goal, 0, 1) * 40) / 40);
+        }
         say(jobHint, advice.text);
-        ink(jobHint, advice.stage === 'done' ? rgb(ICE, 0.9) : rgb(AMBER, advice.urgent ? blink : 0.9));
-        const told = contract.done ? ship.time - contract.doneAt : briefed >= 0 ? ship.time - briefed : -1;
-        const showing = told >= 0 && told < CONTRACT.banner && (contract.done || !ship.away);
+        ink(jobHint, advice.stage === 'done' && !advice.urgent ? rgb(ICE, 0.9) : rgb(AMBER, advice.urgent ? blink : 0.9));
+        const fitted = refit.installedAt >= 0;
+        const told = fitted ? ship.time - refit.installedAt : contract.done ? ship.time - contract.doneAt : briefed >= 0 ? ship.time - briefed : -1;
+        const showing = told >= 0 && told < CONTRACT.banner && (contract.done || !ship.away) && !refit.open;
         place(notice, across / 2, contract.done ? 292 : 250);
         fade(notice, showing ? clamp(told * 3, 0, 1) * clamp((CONTRACT.banner - told) * 1.2, 0, 1) : 0);
-        say(noticeNote, contract.done ? 'CONTRACT COMPLETE' : 'NEW CONTRACT');
-        say(noticeName, contract.done ? `${CONTRACT.goal} T OF ORE DELIVERED` : `MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`);
+        say(noticeNote, fitted ? 'REFIT FITTED' : contract.done ? 'CONTRACT COMPLETE' : 'NEW CONTRACT');
+        say(noticeName, fitted ? refit.result : contract.done ? `${CONTRACT.goal} T OF ORE DELIVERED` : `MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`);
         entries.forEach((entry, i) => {
             const line = logLines[i]!, old = ship.time - entry.at;
             say(line, `${stamp(entry.at)}   ${entry.text}`);
@@ -468,6 +497,8 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         state.current = targets.probe.current;
         state.locked = targets.probe.locked;
         state.picks = targets.probe.picks.map((pick) => ({ index: pick.index, x: pick.left * scale, y: pick.top * scale }));
+        for (const name in state.refitSpots) if (!yard.spots[name]) delete state.refitSpots[name];
+        for (const name in yard.spots) state.refitSpots[name] = { x: yard.spots[name]!.left * scale, y: yard.spots[name]!.top * scale };
         for (const name in desk.spots) state.spots[name] = { x: desk.spots[name]!.left * scale, y: desk.spots[name]!.top * scale };
     };
 }

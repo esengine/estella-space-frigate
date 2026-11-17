@@ -45,6 +45,27 @@ Tests, from this folder:
 node ../../sdk/node_modules/vitest/vitest.mjs run
 ```
 
+## Two pilots, one sector
+
+A sector server keeps one rock of ten tonnes and what each pilot has mined from it, and writes both to disk. It is the engine's session host (`esengine/session`) behind a WebSocket, speaking the messages in `proto/sector.proto` as protobuf; `src/shared/sector.ts` and `server/world.ts` hold the rules. A client sends where she is and whether she wants to mine, never an amount: the server pays by its own clock, to a pilot it has signed in, within reach of the rock, until the rock is empty.
+
+```bash
+node examples/space-frigate/server/run.mjs --port 8090 --data examples/space-frigate/server-data/sector.json
+```
+
+Then open the web export twice, once as each test account:
+
+```
+http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-a&token=test-token-a
+http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-b&token=test-token-b
+```
+
+`T` locks the shared rock and `F` mines it. `Ctrl+C` (or `stop` on its input) stops the server and saves; it also saves every second while anything changes. `&wire=json` asks for text frames, to read a session in a debugger. `GET /healthz` gives the books. After a change to `proto/sector.proto`, `node pipeline/bin/estella.mjs proto gen examples/space-frigate` writes `src/proto` again.
+
+`node examples/space-frigate/tools/check-sector.mjs` drives the server as its own process over real sockets (sign-in, a second sign-in taking the seat, replayed and invented requests, a stop and start, a kill, mining to the last gram); `tools/check-online.mjs` does it with two copies of the game in a browser.
+
+Not yet: movement is the client's word held to a frigate's speed, not a helm the server flies; the other 39 rocks of the field are put away in a sector; a sector has no gate out and no raiders; the two accounts and their tokens are fixed test values.
+
 Assets are regenerated from their recipes with `python3 tools/generate.py`.
 
 ## License

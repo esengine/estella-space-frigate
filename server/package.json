@@ -1,0 +1,14 @@
+{
+  "name": "space-frigate-sector-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node run.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

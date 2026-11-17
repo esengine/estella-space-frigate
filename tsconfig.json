@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
     "strict": true, "skipLibCheck": true, "noEmit": true, "resolveJsonModule": true,
-    "paths": { "esengine": ["../../sdk/dist/index.d.ts"], "esengine/*": ["../../sdk/dist/*/index.d.ts"] }
+    "paths": { "esengine": ["../../sdk/dist/index.d.ts"], "esengine/session": ["../../sdk/dist/net/session/index.d.ts"], "esengine/*": ["../../sdk/dist/*/index.d.ts"] }
   },
   "include": ["src/**/*.ts"]
 }

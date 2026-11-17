@@ -8,6 +8,7 @@ import { ALERT, AMBER, DESIGN, HAZE, ICE, KEPT_CLEAR, contactName, ease, hullBlo
 import { MINING, mining, rockClass } from './hudMining';
 import { RAIDER } from './raiderMind';
 import { fall } from './planetfall';
+import { SHARED_ROCK, online, parkedRock } from './online';
 import { foes } from './raiders';
 import { ship } from './shipState';
 import { systemAt } from './worlds';
@@ -101,7 +102,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
             return Math.hypot(left - bow.left - keel.x * k, top - bow.top - keel.y * k);
         };
         const girth = hull.slice(2).reduce((most, p) => Math.max(most, off(p.left, p.top)), 0) + 14;
-        const alive = (i: number): boolean => { const foe = rocks[i]!.foe; return foe === undefined || foes.list[foe]?.alive === true; };
+        const alive = (i: number): boolean => { const foe = rocks[i]!.foe; return !parkedRock(i) && (foe === undefined || foes.list[foe]?.alive === true); };
         rocks.forEach((rock, i) => {
             const at = rock.at;
             const s = seen[i]!;
@@ -122,7 +123,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         if ((t && !keyT) || probe.next) {
             probe.next = false;
             const hostile = byRange.filter((i) => rocks[i]!.foe !== undefined && alive(i)), inView = byRange.filter((i) => seen[i]!.visible);
-            const pool = hostile.length > 0 ? hostile : inView.length > 0 ? inView : byRange.filter(alive);
+            const pool = online.enabled ? [SHARED_ROCK] : hostile.length > 0 ? hostile : inView.length > 0 ? inView : byRange.filter(alive);
             choose(pool[(pool.indexOf(selected) + 1) % pool.length] ?? -1, frame.time);
         }
         if (r && !keyR && selected >= 0) { log.say(`${contactName(selected)}  RELEASED`); selected = -1; heldOff = frame.time; }

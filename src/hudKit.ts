@@ -18,7 +18,7 @@ export const EDGE = 40;
 export const KEPT_CLEAR = { left: 12, top: 76, right: 12, bottom: 340 };
 const NO_ROOM = { left: 0, top: 0, right: 0, bottom: 0 };
 export const keptClear = (across: number, left: number, margin: number, onScreen: boolean): typeof KEPT_CLEAR =>
-    (onScreen ? NO_ROOM : { ...KEPT_CLEAR, top: left > across / 2 - 580 && left < across / 2 + 300 ? Math.max(KEPT_CLEAR.top, 206 - margin) : KEPT_CLEAR.top, bottom: left > 460 && left < across - 430 ? 274 - margin : 404 - margin });
+    (onScreen ? NO_ROOM : { ...KEPT_CLEAR, top: left > across / 2 - 580 && left < across / 2 + 580 ? Math.max(KEPT_CLEAR.top, 244 - margin) : KEPT_CLEAR.top, bottom: left > 460 && left < across - 430 ? 274 - margin : 404 - margin });
 export const sameRoom = (a: typeof KEPT_CLEAR, b: typeof KEPT_CLEAR): boolean => a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
 
 export const TEXTURES = {

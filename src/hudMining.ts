@@ -5,6 +5,8 @@ import { guns } from './gunnery';
 import { helm, turnBy } from './helm';
 import { AMBER, hullBlocks, pad, type Frame, type Log, type Rock } from './hudKit';
 import type { TargetProbe } from './hudTargets';
+import { SHARED_ROCK, askToMine, online } from './online';
+import { GRAMS } from './shared/sector';
 import { FIELD_HALF_LENGTH, ship } from './shipState';
 
 const FX = 'assets/fx/mining.esprefab';
@@ -78,7 +80,7 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
     };
     guns.strike = (index, amount) => {
         const rock = rocks[index];
-        if (!rock) return;
+        if (!rock || online.enabled) return;
         if (rock.big) { log.say(`ROCK ${pad(index + 1, 2)} HIT  NO EFFECT`); return; }
         mining.integrity[index] = mining.integrity[index]! - amount / (1 + sizes[index]! * 0.08);
         if (mining.integrity[index]! <= 0) shatter(index, `ROCK ${pad(index + 1, 2)} DESTROYED`);
@@ -109,7 +111,7 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
 
     return (frame) => {
         if (ship.system !== system) scatter();
-        const index = probe.selected;
+        const index = probe.selected, net = online.enabled;
         const rock = index >= 0 ? rocks[index]! : null;
         const there = rock ? rock.at : null;
         const range = there ? Math.hypot(there.x, there.y, there.z) : Infinity;
@@ -124,11 +126,21 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
             if (rock!.foe !== undefined) reason = 'HOSTILE  USE THE GUNS';
             else if (rock!.big) reason = 'TOO LARGE TO MINE';
             else if (range > MINING.range) reason = 'OUT OF RANGE';
-            else if (mining.hold >= MINING.capacity) reason = 'HOLD FULL';
+            else if (net && online.link !== 'online') reason = 'NO LINK TO THE SECTOR';
+            else if (net && index !== SHARED_ROCK) reason = 'NOT A SECTOR ROCK';
+            else if (!net && mining.hold >= MINING.capacity) reason = 'HOLD FULL';
             else if (mining.overheated) reason = 'EMITTER COOLING';
             else if (mining.capacitor < (mining.firing ? 0.03 : 0.2)) reason = 'CAPACITOR LOW';
         }
-        const firing = wants && reason === '' && fx !== null;
+        if (net) {
+            const intent = wants && reason === '';
+            askToMine(intent);
+            if (intent && !online.mining && online.refusal !== '' && online.refusal !== 'NOT MINING') reason = online.refusal;
+            const left = online.rock.total > 0 ? online.rock.remaining / online.rock.total : 0;
+            if (mining.integrity[SHARED_ROCK] !== left) { mining.integrity[SHARED_ROCK] = left; shrink(SHARED_ROCK); }
+            mining.hold = Math.round((online.cargo / GRAMS) * 100) / 100;
+        }
+        const firing = wants && reason === '' && fx !== null && (!net || online.mining);
         if (wants && reason) note(`MINING HELD  ${reason}`, AMBER);
         else if (firing && !mining.firing) note(`MINING ROCK ${pad(index + 1, 2)}`);
         else if (!wants) said = '';
@@ -141,7 +153,7 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
             mining.capacitor = Math.max(0, mining.capacitor - MINING.drain * frame.dt);
             mining.heat = Math.min(1, mining.heat + MINING.heating * frame.dt);
             if (mining.heat >= 1) { mining.overheated = true; log.say('EMITTER OVERHEATED', AMBER); }
-            mining.integrity[index] = mining.integrity[index]! - frame.dt / (2.4 + sizes[index]! * 0.2);
+            if (!net) mining.integrity[index] = mining.integrity[index]! - frame.dt / (2.4 + sizes[index]! * 0.2);
         } else {
             mining.capacitor = Math.min(1 - 0.35 * drive, mining.capacitor + MINING.recharge * frame.dt * (1 - 0.5 * drive));
             mining.capacitor = Math.max(0, mining.capacitor);
@@ -174,8 +186,8 @@ export function installMining(app: App, world: World, rocks: readonly Rock[], pr
             shine(fx.impact, 5 + 2 * Math.sin(frame.time * 37));
             rate(fx.glow, 70);
             rate(fx.sparks, 110);
-            shrink(index);
-            if (mining.integrity[index]! <= 0) {
+            if (!net) shrink(index);
+            if (!net && mining.integrity[index]! <= 0) {
                 const kind = rockClass(index);
                 const tonnes = Math.min(MINING.capacity - mining.hold, Math.round(sizes[index]! * kind.worth * 10) / 10);
                 mining.hold = Math.round((mining.hold + tonnes) * 10) / 10;

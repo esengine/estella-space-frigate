@@ -2,6 +2,7 @@ import { Material, MeshRenderer, Particle, Transform } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { IMPACT, absorb, clearance, rockMass, spinFrom, strike, touch } from './collision';
 import { helm, setEngine, turnBack, turnBy, type Vec } from './helm';
+import { parkedRock, pinnedRock } from './online';
 import { SHIELD } from './shieldShape';
 import { DRIFTING_ROCKS, FIELD_DRIFT, FIELD_HALF_LENGTH, TOP_SPEED, ship } from './shipState';
 
@@ -33,9 +34,10 @@ export function createImpacts(app: App): (world: World, dt: number, cruise: numb
         const halves = [FIELD_HALF_LENGTH * 1.2, FIELD_HALF_LENGTH * 0.7, FIELD_HALF_LENGTH];
         let nearest = Infinity;
         rocks.forEach((rock, i) => {
+            if (parkedRock(i)) return;
             const t = world.get(rock, Transform), speed = speeds[i]!, before = seen[i]!;
             if (before && Math.hypot(t.position.x - before.x, t.position.y - before.y, t.position.z - before.z) > 150) speeds[i] = still();
-            const drifts = i < DRIFTING_ROCKS, run = !drifts ? 0 : leaving ? past : cruise, v = speeds[i]!;
+            const drifts = i < DRIFTING_ROCKS && !pinnedRock(i), run = !drifts ? 0 : leaving ? past : cruise, v = speeds[i]!;
             const at = [t.position.x - forward.x * run + v.x * dt, t.position.y - forward.y * run + v.y * dt, t.position.z - forward.z * run + v.z * dt];
             if (!leaving && drifts) {
                 for (let axis = 0; axis < 3; axis++) {

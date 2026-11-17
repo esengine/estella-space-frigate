@@ -10,6 +10,7 @@ import { createRaiders, foes } from './raiders';
 import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
 import { installLoading, loading } from './loading';
+import { configureOnline, online } from './online';
 import { installSky } from './sky';
 import { createPlanetfall, fall } from './planetfall';
 import { graphics } from './hudSettings';
@@ -59,6 +60,8 @@ addPlugin({
     build(app) {
         const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0 };
         galaxy.seed = voyageSeed((globalThis as { location?: { search?: string } }).location?.search ?? '', Math.random);
+        configureOnline((globalThis as { location?: { search?: string } }).location?.search ?? '');
+        if (online.enabled) { helm.fixed = true; foes.peace = true; }
         app.insertResource(Playthrough, { facts });
         installSky();
         installLoading(app);
@@ -410,7 +413,7 @@ addPlugin({
                 flash = 1;
                 since = 0;
                 facts.transits++;
-                if (ship.jump < 0) {
+                if (ship.jump < 0 && !online.enabled) {
                     leaving = ship.system;
                     ship.bound = nextSystem(ship.system);
                     ship.jump = 0;

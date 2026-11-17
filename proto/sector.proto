@@ -1,0 +1,60 @@
+// The wire form of everything a frigate and the sector server say to each other.
+// Ore is counted in whole grams, so what two holds and a rock carry always adds up exactly.
+// The rules (who may mine, how fast, how far) live in src/shared/sector.ts and server/world.ts; this file is only the shape.
+syntax = "proto3";
+
+package sector;
+
+enum Refusal {
+  REFUSAL_UNSPECIFIED = 0;
+  REFUSAL_NONE = 1;
+  REFUSAL_NOT_MINING = 2;
+  REFUSAL_OUT_OF_RANGE = 3;
+  REFUSAL_ROCK_EXHAUSTED = 4;
+  REFUSAL_HOLD_FULL = 5;
+}
+
+message Vec3 { double x = 1; double y = 2; double z = 3; }
+message Quat { double x = 1; double y = 2; double z = 3; double w = 4; }
+
+// ── requests ──
+message Empty {}
+message PoseRequest { Vec3 p = 1; Quat q = 2; double throttle = 3; }
+message MineRequest { bool on = 1; }
+
+// ── replies ──
+message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 4; }
+message EnterReply {
+  string account = 1;
+  string name = 2;
+  Vec3 p = 3;
+  Quat q = 4;
+  uint32 cargo = 5;
+  string sector = 6;
+  string sector_name = 7;
+  Rock rock = 8;
+  double range = 9;
+  uint32 rate = 10;
+  uint32 capacity = 11;
+}
+message MineReply { bool asking = 1; }
+
+// ── events ──
+message Pilot {
+  string account = 1;
+  string name = 2;
+  Vec3 p = 3;
+  Quat q = 4;
+  double throttle = 5;
+  bool mining = 6;
+  uint32 cargo = 7;
+}
+message StateEvent {
+  uint32 tick = 1;
+  uint32 remaining = 2;
+  Vec3 p = 3;
+  uint32 cargo = 4;
+  bool mining = 5;
+  Refusal why = 6;
+  repeated Pilot others = 7;
+}

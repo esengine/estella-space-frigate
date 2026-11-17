@@ -69,6 +69,7 @@ export const helm = {
     aim: null as Vec | null,
     target: null as Vec | null,
     surge: 1,
+    fixed: false,
 };
 
 export interface HelmKeys { ahead: boolean; astern: boolean; port: boolean; starboard: boolean; climb: boolean; dive: boolean; steady: boolean; approach: boolean; align: boolean; level: boolean; planet?: boolean }
@@ -154,7 +155,7 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
     const moved = { x: -helm.forward.x * run, y: -helm.forward.y * run, z: -helm.forward.z * run };
     if (!ship.away) helm.gate = { x: helm.gate.x + moved.x, y: helm.gate.y + moved.y, z: helm.gate.z + moved.z };
     helm.arrived = false;
-    if (!ship.away && Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z) < GATE_REACH) {
+    if (!ship.away && !helm.fixed && Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z) < GATE_REACH) {
         helm.arrived = true;
         helm.arrivals++;
         helm.leg = (helm.leg % 9) + 1;
