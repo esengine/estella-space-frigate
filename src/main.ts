@@ -28,7 +28,9 @@ const GLOWS = ['EngineGlowL', 'EngineGlowR', 'EngineGlowNL', 'EngineGlowNR'] as 
 const GATES = ['GateA', 'GateB'] as const;
 const BODY = ['Planet', 'Atmosphere', 'Ring'] as const;
 const GATE_RADIUS = 170;
-const DUST = { from: 0.2, full: 0.95, rate: 700, glow: 4.5 } as const;
+// Dust in the space she sails through, to give her way something to be seen against: sparse, short and dim, a few motes at a time.
+// The long lines belong to a jump, which gets them by itself from the speed it runs the field past at.
+const DUST = { from: 0.3, full: 1, rate: 150, glow: 1.9 } as const;
 const SPEED_WIDEN = 4;
 const STROBES = [
     { name: 'StrobeMast', size: 0.55, every: 1.7, flashes: 2 },

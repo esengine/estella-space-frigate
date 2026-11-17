@@ -9812,11 +9812,11 @@
       "texture": "assets/fx/spark.esimage",
       "lifetimeMin": 1.2,
       "lifetimeMax": 2.2,
-      "maxParticles": 1500,
-      "startSizeMin": 0.14,
-      "startSizeMax": 0.3,
-      "endSizeMin": 0.14,
-      "endSizeMax": 0.3,
+      "maxParticles": 400,
+      "startSizeMin": 0.07,
+      "startSizeMax": 0.15,
+      "endSizeMin": 0.07,
+      "endSizeMax": 0.15,
       "renderMode": 1,
       "intensity": 0,
       "collisionEnabled": false,
@@ -9827,8 +9827,8 @@
        "y": 200,
        "z": 480
       },
-      "velocityScale": 0.4,
-      "lengthScale": 4,
+      "velocityScale": 0.09,
+      "lengthScale": 1.6,
       "colorGradient": {
        "stops": [
         {
@@ -9846,7 +9846,7 @@
           "r": 0.8,
           "g": 0.9,
           "b": 1,
-          "a": 0.85
+          "a": 0.5
          }
         },
         {
@@ -9855,7 +9855,7 @@
           "r": 0.8,
           "g": 0.9,
           "b": 1,
-          "a": 0.85
+          "a": 0.5
          }
         },
         {

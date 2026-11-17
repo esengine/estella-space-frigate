@@ -231,11 +231,11 @@ TRACER = dict(material='assets/materials/particle-hard.esmaterial', shape=4, sha
               startSizeMin=1.0, startSizeMax=1.5, endSizeMin=0.15, endSizeMax=0.3, intensity=5, rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
               colorGradient={'stops': [{'t': 0, 'color': {'r': 1, 'g': 0.9, 'b': 0.65, 'a': 1}}, {'t': 0.3, 'color': {'r': 1, 'g': 0.55, 'b': 0.18, 'a': 0.8}}, {'t': 1, 'color': {'r': 0.7, 'g': 0.16, 'b': 0.03, 'a': 0}}]})
 SPEED_DUST = dict(material='assets/materials/particle-streak.esmaterial', texture='assets/fx/spark.esimage', shape=2, shapeSize={'x': 340, 'y': 200, 'z': 480},
-                  speedMin=0, speedMax=0, lifetimeMin=1.2, lifetimeMax=2.2, maxParticles=1500, rate=0, intensity=0,
-                  startSizeMin=0.14, startSizeMax=0.3, endSizeMin=0.14, endSizeMax=0.3, renderMode=1, velocityScale=0.4, lengthScale=4,
+                  speedMin=0, speedMax=0, lifetimeMin=1.2, lifetimeMax=2.2, maxParticles=400, rate=0, intensity=0,
+                  startSizeMin=0.07, startSizeMax=0.15, endSizeMin=0.07, endSizeMax=0.15, renderMode=1, velocityScale=0.09, lengthScale=1.6,
                   rotationMax=0, angularVelocityMin=0, angularVelocityMax=0,
-                  colorGradient={'stops': [{'t': 0, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}, {'t': 0.2, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.85}},
-                                           {'t': 0.7, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.85}}, {'t': 1, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}]})
+                  colorGradient={'stops': [{'t': 0, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}, {'t': 0.2, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.5}},
+                                           {'t': 0.7, 'color': {'r': 0.8, 'g': 0.9, 'b': 1, 'a': 0.5}}, {'t': 1, 'color': {'r': 0.72, 'g': 0.84, 'b': 1, 'a': 0}}]})
 IMPACT_FIRE = {**MUZZLE_FIRE, 'shape': 4, 'shapeRadius': 1.2, 'speedMin': 8, 'speedMax': 70, 'lifetimeMax': 0.55, 'endSizeMin': 7, 'endSizeMax': 14}
 SMOKE = dict(shape=4, shapeRadius=0.5, speedMin=2, speedMax=11, damping=1.8, lifetimeMin=0.5, lifetimeMax=1.3, maxParticles=260,
              startSizeMin=0.8, startSizeMax=1.6, endSizeMin=3.5, endSizeMax=6.5, intensity=0.9, noiseStrength=3, noiseFrequency=0.3, noiseScrollSpeed=1,
@@ -678,7 +678,7 @@ def make_materials():
         'particle-fire': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 1.0, 'u_erosion': 0.75, 'u_erosionEdge': 0.25}},
         'particle-hard': {'version': '1.0', 'type': 'material', 'shader': 'builtin:particle', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0, 'properties': {'u_softness': 0.3}},
         'particle-streak': {'version': '1.0', 'type': 'material', 'shader': 'streak.esshader', 'blendMode': 1, 'depthTest': True, 'depthWrite': False, 'cull': 0,
-                            'properties': {'u_near': 14, 'u_clear': 30, 'u_far': 900}},
+                            'properties': {'u_near': 36, 'u_clear': 90, 'u_far': 700}},
         'plume-core': {'version': '1.0', 'type': 'material', 'shader': 'plume.esshader', 'blendMode': 5, 'depthTest': True, 'depthWrite': False, 'cull': 0,
                        'properties': {'u_core': {'r': 0.9, 'g': 0.97, 'b': 1.0, 'a': 1}, 'u_edge': {'r': 0.2, 'g': 0.55, 'b': 1.0, 'a': 1}, 'u_strength': 5, 'u_length': 11,
                                       'u_falloff': 1.3, 'u_fade': 2.4, 'u_diamonds': 5, 'u_knots': 1.4, 'u_flicker': 0.14}},
