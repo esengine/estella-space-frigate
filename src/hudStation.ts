@@ -1,6 +1,6 @@
 import { TextAlign, UIVisual } from 'esengine';
 import { AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Log } from './hudKit';
-import { askToDock, moveOre, online } from './online';
+import { moveOre, online, pressDock } from './online';
 import { GRAMS, tonnage } from './shared/sector';
 
 const PANEL = { w: 620, h: 196, top: 176 };
@@ -44,7 +44,7 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
     const down: Record<string, boolean> = {};
     const struck = (frame: Frame, code: string): boolean => { const held = frame.held(code), was = down[code] === true; down[code] = held; return held && !was; };
     const inside = (p: { left: number; top: number } | null, x: number, y: number, w: number, h: number): boolean => !!p && p.left >= x && p.left <= x + w && p.top >= y && p.top <= y + h;
-    let answered = '', refusedAt = 0;
+    let answered = '', refusedAt = 0, told = 'none0', was: string = 'none';
 
     const update = (frame: Frame): void => {
         const keys = { store: struck(frame, 'KeyJ'), take: struck(frame, 'KeyK'), leave: struck(frame, 'KeyH') };
@@ -55,20 +55,29 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
             if (move.state === 'done') log.say(`${move.withdraw ? 'TAKEN FROM' : 'STORED IN'} THE WAREHOUSE   ${tonnage(move.grams)} T`, AMBER);
             else log.say(`STATION REFUSED   ${move.why}`, AMBER);
         }
-        if (online.dock.why && online.dock.at !== refusedAt) { refusedAt = online.dock.at; log.say(`STATION REFUSED DOCKING   ${online.dock.why}`, AMBER); }
+        if (online.dock.at !== refusedAt) { refusedAt = online.dock.at; if (online.dock.why) log.say(`THE ANCHORAGE SAYS   ${online.dock.why}`, AMBER); }
+        if (told !== `${online.mooring}${online.berth}`) {
+            told = `${online.mooring}${online.berth}`;
+            if (online.mooring === 'assigned') log.say(`BERTH ${online.berth} IS KEPT FOR YOU`, AMBER);
+            else if (online.mooring === 'docking') log.say(`THE ANCHORAGE HAS HER   BERTH ${online.berth}`, AMBER);
+            else if (online.mooring === 'docked') log.say(`DOCKED IN BERTH ${online.berth}   WAREHOUSE OPEN`, AMBER);
+            else if (online.mooring === 'undocking') log.say(`CAST OFF FROM BERTH ${online.berth}   WAREHOUSE SHUT`, AMBER);
+            else if (was !== 'none') log.say(was === 'undocking' ? 'CLEAR OF THE ANCHORAGE   THE HELM IS YOURS' : 'BERTH GIVEN UP', AMBER);
+            was = online.mooring;
+        }
 
         const linked = online.link === 'online';
         if (!online.docked || !linked) {
             fade(panel, 0);
             for (const name in spots) delete spots[name];
-            if (keys.leave && linked) askToDock(true);
+            if (keys.leave && linked) pressDock();
             said.text = '';
             return;
         }
         const left = frame.across / 2 - PANEL.w / 2, top = PANEL.top;
         place(panel, left, top);
         fade(panel, 1);
-        say(title, online.station.name);
+        say(title, `${online.station.name}   BERTH ${online.berth}`);
         say(hold, `${tonnage(online.cargo)} T`);
         say(store, `${tonnage(online.stored)} T`);
         const pending = move.state === 'pending', fresh = now - move.at < SHOWN * 1000;
@@ -87,7 +96,7 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
             if (!can[name] || !(keys[name] || inside(click, x, y, BUTTON.w, BUTTON.h))) continue;
             if (name === 'store') moveOre(false, online.cargo);
             else if (name === 'take') moveOre(true, taking);
-            else askToDock(false);
+            else pressDock();
         }
         if (inside(click, left, top, PANEL.w, PANEL.h)) frame.click = null;
         // The status line never runs ahead of the server: an order out is "waiting", and only its answer is a result.

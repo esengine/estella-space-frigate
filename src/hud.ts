@@ -5,7 +5,7 @@ import {
 import { loading as boot } from './loading';
 import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
-import { METRES, followFlight, helm, helmOrders, stepHelm } from './helm';
+import { METRES, followFlight, helm, helmOrders, setEngine, steady, stepHelm } from './helm';
 import {
     ALERT, AMBER, Contact, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
@@ -16,10 +16,10 @@ import { buildGunnery } from './hudGunnery';
 import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
 import { buildRefit } from './hudRefit';
-import { installSector, pilotsSeen } from './hudSector';
+import { berthSeen, installSector, pilotsSeen } from './hudSector';
 import { buildStation } from './hudStation';
 import { flyOnline, online } from './online';
-import { GRAMS, approach, tonnage } from './shared/sector';
+import { GRAMS, approach, inHand, tonnage } from './shared/sector';
 import { refit } from './refit';
 import { buildSettings } from './hudSettings';
 import { buildScope } from './hudScope';
@@ -38,7 +38,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, berthMark: berthSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -450,24 +450,33 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
             mode: helm.mode, stopped: helm.order <= 0, away: ship.away, gate: helm.gateName, refit: refit.result,
         });
         if (online.enabled) {
+            // In the station's hands the engine order is rung off, so that when she is let go she lies where she was left.
+            if (inHand(online.mooring) && (helm.order !== 0 || helm.mode !== 'manual')) { setEngine(0); steady(); }
             if (online.link !== 'online') { advice.cue = ''; advice.urgent = true; advice.text = online.link === 'refused' ? `SECTOR REFUSED YOU   ${online.why}` : online.link === 'lost' ? 'LINK LOST   CALLING THE SECTOR AGAIN' : 'CALLING THE SECTOR'; }
-            else if (online.docked) { advice.stage = 'mine'; advice.cue = ''; advice.urgent = dock.said.good; advice.text = dock.said.text || `DOCKED AT ${online.station.name}`; }
+            else if (online.mooring === 'docked') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = dock.said.good; advice.text = dock.said.text || `DOCKED IN BERTH ${online.berth}`; }
+            else if (online.mooring === 'docking') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = false; advice.text = `THE ANCHORAGE HAS HER   BRINGING HER IN TO BERTH ${online.berth}`; }
+            else if (online.mooring === 'undocking') { advice.stage = 'mine'; advice.cue = ''; advice.urgent = false; advice.text = `CAST OFF   WAREHOUSE SHUT   THE ANCHORAGE IS TAKING HER OUT OF BERTH ${online.berth}`; }
+            else if (online.mooring === 'assigned') {
+                // A berth is kept for her: the helm is talked to its approach point, which is where the waypoint now is. When she is
+                // taken in hand is the station's to say, and what it says still stands in the way is shown as it says it.
+                const way = approach({ distance: Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z), speed: ship.speed, order: helm.order, aligned: helm.mode === 'align', berth: online.berth });
+                advice.stage = 'return'; advice.cue = way.cue; advice.urgent = way.cue !== ''; advice.text = way.text;
+            }
             else if (mining.firing) advice.text = `MINING THE SHARED ROCK   ${tonnage(online.rock.remaining)} T LEFT`;
             else if (online.cargo >= GRAMS || (online.cargo > 0 && online.rock.remaining <= 0)) {
-                // Ore worth a run is aboard: the helm is talked to the station. Whether she docks is the station's to say.
-                const way = approach({ distance: Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z), speed: ship.speed, order: helm.order, aligned: helm.mode === 'align' });
-                const refused = online.dock.why !== '' && Date.now() - online.dock.at < 4000;
-                advice.stage = 'return'; advice.cue = way.cue; advice.urgent = way.cue !== ''; advice.text = refused ? `STATION REFUSED DOCKING   ${online.dock.why}` : way.text;
+                // Ore worth a run is aboard: she asks the station for a berth. Which one, and whether there is one, is the station's to say.
+                const refused = online.dock.why === 'NO BERTH FREE' && Date.now() - online.dock.at < 5000;
+                advice.stage = 'mine'; advice.cue = refused ? '' : 'Dock'; advice.urgent = true; advice.text = refused ? 'NO BERTH FREE   BOTH ARE TAKEN   ASK AGAIN SHORTLY' : `ORE ABOARD   PRESS H TO ASK ${online.station.name} FOR A BERTH`;
             }
             else if (online.rock.remaining <= 0) { advice.cue = ''; advice.urgent = false; advice.text = online.stored > 0 ? 'THE ROCK IS MINED OUT   YOUR ORE IS IN THE WAREHOUSE' : 'THE ROCK IS MINED OUT'; }
             say(jobTitle, `SECTOR   ${online.sector}`);
             say(jobGoal, `SHARED ROCK 01     ${tonnage(online.rock.remaining)} / ${tonnage(online.rock.total)} T LEFT`);
-            say(jobState, online.link === 'online' ? `${online.name}   ONLINE` : online.link === 'refused' ? 'REFUSED' : online.link === 'lost' ? 'LINK LOST' : 'CONNECTING');
             ink(jobState, online.link === 'online' ? rgb(ICE) : rgb(AMBER));
             say(jobHold, `YOUR HOLD   ${tonnage(online.cargo)} T`);
             ink(jobHold, mining.firing ? rgb(AMBER) : rgb(ICE));
             say(jobDelivered, `YOUR WAREHOUSE   ${tonnage(online.stored)} T`);
             ink(jobDelivered, online.docked ? rgb(AMBER) : online.stored > 0 ? rgb(ICE) : rgb(HAZE));
+            say(jobState, online.link !== 'online' ? (online.link === 'refused' ? 'REFUSED' : online.link === 'lost' ? 'LINK LOST' : 'CONNECTING') : online.mooring === 'none' ? `${online.name}   ONLINE` : `${online.name}   BERTH ${online.berth}   ${online.mooring === 'assigned' ? 'KEPT' : online.mooring.toUpperCase()}`);
             fill(jobAboard, 0);
             fill(jobDone, Math.round(clamp(online.rock.total > 0 ? online.rock.remaining / online.rock.total : 0, 0, 1) * 200) / 200);
         }

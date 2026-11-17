@@ -20,6 +20,24 @@ enum DockRefusal {
   DOCK_REFUSAL_NONE = 1;
   DOCK_REFUSAL_TOO_FAR = 2;
   DOCK_REFUSAL_TOO_FAST = 3;
+  DOCK_REFUSAL_NO_BERTH_FREE = 4;
+  reserved 5;
+  // The station has her in hand and will not be interrupted.
+  DOCK_REFUSAL_MANEUVERING = 6;
+}
+
+// Where a ship stands with the station.
+enum Mooring {
+  MOORING_UNSPECIFIED = 0;
+  MOORING_NONE = 1;
+  // A berth is kept for her; she is still her pilot's to fly.
+  MOORING_ASSIGNED = 2;
+  // The station is bringing her in: her helm does nothing.
+  MOORING_DOCKING = 3;
+  // She lies in her berth, and her warehouse is open.
+  MOORING_DOCKED = 4;
+  // The station is taking her out: her warehouse is shut and her helm does nothing.
+  MOORING_UNDOCKING = 5;
 }
 
 enum TransferRefusal {
@@ -60,7 +78,8 @@ message Empty {}
 message Orders { uint32 seq = 1; double order = 2; double rudder = 3; double elevation = 4; double roll = 5; }
 message SteerRequest { repeated Orders orders = 1; }
 message MineRequest { bool on = 1; }
-// To make fast to the station (true) or cast off (false). The server decides, from where it has flown the ship.
+// To ask the station for a berth (true), or to give one up or cast off from it (false). Which berth, whether she is taken
+// in hand, and when she is docked are the server's to say, from where it has flown the ship.
 message DockRequest { bool dock = 1; }
 // Ore between the sender's own hold and the sender's own warehouse; no field names anyone else's.
 // `seq` is this pilot's number for the order: 1, 2, 3 for as long as the sector lives, and the server says which is next.
@@ -71,7 +90,9 @@ message TransferRequest { string op = 1; bool withdraw = 2; sint64 grams = 3; ui
 
 // ── replies ──
 message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 4; }
-message Station { string id = 1; string name = 2; Vec3 at = 3; double dock_range = 4; double dock_speed = 5; }
+// A berth: where a ship lies in it, and the point above it where she is taken in hand and let go.
+message Berth { uint32 id = 1; Vec3 at = 2; Vec3 approach = 3; Vec3 over = 4; }
+message Station { reserved 4; string id = 1; string name = 2; Vec3 at = 3; double dock_speed = 5; double approach_range = 6; repeated Berth berths = 7; }
 message EnterReply {
   string account = 1;
   string name = 2;
@@ -88,10 +109,13 @@ message EnterReply {
   bool docked = 14;
   // The number this pilot's next order to move ore must carry.
   uint32 next_move = 15;
+  // The berth kept for her or that she lies in; 0 is none.
+  uint32 berth = 16;
+  Mooring mooring = 17;
 }
 message SteerReply { uint32 taken = 1; }
 message MineReply { bool asking = 1; }
-message DockReply { bool docked = 1; DockRefusal why = 2; }
+message DockReply { bool docked = 1; DockRefusal why = 2; uint32 berth = 3; Mooring mooring = 4; }
 // A reply that says `ok` is a promise: the move is on the server's disk before it is sent, and before it is true anywhere else.
 message TransferReply {
   string op = 1;
@@ -119,6 +143,8 @@ message Pilot {
   uint32 cargo = 7;
   Vec3 v = 8;
   bool docked = 9;
+  uint32 berth = 10;
+  Mooring mooring = 11;
 }
 message StateEvent {
   uint32 tick = 1;
@@ -134,4 +160,8 @@ message StateEvent {
   uint32 stored = 10;
   bool docked = 11;
   uint32 next_move = 12;
+  uint32 berth = 13;
+  Mooring mooring = 14;
+  // With a berth kept for her: what stands between her and being taken in hand, as the server sees her now.
+  DockRefusal hold = 15;
 }

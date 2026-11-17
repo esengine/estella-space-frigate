@@ -13,6 +13,8 @@ const SETTLE = 0.12;
 const HARD = 200;
 /** A correction a pilot would feel as being pulled back, in units. */
 export const FELT = 5;
+/** How closely the drawn ship follows the server's while the station moves her, seconds. */
+const HELD = 0.09;
 /** The orders the server should have waiting: enough to ride out an uneven link, few enough to add little to it. */
 export const WAITING_AIM = 3;
 /** The most this clock is hurried or held to keep them there. Nobody sees four parts in a hundred. */
@@ -27,10 +29,13 @@ export function createPredictor() {
     let pending: Numbered[] = [], outbox: Numbered[] = [];
     let seq = 0, owed = 0, pace = 1, last: Orders = { ...NO_ORDERS };
     let offPos: Vec = { x: 0, y: 0, z: 0 }, offTurn: Quat = { ...IDENTITY };
+    /** The ship as drawn while the station has her in hand; null when she is her pilot's. */
+    let hand: Flight | null = null;
     const fix = { count: 0, worst: 0, worstTurn: 0, hard: 0, recent: 0 };
 
     /** The ship to draw now: the predicted flight, carried into the part of a step not yet taken, with what is left of the last correction. */
     const show = (): Flight => {
+        if (hand) return copyFlight(hand);
         const shown = copyFlight(flight);
         if (owed > 0) stepFlight(shown, last, owed);
         shown.pos = { x: shown.pos.x + offPos.x, y: shown.pos.y + offPos.y, z: shown.pos.z + offPos.z };
@@ -41,6 +46,7 @@ export function createPredictor() {
     /** Taking the helm: the ship is where the server has her, and orders count from 1 again. */
     const take = (truth: Flight): void => {
         flight = copyFlight(truth);
+        hand = null;
         pending = []; outbox = []; seq = 0; owed = 0; pace = 1;
         offPos = { x: 0, y: 0, z: 0 }; offTurn = { ...IDENTITY };
     };
@@ -51,8 +57,21 @@ export function createPredictor() {
      * made fast to the station.
      */
     const advance = (dt: number, orders: Orders, linked: boolean, held = false): void => {
-        // Docked, she is held by the station: nothing is flown here and no orders go out, and she is where the server last said.
-        if (held) { pending = []; outbox = []; owed = 0; last = NO_ORDERS; return; }
+        // In the station's hands nothing is flown here and no orders go out: she is where the server says. What is drawn is eased
+        // toward that, since the server says it twenty times a second and a frame comes sixty.
+        if (held) {
+            hand ??= show();
+            pending = []; outbox = []; owed = 0; last = NO_ORDERS;
+            offPos = { x: 0, y: 0, z: 0 }; offTurn = { ...IDENTITY };
+            const k = 1 - Math.exp(-Math.max(0, dt) / HELD), same = hand.level.x * flight.level.x + hand.level.y * flight.level.y + hand.level.z * flight.level.z + hand.level.w * flight.level.w < 0 ? -1 : 1;
+            hand = {
+                ...copyFlight(flight),
+                pos: { x: hand.pos.x + (flight.pos.x - hand.pos.x) * k, y: hand.pos.y + (flight.pos.y - hand.pos.y) * k, z: hand.pos.z + (flight.pos.z - hand.pos.z) * k },
+                level: unitQuat({ x: hand.level.x + (flight.level.x * same - hand.level.x) * k, y: hand.level.y + (flight.level.y * same - hand.level.y) * k, z: hand.level.z + (flight.level.z * same - hand.level.z) * k, w: hand.level.w + (flight.level.w * same - hand.level.w) * k }),
+            };
+            return;
+        }
+        hand = null;
         const flown = linked ? orders : NO_ORDERS;
         owed += Math.max(0, dt) * (linked ? pace : 1);
         if (owed > FLIGHT_TICK * STALL_TICKS) owed = FLIGHT_TICK * STALL_TICKS;

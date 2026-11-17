@@ -16,6 +16,17 @@ export enum DockRefusal {
     DOCK_REFUSAL_NONE = 1,
     DOCK_REFUSAL_TOO_FAR = 2,
     DOCK_REFUSAL_TOO_FAST = 3,
+    DOCK_REFUSAL_NO_BERTH_FREE = 4,
+    DOCK_REFUSAL_MANEUVERING = 6,
+}
+
+export enum Mooring {
+    MOORING_UNSPECIFIED = 0,
+    MOORING_NONE = 1,
+    MOORING_ASSIGNED = 2,
+    MOORING_DOCKING = 3,
+    MOORING_DOCKED = 4,
+    MOORING_UNDOCKING = 5,
 }
 
 export enum TransferRefusal {
@@ -517,24 +528,79 @@ export const Rock = {
     decode(bytes: Uint8Array): Rock { return Rock.read(new Reader(bytes), bytes.length); },
 };
 
+export interface Berth {
+    id: number;
+    at?: Vec3 | undefined;
+    approach?: Vec3 | undefined;
+    over?: Vec3 | undefined;
+}
+
+export const Berth = {
+    create(init: Partial<Berth> = {}): Berth {
+        return { id: 0, ...init };
+    },
+    write(m: Berth, w: Writer): void {
+        if (m.id !== 0) { w.tag(1, 0); w.uint32(m.id); }
+        if (m.at !== undefined) { w.tag(2, 2); w.bytes(Vec3.encode(m.at)); }
+        if (m.approach !== undefined) { w.tag(3, 2); w.bytes(Vec3.encode(m.approach)); }
+        if (m.over !== undefined) { w.tag(4, 2); w.bytes(Vec3.encode(m.over)); }
+    },
+    read(r: Reader, end: number): Berth {
+        const m = Berth.create();
+        while (r.pos < end) {
+            const t = r.tag(); const wt = t & 7;
+            switch (t >>> 3) {
+                case 1: if (wt === 0) m.id = r.uint32(); else r.skip(wt); break;
+                case 2: if (wt === 2) m.at = Vec3.read(r, r.end()); else r.skip(wt); break;
+                case 3: if (wt === 2) m.approach = Vec3.read(r, r.end()); else r.skip(wt); break;
+                case 4: if (wt === 2) m.over = Vec3.read(r, r.end()); else r.skip(wt); break;
+                default: r.skip(wt);
+            }
+        }
+        return m;
+    },
+    toJSON(m: Berth): unknown {
+        const o: Record<string, unknown> = {};
+        o.id = m.id;
+        if (m.at !== undefined) o.at = Vec3.toJSON(m.at);
+        if (m.approach !== undefined) o.approach = Vec3.toJSON(m.approach);
+        if (m.over !== undefined) o.over = Vec3.toJSON(m.over);
+        return o;
+    },
+    fromJSON(j: unknown): Berth {
+        const o = jObj(j, "Berth");
+        const m = Berth.create();
+        if (o.id != null) m.id = jInt(o.id, "Berth.id", 0, 4294967295);
+        if (o.at != null) m.at = Vec3.fromJSON(o.at);
+        if (o.approach != null) m.approach = Vec3.fromJSON(o.approach);
+        if (o.over != null) m.over = Vec3.fromJSON(o.over);
+        return m;
+    },
+    shape: "Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over};Vec3{1:double x,2:double y,3:double z}",
+    encode(m: Berth): Uint8Array { const w = new Writer(); Berth.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): Berth { return Berth.read(new Reader(bytes), bytes.length); },
+};
+
 export interface Station {
     id: string;
     name: string;
     at?: Vec3 | undefined;
-    dockRange: number;
     dockSpeed: number;
+    approachRange: number;
+    berths: Berth[];
 }
 
 export const Station = {
     create(init: Partial<Station> = {}): Station {
-        return { id: '', name: '', dockRange: 0, dockSpeed: 0, ...init };
+        return { id: '', name: '', dockSpeed: 0, approachRange: 0, berths: [], ...init };
     },
     write(m: Station, w: Writer): void {
         if (m.id !== '') { w.tag(1, 2); w.string(m.id); }
         if (m.name !== '') { w.tag(2, 2); w.string(m.name); }
         if (m.at !== undefined) { w.tag(3, 2); w.bytes(Vec3.encode(m.at)); }
-        if (m.dockRange !== 0) { w.tag(4, 1); w.double(m.dockRange); }
         if (m.dockSpeed !== 0) { w.tag(5, 1); w.double(m.dockSpeed); }
+        if (m.approachRange !== 0) { w.tag(6, 1); w.double(m.approachRange); }
+        for (const v of m.berths) { w.tag(7, 2); w.bytes(Berth.encode(v)); }
     },
     read(r: Reader, end: number): Station {
         const m = Station.create();
@@ -544,8 +610,9 @@ export const Station = {
                 case 1: if (wt === 2) m.id = r.string(); else r.skip(wt); break;
                 case 2: if (wt === 2) m.name = r.string(); else r.skip(wt); break;
                 case 3: if (wt === 2) m.at = Vec3.read(r, r.end()); else r.skip(wt); break;
-                case 4: if (wt === 1) m.dockRange = r.double(); else r.skip(wt); break;
                 case 5: if (wt === 1) m.dockSpeed = r.double(); else r.skip(wt); break;
+                case 6: if (wt === 1) m.approachRange = r.double(); else r.skip(wt); break;
+                case 7: if (wt === 2) m.berths.push(Berth.read(r, r.end())); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -556,8 +623,9 @@ export const Station = {
         o.id = m.id;
         o.name = m.name;
         if (m.at !== undefined) o.at = Vec3.toJSON(m.at);
-        o.dockRange = m.dockRange;
         o.dockSpeed = m.dockSpeed;
+        o.approachRange = m.approachRange;
+        o.berths = m.berths.map((v) => Berth.toJSON(v));
         return o;
     },
     fromJSON(j: unknown): Station {
@@ -566,11 +634,12 @@ export const Station = {
         if (o.id != null) m.id = jStr(o.id, "Station.id");
         if (o.name != null) m.name = jStr(o.name, "Station.name");
         if (o.at != null) m.at = Vec3.fromJSON(o.at);
-        if (o.dockRange != null) m.dockRange = jNum(o.dockRange, "Station.dockRange");
         if (o.dockSpeed != null) m.dockSpeed = jNum(o.dockSpeed, "Station.dockSpeed");
+        if (o.approachRange != null) m.approachRange = jNum(o.approachRange, "Station.approachRange");
+        if (o.berths != null) m.berths = jArr(o.berths, "Station.berths").map((v) => Berth.fromJSON(v));
         return m;
     },
-    shape: "Station{1:string id,2:string name,3:Vec3 at,4:double dock_range,5:double dock_speed};Vec3{1:double x,2:double y,3:double z}",
+    shape: "Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths};Vec3{1:double x,2:double y,3:double z};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over}",
     encode(m: Station): Uint8Array { const w = new Writer(); Station.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): Station { return Station.read(new Reader(bytes), bytes.length); },
 };
@@ -590,11 +659,13 @@ export interface EnterReply {
     stored: number;
     docked: boolean;
     nextMove: number;
+    berth: number;
+    mooring: Mooring;
 }
 
 export const EnterReply = {
     create(init: Partial<EnterReply> = {}): EnterReply {
-        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, nextMove: 0, ...init };
+        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, ...init };
     },
     write(m: EnterReply, w: Writer): void {
         if (m.account !== '') { w.tag(1, 2); w.string(m.account); }
@@ -611,6 +682,8 @@ export const EnterReply = {
         if (m.stored !== 0) { w.tag(13, 0); w.uint32(m.stored); }
         if (m.docked !== false) { w.tag(14, 0); w.bool(m.docked); }
         if (m.nextMove !== 0) { w.tag(15, 0); w.uint32(m.nextMove); }
+        if (m.berth !== 0) { w.tag(16, 0); w.uint32(m.berth); }
+        if (m.mooring !== 0) { w.tag(17, 0); w.int32(m.mooring); }
     },
     read(r: Reader, end: number): EnterReply {
         const m = EnterReply.create();
@@ -631,6 +704,8 @@ export const EnterReply = {
                 case 13: if (wt === 0) m.stored = r.uint32(); else r.skip(wt); break;
                 case 14: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
                 case 15: if (wt === 0) m.nextMove = r.uint32(); else r.skip(wt); break;
+                case 16: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
+                case 17: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -652,6 +727,8 @@ export const EnterReply = {
         o.stored = m.stored;
         o.docked = m.docked;
         o.nextMove = m.nextMove;
+        o.berth = m.berth;
+        o.mooring = m.mooring;
         return o;
     },
     fromJSON(j: unknown): EnterReply {
@@ -671,9 +748,11 @@ export const EnterReply = {
         if (o.stored != null) m.stored = jInt(o.stored, "EnterReply.stored", 0, 4294967295);
         if (o.docked != null) m.docked = jBool(o.docked, "EnterReply.docked");
         if (o.nextMove != null) m.nextMove = jInt(o.nextMove, "EnterReply.nextMove", 0, 4294967295);
+        if (o.berth != null) m.berth = jInt(o.berth, "EnterReply.berth", 0, 4294967295);
+        if (o.mooring != null) m.mooring = jInt(o.mooring, "EnterReply.mooring", -2147483648, 2147483647);
         return m;
     },
-    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked,15:uint32 next_move};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,4:double dock_range,5:double dock_speed}",
+    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked,15:uint32 next_move,16:uint32 berth,17:Mooring mooring};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
     encode(m: EnterReply): Uint8Array { const w = new Writer(); EnterReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): EnterReply { return EnterReply.read(new Reader(bytes), bytes.length); },
 };
@@ -757,15 +836,19 @@ export const MineReply = {
 export interface DockReply {
     docked: boolean;
     why: DockRefusal;
+    berth: number;
+    mooring: Mooring;
 }
 
 export const DockReply = {
     create(init: Partial<DockReply> = {}): DockReply {
-        return { docked: false, why: 0, ...init };
+        return { docked: false, why: 0, berth: 0, mooring: 0, ...init };
     },
     write(m: DockReply, w: Writer): void {
         if (m.docked !== false) { w.tag(1, 0); w.bool(m.docked); }
         if (m.why !== 0) { w.tag(2, 0); w.int32(m.why); }
+        if (m.berth !== 0) { w.tag(3, 0); w.uint32(m.berth); }
+        if (m.mooring !== 0) { w.tag(4, 0); w.int32(m.mooring); }
     },
     read(r: Reader, end: number): DockReply {
         const m = DockReply.create();
@@ -774,6 +857,8 @@ export const DockReply = {
             switch (t >>> 3) {
                 case 1: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
                 case 2: if (wt === 0) m.why = r.int32(); else r.skip(wt); break;
+                case 3: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
+                case 4: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -783,6 +868,8 @@ export const DockReply = {
         const o: Record<string, unknown> = {};
         o.docked = m.docked;
         o.why = m.why;
+        o.berth = m.berth;
+        o.mooring = m.mooring;
         return o;
     },
     fromJSON(j: unknown): DockReply {
@@ -790,9 +877,11 @@ export const DockReply = {
         const m = DockReply.create();
         if (o.docked != null) m.docked = jBool(o.docked, "DockReply.docked");
         if (o.why != null) m.why = jInt(o.why, "DockReply.why", -2147483648, 2147483647);
+        if (o.berth != null) m.berth = jInt(o.berth, "DockReply.berth", 0, 4294967295);
+        if (o.mooring != null) m.mooring = jInt(o.mooring, "DockReply.mooring", -2147483648, 2147483647);
         return m;
     },
-    shape: "DockReply{1:bool docked,2:DockRefusal why};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3}",
+    shape: "DockReply{1:bool docked,2:DockRefusal why,3:uint32 berth,4:Mooring mooring};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
     encode(m: DockReply): Uint8Array { const w = new Writer(); DockReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): DockReply { return DockReply.read(new Reader(bytes), bytes.length); },
 };
@@ -890,11 +979,13 @@ export interface Pilot {
     cargo: number;
     v?: Vec3 | undefined;
     docked: boolean;
+    berth: number;
+    mooring: Mooring;
 }
 
 export const Pilot = {
     create(init: Partial<Pilot> = {}): Pilot {
-        return { account: '', name: '', throttle: 0, mining: false, cargo: 0, docked: false, ...init };
+        return { account: '', name: '', throttle: 0, mining: false, cargo: 0, docked: false, berth: 0, mooring: 0, ...init };
     },
     write(m: Pilot, w: Writer): void {
         if (m.account !== '') { w.tag(1, 2); w.string(m.account); }
@@ -906,6 +997,8 @@ export const Pilot = {
         if (m.cargo !== 0) { w.tag(7, 0); w.uint32(m.cargo); }
         if (m.v !== undefined) { w.tag(8, 2); w.bytes(Vec3.encode(m.v)); }
         if (m.docked !== false) { w.tag(9, 0); w.bool(m.docked); }
+        if (m.berth !== 0) { w.tag(10, 0); w.uint32(m.berth); }
+        if (m.mooring !== 0) { w.tag(11, 0); w.int32(m.mooring); }
     },
     read(r: Reader, end: number): Pilot {
         const m = Pilot.create();
@@ -921,6 +1014,8 @@ export const Pilot = {
                 case 7: if (wt === 0) m.cargo = r.uint32(); else r.skip(wt); break;
                 case 8: if (wt === 2) m.v = Vec3.read(r, r.end()); else r.skip(wt); break;
                 case 9: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
+                case 10: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
+                case 11: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -937,6 +1032,8 @@ export const Pilot = {
         o.cargo = m.cargo;
         if (m.v !== undefined) o.v = Vec3.toJSON(m.v);
         o.docked = m.docked;
+        o.berth = m.berth;
+        o.mooring = m.mooring;
         return o;
     },
     fromJSON(j: unknown): Pilot {
@@ -951,9 +1048,11 @@ export const Pilot = {
         if (o.cargo != null) m.cargo = jInt(o.cargo, "Pilot.cargo", 0, 4294967295);
         if (o.v != null) m.v = Vec3.fromJSON(o.v);
         if (o.docked != null) m.docked = jBool(o.docked, "Pilot.docked");
+        if (o.berth != null) m.berth = jInt(o.berth, "Pilot.berth", 0, 4294967295);
+        if (o.mooring != null) m.mooring = jInt(o.mooring, "Pilot.mooring", -2147483648, 2147483647);
         return m;
     },
-    shape: "Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w}",
+    shape: "Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
     encode(m: Pilot): Uint8Array { const w = new Writer(); Pilot.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): Pilot { return Pilot.read(new Reader(bytes), bytes.length); },
 };
@@ -971,11 +1070,14 @@ export interface StateEvent {
     stored: number;
     docked: boolean;
     nextMove: number;
+    berth: number;
+    mooring: Mooring;
+    hold: DockRefusal;
 }
 
 export const StateEvent = {
     create(init: Partial<StateEvent> = {}): StateEvent {
-        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, nextMove: 0, ...init };
+        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, hold: 0, ...init };
     },
     write(m: StateEvent, w: Writer): void {
         if (m.tick !== 0) { w.tag(1, 0); w.uint32(m.tick); }
@@ -990,6 +1092,9 @@ export const StateEvent = {
         if (m.stored !== 0) { w.tag(10, 0); w.uint32(m.stored); }
         if (m.docked !== false) { w.tag(11, 0); w.bool(m.docked); }
         if (m.nextMove !== 0) { w.tag(12, 0); w.uint32(m.nextMove); }
+        if (m.berth !== 0) { w.tag(13, 0); w.uint32(m.berth); }
+        if (m.mooring !== 0) { w.tag(14, 0); w.int32(m.mooring); }
+        if (m.hold !== 0) { w.tag(15, 0); w.int32(m.hold); }
     },
     read(r: Reader, end: number): StateEvent {
         const m = StateEvent.create();
@@ -1008,6 +1113,9 @@ export const StateEvent = {
                 case 10: if (wt === 0) m.stored = r.uint32(); else r.skip(wt); break;
                 case 11: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
                 case 12: if (wt === 0) m.nextMove = r.uint32(); else r.skip(wt); break;
+                case 13: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
+                case 14: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
+                case 15: if (wt === 0) m.hold = r.int32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -1027,6 +1135,9 @@ export const StateEvent = {
         o.stored = m.stored;
         o.docked = m.docked;
         o.nextMove = m.nextMove;
+        o.berth = m.berth;
+        o.mooring = m.mooring;
+        o.hold = m.hold;
         return o;
     },
     fromJSON(j: unknown): StateEvent {
@@ -1044,9 +1155,12 @@ export const StateEvent = {
         if (o.stored != null) m.stored = jInt(o.stored, "StateEvent.stored", 0, 4294967295);
         if (o.docked != null) m.docked = jBool(o.docked, "StateEvent.docked");
         if (o.nextMove != null) m.nextMove = jInt(o.nextMove, "StateEvent.nextMove", 0, 4294967295);
+        if (o.berth != null) m.berth = jInt(o.berth, "StateEvent.berth", 0, 4294967295);
+        if (o.mooring != null) m.mooring = jInt(o.mooring, "StateEvent.mooring", -2147483648, 2147483647);
+        if (o.hold != null) m.hold = jInt(o.hold, "StateEvent.hold", -2147483648, 2147483647);
         return m;
     },
-    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked}",
+    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move,13:uint32 berth,14:Mooring mooring,15:DockRefusal hold};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6}",
     encode(m: StateEvent): Uint8Array { const w = new Writer(); StateEvent.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): StateEvent { return StateEvent.read(new Reader(bytes), bytes.length); },
 };

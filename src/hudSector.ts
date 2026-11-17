@@ -8,6 +8,9 @@ import { ship } from './shipState';
 
 interface Seen { entity: Entity; tag: Entity; name: Entity; note: Entity; p: Vec3; q: Quat4; here: boolean }
 
+/** What the berth marker shows: 0 is that no berth is hers. */
+export const berthSeen = { id: 0, name: '' };
+
 export const pilotsSeen: { account: string; x: number; y: number; z: number; mining: boolean; sx: number; sy: number; sz: number }[] = [];
 
 export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) => void {
@@ -26,6 +29,15 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
     const shared = rocks[SHARED_ROCK]!;
     const anchorage = world.findEntityByName('Station');
     const seen = new Map<string, Seen>();
+    const berthAt = world.spawn('Berth Mark');
+    world.insert(berthAt, Transform, { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 }, scale: { x: 1, y: 1, z: 1 } });
+    const berthTag = centred(node(root, 'BerthTag', { left: 0, top: 0, width: 44, height: 44 }), 44, 44);
+    world.insert(berthTag, UIWorldAnchor, { clampToEdges: true, edgeMargin: 96, edgeInsets: { ...KEPT_CLEAR } });
+    world.update(berthTag, UIWorldAnchor, (anchored) => { anchored.target = berthAt; });
+    image(berthTag, 'BerthBracket', { left: 0, top: 0, width: 44, height: 44 }, textures.bracket, rgb(ICE, 0.9));
+    const berthName = label(berthTag, 'BerthName', { left: 52, top: 6, width: 240, height: 14 }, { size: 11, color: rgb(ICE), spacing: 2.6 });
+    const berthNote = label(berthTag, 'BerthNote', { left: 52, top: 23, width: 240, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 1.6, strong: false });
+    fade(berthTag, 0);
     connectOnline();
 
     const meet = (account: string, p: Vec3, q: Quat4): Seen => {
@@ -48,11 +60,22 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
             online.leap = null;
         }
         const me = online.pos, rock = online.rock.at;
-        // In a sector the helm's waypoint is the station: its marker, its range and the autopilot that steers for it all lead there.
+        // In a sector the helm's waypoint is the station, and once a berth is kept for her it is that berth's approach point: its
+        // marker, its range and the autopilot that steers for it all lead there. The berth itself carries a marker of its own.
         const station = online.station;
-        helm.gate = { x: station.at[0] - me[0], y: station.at[1] - me[1], z: station.at[2] - me[2] };
-        helm.gateName = station.name;
-        if (anchorage !== null) world.update(anchorage, Transform, (t) => { t.position = { ...helm.gate }; });
+        const mine = online.mooring === 'none' ? null : station.berths.find((berth) => berth.id === online.berth) ?? null;
+        const lead = mine === null ? station.at : mine.approach;
+        helm.gate = { x: lead[0] - me[0], y: lead[1] - me[1], z: lead[2] - me[2] };
+        helm.gateName = mine === null ? station.name : `BERTH ${mine.id} APPROACH`;
+        if (anchorage !== null) world.update(anchorage, Transform, (t) => { t.position = { x: station.at[0] - me[0], y: station.at[1] - me[1], z: station.at[2] - me[2] }; });
+        if (mine !== null) {
+            const at = { x: mine.at[0] - me[0], y: mine.at[1] - me[1], z: mine.at[2] - me[2] };
+            world.update(berthAt, Transform, (t) => { t.position = at; });
+            say(berthName, `BERTH ${mine.id}`);
+            say(berthNote, `${reach(Math.hypot(at.x, at.y, at.z))}   ${online.mooring === 'assigned' ? 'KEPT FOR YOU' : online.mooring === 'docked' ? 'DOCKED' : online.mooring === 'docking' ? 'COMING IN' : 'CASTING OFF'}`);
+        }
+        fade(berthTag, mine !== null && online.mooring !== 'docked' && !ship.away ? 1 : 0);
+        berthSeen.id = mine === null ? 0 : mine.id; berthSeen.name = helm.gateName;
         const there = { x: rock[0] - me[0], y: rock[1] - me[1], z: rock[2] - me[2] };
         world.update(shared.entity, Transform, (t) => { t.position = there; });
         shared.at.x = there.x; shared.at.y = there.y; shared.at.z = there.z;
@@ -77,7 +100,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
             if (hullMesh && !world.get(one.entity, MeshRenderer).enabled) world.update(one.entity, MeshRenderer, (m) => { m.enabled = true; });
             fade(one.tag, ship.away ? 0 : 1);
             say(one.name, other.name);
-            say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.docked ? 'DOCKED   ' : other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
+            say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.mooring === 'docked' ? `BERTH ${other.berth}   ` : other.mooring === 'docking' ? `TO BERTH ${other.berth}   ` : other.mooring === 'undocking' ? 'CASTING OFF   ' : other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
             ink(one.note, other.mining ? rgb(AMBER) : rgb(HAZE));
             ink(one.name, rgb(other.mining ? AMBER : ICE));
             pilotsSeen.push({ account: other.account, x: at.x, y: at.y, z: at.z, mining: other.mining, sx: one.p[0], sy: one.p[1], sz: one.p[2] });

@@ -18,7 +18,7 @@ export class NoSave extends Error {
 /**
  * A save from an earlier server, brought up to this one. Before there was a station (1): every warehouse is empty, nobody is
  * docked and no order to move ore was ever given. Before orders were numbered (2): the orders it remembers are numbered in the
- * order they were answered, and the pilot's count starts from them.
+ * order they were answered, and the pilot's count starts from them. Before there were berths (3): nobody has one.
  */
 function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<string, unknown>> }): void {
     if (typeof saved?.pilots !== 'object' || saved.pilots === null) return;
@@ -34,6 +34,11 @@ function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<stri
             pilot.ops = ops.slice(-8);
         }
         saved.version = 3;
+    }
+    if (saved.version === 3) {
+        // Before there were berths a docked ship lay wherever she had stopped off the station. She is free there now, with no berth.
+        for (const pilot of Object.values(saved.pilots)) { delete pilot.docked; pilot.berth = 0; pilot.mooring = 'none'; }
+        saved.version = 4;
     }
 }
 /**

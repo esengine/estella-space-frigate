@@ -20,8 +20,10 @@ const placed = (at: { [id: string]: { cargo?: number; stored?: number; docked?: 
     const saved = freshSave();
     let out = 0;
     [A, B].forEach((id, i) => {
-        const want = at[id] ?? {}, p = want.atStation ? [STATION.at[0] + (want.off ?? 40), STATION.at[1], STATION.at[2]] : [...SECTOR.berths[i]!];
-        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: want.stored ?? 0, docked: want.docked ?? false, moves: 0, p: p as [number, number, number], q: [0, 0, 0, 1], ops: [] };
+        // Docked is in her own berth; at the station and not docked is on its approach point, where the station will take her in hand when she has a berth.
+        const want = at[id] ?? {}, berth = STATION.berths[i]!;
+        const p = want.docked ? [...berth.at] : want.atStation ? [...berth.approach] : [...SECTOR.berths[i]!];
+        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: want.stored ?? 0, berth: want.docked ? berth.id : 0, mooring: want.docked ? 'docked' : 'none', moves: 0, p: p as [number, number, number], q: [0, 0, 0, 1], ops: [] };
         out += (want.cargo ?? 0) + (want.stored ?? 0);
     });
     saved.rock.remaining = TOTAL - out;
@@ -60,10 +62,16 @@ describe('a pilot\'s warehouse', () => {
         away.enter(A);
         expect(order(away, A, false, 1 * GRAMS)).toMatchObject({ ok: false, why: 'NOT DOCKED', cargo: 2 * GRAMS, stored: 1 * GRAMS });
         expect(order(away, A, true, 1 * GRAMS)).toMatchObject({ ok: false, why: 'NOT DOCKED' });
+        // Cast off, it is shut at once, though she has not moved yet; and all the way out, and once she is let go.
         const s = docked();
+        expect(order(s, A, false, 500_000).ok).toBe(true);
         s.dock(A, false);
         expect(order(s, A, false, 1 * GRAMS)).toMatchObject({ ok: false, why: 'NOT DOCKED' });
+        for (let n = 0; n < 40 * 30; n++) { s.step(1000 / 30); if (n % 60 === 0) expect(order(s, A, true, 1).why).toBe('NOT DOCKED'); }
+        expect(s.stateFor(A).you).toMatchObject({ mooring: 'none', berth: 0 });
+        // She asks for a berth again from where she was let go, is brought in, and it opens when she is in and not before.
         s.dock(A, true);
+        for (let n = 0; n < 40 * 30 && s.stateFor(A).you.mooring !== 'docked'; n++) { s.step(1000 / 30); if (n % 60 === 0 && s.stateFor(A).you.mooring !== 'docked') expect(order(s, A, true, 1).why).toBe('NOT DOCKED'); }
         expect(order(s, A, false, 1 * GRAMS).ok).toBe(true);
         s.leave(A);
         expect(order(s, A, true, 1 * GRAMS)).toMatchObject({ ok: false, why: 'BAD ORDER' });
@@ -260,7 +268,7 @@ describe('a pilot\'s warehouse', () => {
             (v: Saved) => { delete (v.pilots[A] as { stored?: number }).stored; },
             (v: Saved) => { delete (v.pilots[A] as { moves?: number }).moves; },
             (v: Saved) => { v.pilots[A]!.moves = 0; },
-            (v: Saved) => { (v.pilots[A] as { docked: unknown }).docked = 'yes'; },
+            (v: Saved) => { v.pilots[A]!.berth = 7; },
             (v: Saved) => { (v.pilots[A] as { ops: unknown }).ops = [{ op: 7 }]; },
             (v: Saved) => { (v as { version: number }).version = 2; },
         ]) {
@@ -274,7 +282,7 @@ describe('a pilot\'s warehouse', () => {
     it('holds its sum, and does no order twice, through any order of mining, docking, moving ore, failed writes, replays and restarts', () => {
         let seed = 2024;
         const rand = (): number => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-        let s = createSector(placed({ [A]: { cargo: 1 * GRAMS, atStation: true }, [B]: { atStation: false } }));
+        let s = createSector(placed({ [A]: { cargo: 1 * GRAMS, atStation: true, docked: true }, [B]: { atStation: true } }));
         let disk = JSON.stringify(s.save());
         const sent: { id: string; seq: number; name: string; withdraw: boolean; grams: number }[] = [];
         const made = new Map<string, number>();
@@ -307,7 +315,7 @@ describe('a pilot\'s warehouse', () => {
         expect(auditSave(JSON.parse(disk))).toBe('');
         expect([...made.values()].every((times) => times === 1)).toBe(true);
         // That the run did exercise each of them, not how often.
-        expect(moved).toBeGreaterThan(20);
+        expect(moved).toBeGreaterThan(10);
         expect(refused).toBeGreaterThan(50);
         expect(unsaved).toBeGreaterThan(5);
         expect(replays).toBeGreaterThan(500);

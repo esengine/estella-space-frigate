@@ -1,6 +1,6 @@
 import { defineContract, proto } from 'esengine/session';
 import * as pb from './proto/sector';
-import type { DockRefusal, Quat4, Refusal, TransferRefusal, Vec3 } from './shared/sector';
+import type { DockRefusal, Mooring, Quat4, Refusal, TransferRefusal, Vec3 } from './shared/sector';
 import { unitQuat, type Flight } from './shared/steer';
 
 export const contract = defineContract({
@@ -39,7 +39,15 @@ const REFUSALS: Record<Refusal, pb.Refusal> = {
 export const toRefusal = (why: Refusal): pb.Refusal => REFUSALS[why];
 export const fromRefusal = (why: pb.Refusal): Refusal => (Object.keys(REFUSALS) as Refusal[]).find((text) => REFUSALS[text] === why) ?? 'NOT MINING';
 
-const DOCKS: Record<DockRefusal, pb.DockRefusal> = { '': pb.DockRefusal.DOCK_REFUSAL_NONE, 'TOO FAR': pb.DockRefusal.DOCK_REFUSAL_TOO_FAR, 'TOO FAST': pb.DockRefusal.DOCK_REFUSAL_TOO_FAST };
+const DOCKS: Record<DockRefusal, pb.DockRefusal> = {
+    '': pb.DockRefusal.DOCK_REFUSAL_NONE, 'TOO FAR': pb.DockRefusal.DOCK_REFUSAL_TOO_FAR, 'TOO FAST': pb.DockRefusal.DOCK_REFUSAL_TOO_FAST,
+    'NO BERTH FREE': pb.DockRefusal.DOCK_REFUSAL_NO_BERTH_FREE, 'MANEUVERING': pb.DockRefusal.DOCK_REFUSAL_MANEUVERING,
+};
+const MOORED: Record<Mooring, pb.Mooring> = {
+    none: pb.Mooring.MOORING_NONE, assigned: pb.Mooring.MOORING_ASSIGNED, docking: pb.Mooring.MOORING_DOCKING, docked: pb.Mooring.MOORING_DOCKED, undocking: pb.Mooring.MOORING_UNDOCKING,
+};
+export const toMooring = (mooring: Mooring): pb.Mooring => MOORED[mooring];
+export const fromMooring = (mooring: pb.Mooring): Mooring => (Object.keys(MOORED) as Mooring[]).find((text) => MOORED[text] === mooring) ?? 'none';
 export const toDockRefusal = (why: DockRefusal): pb.DockRefusal => DOCKS[why];
 export const fromDockRefusal = (why: pb.DockRefusal): DockRefusal => (Object.keys(DOCKS) as DockRefusal[]).find((text) => DOCKS[text] === why) ?? 'TOO FAR';
 

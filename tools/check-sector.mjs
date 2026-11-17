@@ -75,10 +75,13 @@ async function pilot(creds, fingerprint = contract.fingerprint) {
         credentials: () => ({ ...creds, contract: fingerprint }),
         backoff: { initialMs: 100, maxMs: 500 },
     });
-    const me = { session, sockets, api: contract.client(session), state: null, states: 0, closed: '', seq: 0 };
+    const me = { session, sockets, api: contract.client(session), state: null, states: 0, closed: '', seq: 0, holds: new Set(), track: null };
     contract.on(session, 'state', (state) => {
         me.state = state;
         me.states++;
+        me.holds.add(state.hold);
+        // While a check is following the ships: where the server put her that step, and where she was told the other was.
+        if (me.track) me.track.set(state.tick, { own: at(state.flight.p), other: state.others[0] ? at(state.others[0].p) : null, mooring: state.mooring, otherMooring: state.others[0]?.mooring ?? 0 });
         // A pilot who is signed out is not in the state, though her hold still counts: those moments are checked against /healthz instead.
         if (state.others.length !== 1) return;
         const sum = state.remaining + state.cargo + state.others[0].cargo;
@@ -215,13 +218,13 @@ try {
     pass('two pilots mine the one rock at once');
 
     // ---- The same pilot twice: the old seat has no helm -----------------------------
-    const old = a;
+    const usurped = a;
     const second = await pilot(CREDS.a);
-    await until('the first seat to be taken', () => old.closed !== '');
-    assert.match(old.closed, /replaced/);
+    await until('the first seat to be taken', () => usurped.closed !== '');
+    assert.match(usurped.closed, /replaced/);
     const helmBefore = (await books())['pilot-a'];
-    await assert.rejects(old.api.steer({ orders: [{ seq: 1, order: 1, rudder: 1, elevation: 0, roll: 0 }] }, { retries: 0, timeoutMs: 1000 }));
-    await assert.rejects(old.api.mine({ on: true }, { retries: 0, timeoutMs: 1000 }));
+    await assert.rejects(usurped.api.steer({ orders: [{ seq: 1, order: 1, rudder: 1, elevation: 0, roll: 0 }] }, { retries: 0, timeoutMs: 1000 }));
+    await assert.rejects(usurped.api.mine({ on: true }, { retries: 0, timeoutMs: 1000 }));
     await wait(600);
     const helmAfter = (await books())['pilot-a'];
     assert.equal(helmAfter.ack, 0, 'no order of the old seat was flown');
@@ -333,7 +336,7 @@ try {
     pass(`every one of the ${sums.seen} states sent while both pilots were in added up to exactly ten tonnes`);
 
     // ==== The station: carry it, dock, and put it in a warehouse of one's own ================================
-    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
+    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, MANEUVERING = 6, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
     const ledger = [];
     /** A line in the books: where every gram is, by the server's own account, and that they are ten tonnes. */
     const note = async (event) => {
@@ -352,34 +355,66 @@ try {
     const restart = async (how, env = {}) => { if (how === 'kill') await kill(); else if (server) await stopGently(); await start([], env); };
     await note('mined out, nothing stored');
 
-    // From where she mined: no docking, and no warehouse, whatever is sent.
+    // ==== Berths ==============================================================================================
+    const M = { NONE: 1, ASSIGNED: 2, DOCKING: 3, DOCKED: 4, UNDOCKING: 5 };
+    const BERTHS = SECTOR.station.berths, REACH = SECTOR.station.approachRange;
+    const berthFor = (n) => BERTHS.find((berth) => berth.id === n);
+    const berthsNow = async () => (await books()).berths.map((berth) => `${berth.id}:${berth.pilot || '-'}:${berth.mooring}`).join(' ');
+    const off = (pos, to) => Math.hypot(pos.x - to[0], pos.y - to[1], pos.z - to[2]);
+    const occupancy = [];
+    const occupied = async (event) => { const line = await berthsNow(); occupancy.push({ at: new Date().toISOString(), event, berths: line }); return line; };
+    assert.equal(await occupied('nobody has asked'), '1:-:none 2:-:none');
+
+    // From where she mined: no warehouse, whatever is sent; and a berth asked for is only kept, not reached.
     const farOff = (await mine('pilot-a')).station;
-    assert.ok(farOff > SECTOR.station.dockRange + 500, `A is ${farOff} from the station`);
-    assert.deepEqual(await a.api.dock({ dock: true }), { docked: false, why: TOO_FAR });
-    await a.session.request('dock', { dock: true, docked: true, distance: 0, speed: 0, station: 'kestrel-station', p: { x: 0, y: 0, z: -1900 } }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
-    assert.equal((await mine('pilot-a')).docked, false);
+    assert.ok(farOff > 1500, `A is ${farOff} from the station`);
+    like(await move(a, 'pilot-a', false, 1 * GRAMS), { ok: false, why: NOT_DOCKED });
+    const forged = await a.session.request('dock', { dock: true, docked: true, berth: 2, mooring: M.DOCKED, distance: 0, speed: 0, station: 'kestrel-station', p: { x: -74, y: 0, z: -1656 } }, { retries: 0, timeoutMs: 1500 }).catch(() => null);
+    // What she added is not in the contract: one wire refuses the whole request, the other reads only what it knows. Neither puts her in a berth.
+    if (forged) like(forged, { docked: false, why: NONE, berth: 1, mooring: M.ASSIGNED }, 'she said she was docked in berth 2');
+    else assert.equal((await mine('pilot-a')).mooring, 'none');
+    like(await a.api.dock({ dock: true }), { docked: false, why: NONE, berth: 1, mooring: M.ASSIGNED });
+    like(await mine('pilot-a'), { docked: false, berth: 1, mooring: 'assigned', hold: 'TOO FAR' });
     like(await move(a, 'pilot-a', false, 1 * GRAMS), { ok: false, why: NOT_DOCKED });
     like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED });
-    await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: false, grams: 1 * GRAMS, docked: true, account: 'pilot-a', at: 'kestrel-station' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
-    await note('A asks to dock and to store from where she mined: refused');
+    await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: false, grams: 1 * GRAMS, docked: true, mooring: M.DOCKED, account: 'pilot-a', at: 'kestrel-station' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    await note('A, where she mined, says she is docked and tries to store: refused');
     assert.equal((await mine('pilot-a')).stored, 0);
-    pass('from where she mined a ship cannot dock or reach her warehouse: asking, and saying she is docked, do nothing');
+    like(await a.api.dock({ dock: false }), { docked: false, why: NONE, berth: 0, mooring: M.NONE });
+    assert.equal(await occupied('A gave up the berth kept for her'), '1:-:none 2:-:none');
+    pass('saying she is docked in a berth of her choosing gets a ship a berth kept for her and nothing more: no place in it, and no warehouse');
 
-    // The run: steered there by her orders alone. A comes in at full speed and is refused until she has slowed.
+    // Both ask in the same instant, many times over: one berth each, never the same, never two.
+    for (let round = 0; round < 5; round++) {
+        const asked = await Promise.all([...Array.from({ length: 8 }, () => a.api.dock({ dock: true })), ...Array.from({ length: 8 }, () => b.api.dock({ dock: true }))]);
+        const mineA = new Set(asked.slice(0, 8).map((r) => r.berth)), mineB = new Set(asked.slice(8).map((r) => r.berth));
+        assert.ok(mineA.size === 1 && mineB.size === 1 && !mineA.has(0) && !mineB.has(0), `round ${round}: ${JSON.stringify(asked.map((r) => r.berth))}`);
+        assert.notEqual([...mineA][0], [...mineB][0], `round ${round}: both were given berth ${[...mineA][0]}`);
+        const now = (await books()).berths;
+        assert.deepEqual(now.map((berth) => berth.pilot).sort(), ['pilot-a', 'pilot-b']);
+        if (round < 4) await Promise.all([a.api.dock({ dock: false }), b.api.dock({ dock: false })]);
+    }
+    const lies = { a: (await mine('pilot-a')).berth, b: (await mine('pilot-b')).berth };
+    // With the other's free again, asking and asking does not get her a second.
+    await b.api.dock({ dock: false });
+    for (let n = 0; n < 6; n++) like(await a.api.dock({ dock: true }), { berth: lies.a, mooring: M.ASSIGNED });
+    assert.equal(await berthsNow(), lies.a === 1 ? '1:pilot-a:assigned 2:-:none' : '1:-:none 2:pilot-a:assigned');
+    like(await b.api.dock({ dock: true }), { berth: lies.b, mooring: M.ASSIGNED });
+    await occupied('both asked at once, five times over');
+    pass(`asking in the same instant, eighty requests in all, two pilots are never given the same berth and neither is given two (A has ${lies.a}, B has ${lies.b})`);
+
+    // The run: each steered to her own approach point by her orders alone. A comes in at full speed and is not taken until she has slowed.
     const haul = async (me, id, comeInFast) => {
-        const station = SECTOR.station.at, began = Date.now();
-        let refusedFast = 0, lastDock = 0;
+        const lie = berthFor((await mine(id)).berth), began = Date.now();
+        let passed = !comeInFast;
         for (let sent = 0; Date.now() - began < 240000;) {
             const now = await mine(id), f = now.flight;
-            const ahead = turnBack(f.level, { x: station[0] - f.pos.x, y: station[1] - f.pos.y, z: station[2] - f.pos.z });
-            const inside = now.station <= SECTOR.station.dockRange - 30;
-            if (inside && Date.now() - lastDock > 400) {
-                lastDock = Date.now();
-                const got = await me.api.dock({ dock: true });
-                if (got.docked) return { seconds: (Date.now() - began) / 1000, refusedFast };
-                if (got.why === TOO_FAST) refusedFast++;
-            }
-            const order = inside ? 0 : now.station > SECTOR.station.dockRange + 600 || comeInFast ? 1 : 0.25;
+            if (now.mooring !== 'assigned') return { seconds: (Date.now() - began) / 1000, taken: { pos: f.pos, from: off(f.pos, lie.approach) } };
+            const ahead = turnBack(f.level, { x: lie.approach[0] - f.pos.x, y: lie.approach[1] - f.pos.y, z: lie.approach[2] - f.pos.z });
+            const far = off(f.pos, lie.approach), askew = Math.atan2(Math.hypot(ahead.x, ahead.y), ahead.z);
+            if (far <= REACH) passed = true;
+            // She stops her engine where her way will carry her in, as a pilot told "slow, then stop at the approach" does.
+            const order = !passed ? 1 : askew > 0.3 ? 0 : far - 15 <= f.speed * FIELD_DRIFT * 1.7 ? 0 : far > 700 ? 1 : 0.25;
             const rudder = -Math.max(-TURN_RATE, Math.min(TURN_RATE, Math.atan2(ahead.x, ahead.z) * 1.4)) / TURN_RATE;
             const elevation = Math.max(-PITCH_RATE, Math.min(PITCH_RATE, Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z) || 1e-6) * 1.4)) / PITCH_RATE;
             const due = Math.max(1, Math.floor((Date.now() - began) / TICK_MS) - sent);
@@ -387,22 +422,68 @@ try {
             me.api.steer({ orders: Array.from({ length: Math.min(due, 30) }, () => ({ seq: ++me.seq, order, rudder, elevation, roll: 0 })) }, { retries: 0 }).catch(() => undefined);
             await wait(60);
         }
-        throw new Error(`${id} did not reach the station`);
+        throw new Error(`${id} did not reach her approach point`);
     };
+    a.holds.clear(); b.holds.clear();
+    a.track = new Map(); b.track = new Map();
     const [runA, runB] = await Promise.all([haul(a, 'pilot-a', true), haul(b, 'pilot-b', false)]);
-    assert.ok(runA.refusedFast > 0, 'A, coming in at speed, was refused for it at least once');
+    assert.ok(a.holds.has(TOO_FAST), `A, passing her approach point at speed, was told TOO FAST: ${[...a.holds]}`);
     assert.ok(runA.seconds > 15 && runB.seconds > 15, `the runs took ${runA.seconds.toFixed(0)} s and ${runB.seconds.toFixed(0)} s`);
+    assert.ok(runA.taken.from <= REACH + 20 && runB.taken.from <= REACH + 20, `taken in hand ${runA.taken.from.toFixed(0)} and ${runB.taken.from.toFixed(0)} from their approach points`);
+    await occupied('both taken in hand at their approach points');
+    pass(`each carried her ore to her own approach point by her own helm (${runA.seconds.toFixed(0)} s and ${runB.seconds.toFixed(0)} s) and the station took her in hand there; the one that came through at speed was told TOO FAST and not taken until she had slowed`);
+
+    // In hand: nothing she sends moves her or stops it, and her warehouse is not open yet.
+    const coming = await mine('pilot-b');
+    if (coming.mooring === 'docking') {
+        like(await b.api.dock({ dock: false }), { docked: false, why: MANEUVERING, berth: lies.b, mooring: M.DOCKING });
+        like(await move(b, 'pilot-b', false, 1 * GRAMS), { ok: false, why: NOT_DOCKED }, 'on her way in');
+    }
+    await Promise.all([a.sail(4, { order: 1, rudder: 1, elevation: 1 }), b.sail(4, { order: 1, rudder: -1, elevation: -1 })]);
+    await until('both to lie in their berths', async () => { const now = await books(); return now['pilot-a'].mooring === 'docked' && now['pilot-b'].mooring === 'docked'; }, 90000);
+    await wait(300);
     const berthA = await mine('pilot-a'), berthB = await mine('pilot-b');
-    assert.ok(berthA.docked && berthB.docked && berthA.station <= SECTOR.station.dockRange && berthA.flight.speed === 0);
-    await note('both ships docked at the station');
-    pass(`both carried their ore to the station by their own helms (${runA.seconds.toFixed(0)} s and ${runB.seconds.toFixed(0)} s); the one that came in fast was refused ${runA.refusedFast} time(s) until she had slowed`);
+    assert.deepEqual(at(berthA.flight.pos), [...berthFor(lies.a).at]);
+    assert.deepEqual(at(berthB.flight.pos), [...berthFor(lies.b).at]);
+    assert.ok(berthA.docked && berthB.docked && berthA.flight.speed === 0 && berthB.flight.speed === 0);
+    // What each was sent while they came in: the way is the station's, and both ends were told the same.
+    const ways = { a: a.track, b: b.track };
+    a.track = null; b.track = null;
+    let steps = 0, nearest = Infinity, compared = 0, inHandSteps = 0;
+    for (const [who, way, lie] of [['A', ways.a, berthFor(lies.a)], ['B', ways.b, berthFor(lies.b)]]) {
+        for (const one of way.values()) {
+            if (one.mooring !== M.DOCKING) continue;
+            steps++;
+            const p = one.own, over = Math.hypot(p[0] - lie.at[0], p[2] - lie.at[2]), fromApproach = Math.hypot(p[0] - lie.approach[0], p[1] - lie.approach[1], p[2] - lie.approach[2]);
+            // Below the height she crosses at, she is either still coming to her approach point, out beside the wing, or straight above her berth.
+            assert.ok(p[1] >= lie.over[1] - 0.01 || fromApproach <= REACH + 0.01 || over <= 0.01, `${who} was at ${p} on her way in`);
+            assert.ok(p[1] >= lie.at[1] - 0.01, `${who} went below her berth: ${p}`);
+        }
+    }
+    for (const [tick, hers] of ways.a) {
+        const theirs = ways.b.get(tick);
+        if (!theirs || !hers.other || !theirs.other) continue;
+        compared++;
+        assert.deepEqual(hers.other, theirs.own, `step ${tick}: A was told B was at ${hers.other}, B that she was at ${theirs.own}`);
+        assert.deepEqual(theirs.other, hers.own, `step ${tick}`);
+        assert.equal(hers.otherMooring, theirs.mooring);
+        // Under their own helms nothing keeps two ships apart; from the moment the station has either, it does.
+        if (hers.mooring !== M.DOCKING && hers.mooring !== M.DOCKED && theirs.mooring !== M.DOCKING && theirs.mooring !== M.DOCKED) continue;
+        inHandSteps++;
+        nearest = Math.min(nearest, Math.hypot(hers.own[0] - theirs.own[0], hers.own[1] - theirs.own[1], hers.own[2] - theirs.own[2]));
+    }
+    assert.ok(steps > 200 && compared > 400, `${steps} steps in hand, ${compared} compared`);
+    assert.ok(nearest >= 147, `the two ships came within ${nearest.toFixed(1)} of one another`);
+    await note('both ships lie in their berths');
+    assert.equal(await occupied('both docked'), `${lies.a === 1 ? '1:pilot-a:docked 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:docked'}`);
+    pass(`the station brought both in at once, each to the exact place of her own berth: over ${steps} steps in hand neither left the way in, from the step the first was taken they were never nearer than ${nearest.toFixed(0)} apart (a hull is 48 across, ${inHandSteps} steps), and in all ${compared} steps compared each was told the other was exactly where the other was told she was`);
 
     // Docked, her helm does nothing.
     await a.sail(1.5, { order: 1, rudder: 1 });
     const heldFast = await mine('pilot-a');
     assert.deepEqual(heldFast.flight.pos, berthA.flight.pos);
     assert.equal(heldFast.flight.speed, 0);
-    pass('a docked ship is held: full ahead and hard over move her nowhere');
+    pass('in hand and in her berth a ship is the station\'s: full ahead and hard over move her nowhere, casting off on the way in is refused, and the warehouse stays shut until she lies in her berth');
 
     // Into the warehouse, and back.
     const had = { a: berthA.cargo, b: berthB.cargo };
@@ -473,6 +554,7 @@ try {
     await restart('kill');
     const afterKill = await mine('pilot-a');
     assert.deepEqual([afterKill.cargo, afterKill.stored, afterKill.docked, afterKill.nextMove], [said.cargo, said.stored, true, kept.seq + 1]);
+    assert.equal(await occupied('the server was killed and started again with nobody signed in'), `${lies.a === 1 ? '1:pilot-a:docked 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:docked'}`);
     assert.deepEqual(afterKill.flight.pos, atSuccess.flight.pos);
     await note('A stores 0.25 t, is told so, and the server is killed at once: it is there when the server comes back');
     await ready(a, b);
@@ -523,8 +605,8 @@ try {
     assert.deepEqual(await onDisk(), [stuck.cargo, stuck.stored, stuck.nextMove - 1]);
     await until('her own state to agree', () => a.state.cargo === stuck.cargo && a.state.stored === stuck.stored);
     // Its own periodic writes fail too while this lasts; it says so, and it does not fall over.
-    await b.api.dock({ dock: false });
-    await b.api.dock({ dock: true });
+    // B casts off meanwhile, which the disk does not take either.
+    like(await b.api.dock({ dock: false }), { docked: false, why: NONE, mooring: M.UNDOCKING });
     await wait(2500);
     assert.equal((await health()).saving, 'failing');
     assert.equal(await sumNow(), TOTAL);
@@ -533,6 +615,10 @@ try {
     await restart('kill');
     const afterStuck = await mine('pilot-a');
     assert.deepEqual([afterStuck.cargo, afterStuck.stored, afterStuck.nextMove], [stuck.cargo, stuck.stored, stuck.nextMove]);
+    // And B's casting off, which no write recorded, has not happened: she lies in her berth.
+    const backIn = await mine('pilot-b');
+    assert.deepEqual([backIn.mooring, backIn.berth, at(backIn.flight.pos)], ['docked', lies.b, [...berthFor(lies.b).at]]);
+    await occupied('killed while B was casting off and the disk refused writes: B is in her berth, as the disk has it');
     await ready(a, b);
     like(await move(a, 'pilot-a', false, 300_000, refusedOrder), { ok: false, why: NOT_SAVED }, 'still refused after the restart, with the disk still stuck');
     // The disk takes writes again. The same order, under the same number and name, is now done: once.
@@ -585,28 +671,107 @@ try {
     await note('A\'s order to take 0.20 t, sent again after 64 others, a stop and start, a dropped link and a kill: refused as expired each time');
     pass('an order is not done a second time after sixty-four others, a restart, a dropped link and a kill: it is refused as expired, and the balances stand');
 
-    // Signing in again: the same ship in the same place, the same hold, the same warehouse.
+    // Signing in again: the same ship in the same berth, the same hold, the same warehouse.
     const leaving = await mine('pilot-a');
     a.session.close();
     await wait(400);
+    assert.equal(await occupied('A signed out, docked'), `${lies.a === 1 ? '1:pilot-a:docked 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:docked'}`);
     a = await pilot(CREDS.a);
-    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked, a.welcome.nextMove], [leaving.cargo, leaving.stored, true, leaving.nextMove]);
+    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked, a.welcome.nextMove, a.welcome.berth, a.welcome.mooring], [leaving.cargo, leaving.stored, true, leaving.nextMove, lies.a, M.DOCKED]);
     assert.deepEqual(a.welcome.flight.p, leaving.flight.pos);
+    assert.deepEqual(at(a.welcome.flight.p), [...berthFor(lies.a).at]);
     assert.equal(a.welcome.station.name, SECTOR.station.name);
-    await until('her state', () => a.state?.stored === leaving.stored && a.state.docked);
-    pass('signed in again she has the same ship at the same berth, the same hold and the same warehouse');
+    assert.deepEqual(a.welcome.station.berths.map((berth) => [berth.id, at(berth.at), at(berth.approach)]), BERTHS.map((berth) => [berth.id, [...berth.at], [...berth.approach]]));
+    await until('her state', () => a.state?.stored === leaving.stored && a.state.docked && a.state.berth === lies.a);
+    pass('signed in again she has the same ship in the same berth, the same hold and the same warehouse');
 
-    // Cast off, the warehouse is out of reach again, and she can sail.
-    assert.deepEqual(await a.api.dock({ dock: false }), { docked: false, why: NONE });
+    // The account signed in a second time while the first is still there: one ship, one berth, and the old seat can do nothing.
+    const former = a;
+    a = await pilot(CREDS.a);
+    assert.deepEqual([a.welcome.berth, a.welcome.mooring, at(a.welcome.flight.p)], [lies.a, M.DOCKED, [...berthFor(lies.a).at]]);
+    for (let n = 0; n < 4; n++) like(await a.api.dock({ dock: true }), { docked: true, berth: lies.a, mooring: M.DOCKED });
+    await former.api.dock({ dock: false }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    await former.api.dock({ dock: true }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    await former.api.transfer({ seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: true, grams: 1 }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    await wait(300);
+    const seated = await mine('pilot-a');
+    assert.deepEqual([seated.mooring, seated.berth, seated.cargo, seated.stored], ['docked', lies.a, leaving.cargo, leaving.stored]);
+    assert.equal(await occupied('A signed in a second time over the first; the old seat tried to cast off'), `${lies.a === 1 ? '1:pilot-a:docked 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:docked'}`);
+    former.session.close();
+    await wait(300);
+    assert.equal((await mine('pilot-a')).here, true, 'closing the old seat does not sign the new one out');
+    pass('signed in a second time over the first, the account has the one ship in the one berth; the seat it took over can neither cast her off nor move her ore');
+
+    // Cast off: the warehouse shuts at once, the station takes her out the way she came, and lets her go at rest outside.
+    a.track = new Map();
+    like(await a.api.dock({ dock: false }), { docked: false, why: NONE, berth: lies.a, mooring: M.UNDOCKING });
+    like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED }, 'the instant she casts off');
+    like(await move(a, 'pilot-a', false, 1), { ok: false, why: NOT_DOCKED }, 'the instant she casts off');
+    like(await a.api.dock({ dock: false }), { why: MANEUVERING, mooring: M.UNDOCKING });
+    assert.equal(await occupied('A casting off'), `${lies.a === 1 ? '1:pilot-a:undocking 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:undocking'}`);
+    const leavingAt = Date.now();
+    while ((await mine('pilot-a')).mooring === 'undocking') {
+        if (Date.now() - leavingAt > 90000) throw new Error('A was never let go');
+        await a.sail(1, { order: 1, rudder: 1, elevation: -1 });
+        like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED }, 'on her way out');
+    }
+    const out = await mine('pilot-a'), lieA = berthFor(lies.a);
+    const wayOut = [...a.track.values()].filter((one) => one.mooring === M.UNDOCKING);
+    a.track = null;
+    assert.ok(wayOut.length > 200, `${wayOut.length} steps on her way out`);
+    for (const one of wayOut) {
+        const p = one.own, over = Math.hypot(p[0] - lieA.at[0], p[2] - lieA.at[2]);
+        assert.ok(over <= 0.01 || Math.abs(p[1] - lieA.over[1]) <= 0.01, `on her way out she was at ${p}`);
+        assert.ok(Math.abs(p[2] - lieA.at[2]) <= 0.01, `she left the line out: ${p}`);
+    }
+    // Let go: at rest, at her approach point, which is clear of every part of the station; her berth is free; and she is hers again.
+    assert.ok(off(out.flight.pos, lieA.approach) <= 12, `let go ${off(out.flight.pos, lieA.approach).toFixed(1)} from her approach point, at ${JSON.stringify(out.flight.pos)}`);
+    assert.deepEqual([out.mooring, out.berth, out.docked], ['none', 0, false]);
+    assert.equal(await occupied('A let go at her approach point'), lies.a === 1 ? '1:-:none 2:pilot-b:docked' : '1:pilot-b:docked 2:-:none');
     like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED });
     await a.sail(3, { order: 1 });
     assert.ok((await mine('pilot-a')).flight.speed > 100);
     await a.sail(1, { order: 0 });
-    const closing = await note('A casts off and sails; her warehouse is out of reach again');
-    pass('cast off, she sails again and her warehouse is closed to her until she docks');
+    await note('A casts off and sails; her warehouse is out of reach again');
+    pass(`cast off, her warehouse shut that instant and stayed shut; the station took her straight up and out along its own line over ${wayOut.length} steps, whatever her helm sent, and let her go at her approach point with her berth free and her helm her own`);
+
+    // A berth only kept: hers while she is there or soon back, given up thirty seconds after she has gone.
+    like(await a.api.dock({ dock: true }), { mooring: M.ASSIGNED });
+    const keptBerth = (await mine('pilot-a')).berth;
+    a.sockets[a.sockets.length - 1].close();
+    await until('her to redial', async () => a.session.state === 'ready' && (await mine('pilot-a')).here, 15000);
+    await ready(a);
+    like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned' });
+    await occupied('A, with a berth kept, lost her link and came back');
+    // Killed and started again, the berth is still kept for her.
+    await restart('kill');
+    like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned', here: false });
+    await ready(a, b);
+    like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned', here: true });
+    await occupied('the server was killed and started again: the berth is still kept for A');
+    a.session.close();
+    const goneAt = Date.now();
+    await wait(20000);
+    like(await mine('pilot-a'), { berth: keptBerth, mooring: 'assigned', here: false });
+    await occupied('A has been gone 20 s: still kept');
+    await until('the berth to be given up', async () => (await mine('pilot-a')).mooring === 'none', 20000);
+    const freedAfter = (Date.now() - goneAt) / 1000;
+    assert.ok(freedAfter >= 28 && freedAfter <= 34, `given up after ${freedAfter.toFixed(1)} s`);
+    assert.equal(await occupied(`A has been gone ${freedAfter.toFixed(0)} s: given up`), keptBerth === 1 ? '1:-:none 2:pilot-b:docked' : '1:pilot-b:docked 2:-:none');
+    // B, docked and signed out for longer than that, keeps hers.
+    b.session.close();
+    await wait(32000);
+    like(await mine('pilot-b'), { berth: lies.b, mooring: 'docked', here: false });
+    await occupied('B, docked, has been signed out 32 s: still in her berth');
+    a = await pilot(CREDS.a);
+    b = await pilot(CREDS.b);
+    assert.deepEqual([a.welcome.berth, a.welcome.mooring, b.welcome.berth, b.welcome.mooring], [0, M.NONE, lies.b, M.DOCKED]);
+    const closing = await note('A is back with no berth; B is back in hers');
+    pass(`a berth only kept survives a dropped link and a killed server, and is given up ${freedAfter.toFixed(0)} s after its pilot has gone; a docked ship keeps her berth however long her pilot is away`);
 
     await mkdir(path.join(engine, 'output/space-frigate/sector'), { recursive: true });
     await writeFile(path.join(engine, 'output/space-frigate/sector', `ledger-${WIRE}.json`), JSON.stringify({ wire: WIRE, totalT: TOTAL / GRAMS, lines: ledger, crashes }, null, 1));
+    await writeFile(path.join(engine, 'output/space-frigate/sector', `berths-${WIRE}.json`), JSON.stringify({ wire: WIRE, berths: BERTHS, lines: occupancy }, null, 1));
     pass(`${ledger.length} lines in the books, from mined out to cast off: every one ten tonnes (output/space-frigate/sector/ledger-${WIRE}.json)`);
     a.session.close();
     b.session.close();

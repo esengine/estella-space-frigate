@@ -1,8 +1,8 @@
 import { createSocket } from 'esengine';
 import { ClientSession } from 'esengine/session';
-import { contract, fromDockRefusal, fromFlight, fromQuat, fromRefusal, fromTransferRefusal, fromVec, type Credentials } from './protocol';
+import { contract, fromDockRefusal, fromFlight, fromMooring, fromQuat, fromRefusal, fromTransferRefusal, fromVec, type Credentials } from './protocol';
 import { DRIFTING_ROCKS } from './shipState';
-import { SECTOR, type DockRefusal, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
+import { SECTOR, inHand, type DockRefusal, type Mooring, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
 import { createPredictor, type Predictor } from './shared/predict';
 import { copyFlight, turnShip, type Flight, type Orders, type Vec } from './shared/steer';
 
@@ -28,10 +28,17 @@ export const online = {
     capacity: SECTOR.capacity as number,
     range: SECTOR.range as number,
     rock: { at: [...SECTOR.rock.at] as Vec3, total: SECTOR.rock.total as number, remaining: SECTOR.rock.total as number },
-    station: { name: SECTOR.station.name as string, at: [...SECTOR.station.at] as Vec3, dockRange: SECTOR.station.dockRange as number, dockSpeed: SECTOR.station.dockSpeed as number },
+    station: {
+        name: SECTOR.station.name as string, at: [...SECTOR.station.at] as Vec3, approachRange: SECTOR.station.approachRange as number, dockSpeed: SECTOR.station.dockSpeed as number,
+        berths: SECTOR.station.berths.map((berth) => ({ id: berth.id as number, at: [...berth.at] as Vec3, over: [...berth.over] as Vec3, approach: [...berth.approach] as Vec3 })),
+    },
     /** Ore in this pilot's own warehouse at the station, and whether the server has her docked there. Both are the server's word. */
     stored: 0,
     docked: false,
+    /** The berth the station keeps for her or has her in, and where she stands with it: all the server's word. `hold` is what still stands between her and being taken in hand. */
+    berth: 0,
+    mooring: 'none' as Mooring,
+    hold: '' as DockRefusal,
     /** The last answer to asking to dock, and when: '' is that she may. */
     dock: { asking: false, why: '' as DockRefusal, at: 0 },
     /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
@@ -83,7 +90,7 @@ function take(truth: Flight): void {
 /** A frame of this ship's flight: the helm's orders go to the predictor, and what it has numbered goes to the server. */
 export function flyOnline(dt: number, orders: Orders): { shown: Flight; jets: { yaw: number; pitch: number; roll: number }; went: Vec } {
     const linked = online.link === 'online';
-    predictor.advance(dt, orders, linked, online.docked);
+    predictor.advance(dt, orders, linked, inHand(online.mooring));
     const now = Date.now();
     // An order to move ore that has had no answer is asked again, under the same name, until it has one: the server does it once.
     if (linked && online.move.state === 'pending' && !moving && now - movedAt > (online.move.why === 'NOT SAVED' ? 1500 : 700)) sendMove();
@@ -106,8 +113,14 @@ async function enter(): Promise<void> {
     online.cargo = reply.cargo;
     online.stored = reply.stored;
     online.docked = reply.docked;
+    online.berth = reply.berth;
+    online.mooring = fromMooring(reply.mooring);
+    online.hold = '';
     online.nextMove = reply.nextMove;
-    if (reply.station) online.station = { name: reply.station.name, at: fromVec(reply.station.at), dockRange: reply.station.dockRange, dockSpeed: reply.station.dockSpeed };
+    if (reply.station) online.station = {
+        name: reply.station.name, at: fromVec(reply.station.at), approachRange: reply.station.approachRange, dockSpeed: reply.station.dockSpeed,
+        berths: reply.station.berths.map((berth) => ({ id: berth.id, at: fromVec(berth.at), over: fromVec(berth.over), approach: fromVec(berth.approach) })),
+    };
     online.capacity = reply.capacity;
     online.range = reply.range;
     online.rock = { at: fromVec(reply.rock?.at), total: reply.rock?.total ?? 0, remaining: reply.rock?.remaining ?? 0 };
@@ -137,13 +150,19 @@ export function connectOnline(): void {
         online.cargo = state.cargo;
         online.stored = state.stored;
         online.docked = state.docked;
+        const was = online.mooring;
+        online.berth = state.berth;
+        online.mooring = fromMooring(state.mooring);
+        online.hold = fromDockRefusal(state.hold);
         online.nextMove = state.nextMove;
         online.mining = state.mining;
         online.refusal = fromRefusal(state.why);
-        online.others = state.others.map((o) => ({ account: o.account, name: o.name, p: fromVec(o.p), q: fromQuat(o.q), v: fromVec(o.v), th: o.throttle, mining: o.mining, docked: o.docked, cargo: o.cargo }));
+        online.others = state.others.map((o) => ({ account: o.account, name: o.name, p: fromVec(o.p), q: fromQuat(o.q), v: fromVec(o.v), th: o.throttle, mining: o.mining, docked: o.docked, berth: o.berth, mooring: fromMooring(o.mooring), cargo: o.cargo }));
         online.othersAt = Date.now();
         online.waiting = state.waiting;
-        predictor.settle(fromFlight(state.flight), state.ack, state.waiting);
+        // Let go by the station: the helm is hers again from exactly where the server left her, with nothing of the old prediction.
+        if (inHand(was) && !inHand(online.mooring)) take(fromFlight(state.flight));
+        else predictor.settle(fromFlight(state.flight), state.ack, state.waiting);
     });
     made.onState((state, reason) => {
         if (state === 'ready') { void enter().catch(() => undefined); return; }
@@ -169,8 +188,10 @@ export function askToDock(want: boolean): void {
     if (online.link !== 'online' || online.dock.asking || !api) return;
     online.dock.asking = true;
     api.dock({ dock: want }, { retries: 1, timeoutMs: 4000 }).then((reply) => {
-        online.dock = { asking: false, why: reply.docked || !want ? '' : fromDockRefusal(reply.why), at: Date.now() };
+        online.dock = { asking: false, why: fromDockRefusal(reply.why), at: Date.now() };
         online.docked = reply.docked;
+        online.berth = reply.berth;
+        online.mooring = fromMooring(reply.mooring);
     }, () => { online.dock.asking = false; });
 }
 
@@ -203,4 +224,9 @@ export function moveOre(withdraw: boolean, grams: number): boolean {
     online.move = { seq: online.nextMove, op, withdraw, grams, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
     sendMove();
     return true;
+}
+/** The one key for the station: ask for a berth, give up one that is only kept, or cast off from one she lies in. A ship the station is moving is left to it. */
+export function pressDock(): void {
+    if (online.mooring === 'none') askToDock(true);
+    else if (online.mooring === 'assigned' || online.mooring === 'docked') askToDock(false);
 }

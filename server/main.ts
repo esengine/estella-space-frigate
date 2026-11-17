@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { SessionHost, SessionRejected, acceptWebSocket, type SessionContext } from 'esengine/session';
-import { contract, toDockRefusal, toFlight, toQuat, toRefusal, toTransferRefusal, toVec, type Credentials } from '../src/protocol';
+import { contract, toDockRefusal, toFlight, toMooring, toQuat, toRefusal, toTransferRefusal, toVec, type Credentials } from '../src/protocol';
 import { SECTOR, tonnage } from '../src/shared/sector';
 import { NoSave, loadSave, writeSave } from './store';
 import { createSector } from './world';
@@ -78,8 +78,11 @@ contract.serve(host, {
         return {
             account: you.account, name: you.name, flight: toFlight(you.flight), cargo: you.cargo,
             sector: here.id, sectorName: here.name, rock: { id: here.rock.id, at: toVec(here.rock.at), total: here.rock.total, remaining: here.rock.remaining },
-            range: here.range, rate: here.rate, capacity: here.capacity, stored: you.stored, docked: you.docked, nextMove: you.next,
-            station: { id: here.station.id, name: here.station.name, at: toVec(here.station.at), dockRange: here.station.dockRange, dockSpeed: here.station.dockSpeed },
+            range: here.range, rate: here.rate, capacity: here.capacity, stored: you.stored, docked: you.docked, nextMove: you.next, berth: you.berth, mooring: toMooring(you.mooring),
+            station: {
+                id: here.station.id, name: here.station.name, at: toVec(here.station.at), dockSpeed: here.station.dockSpeed, approachRange: here.station.approachRange,
+                berths: here.station.berths.map((berth) => ({ id: berth.id, at: toVec(berth.at), over: toVec(berth.over), approach: toVec(berth.approach) })),
+            },
         };
     },
     steer(steer, ctx) {
@@ -89,9 +92,10 @@ contract.serve(host, {
         return { asking: sits(ctx) && sector.mine(ctx.playerId, ask.on) && ask.on };
     },
     dock(ask, ctx) {
-        if (!sits(ctx)) return { docked: false, why: toDockRefusal('TOO FAR') };
+        // A berth is the account's, and only the seat the account has now may ask for one or give one up.
+        if (!sits(ctx)) return { docked: false, why: toDockRefusal('TOO FAR'), berth: 0, mooring: toMooring('none') };
         const got = sector.dock(ctx.playerId, ask.dock);
-        return { docked: got.docked, why: toDockRefusal(got.why) };
+        return { docked: got.docked, why: toDockRefusal(got.why), berth: got.berth, mooring: toMooring(got.mooring) };
     },
     transfer(ask, ctx) {
         // The pilot is the one this seat signed in as: the request has no way to say whose warehouse.
@@ -121,7 +125,8 @@ const http = createServer((req, res) => {
     // The server's own account of each ship, for a check to read beside what the clients believe.
     if (req.url === '/pilots') {
         const out: Record<string, unknown> = {};
-        for (const id of ['pilot-a', 'pilot-b']) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, docked: s.you.docked, nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
+        for (const id of ['pilot-a', 'pilot-b']) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, docked: s.you.docked, berth: s.you.berth, mooring: s.you.mooring, hold: s.you.hold, nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
+        out.berths = sector.berths();
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(out));
         return;
@@ -145,7 +150,8 @@ const loop = setInterval(() => {
         contract.push(host as unknown as SessionHost<never>, id, 'state', {
             tick: state.tick, remaining: state.rock, flight: toFlight(state.flight), ack: state.ack, waiting: state.waiting,
             cargo: state.you.cargo, stored: state.you.stored, docked: state.you.docked, nextMove: state.you.next, mining: state.you.mining, why: toRefusal(state.you.why),
-            others: state.others.map((o) => ({ account: o.account, name: o.name, p: toVec(o.p), q: toQuat(o.q), v: toVec(o.v), throttle: o.th, mining: o.mining, docked: o.docked, cargo: o.cargo })),
+            berth: state.you.berth, mooring: toMooring(state.you.mooring), hold: toDockRefusal(state.you.hold),
+            others: state.others.map((o) => ({ account: o.account, name: o.name, p: toVec(o.p), q: toQuat(o.q), v: toVec(o.v), throttle: o.th, mining: o.mining, docked: o.docked, berth: o.berth, mooring: toMooring(o.mooring), cargo: o.cargo })),
         });
     }
 }, SECTOR.tickMs);
