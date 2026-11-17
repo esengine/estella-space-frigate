@@ -121,7 +121,7 @@ addPlugin({
         const mix = (a: number, b: number, k: number): number => a + (b - a) * k;
         const light = (world: World, name: string, way: { x: number; y: number; z: number }, color: { r: number; g: number; b: number; a: number }, intensity: number): void => {
             const e = get(world, name);
-            world.insert(e, Light, { ...world.get(e, Light), color, intensity });
+            world.update(e, Light, (l) => { l.color = color; l.intensity = intensity; });
             world.update(e, Transform, (t) => { t.rotation = lookRotation([0, 0, 0], [way.x, way.y, way.z]); });
         };
         const dress = (world: World, from: number, to: number, k: number): void => {
@@ -131,7 +131,7 @@ addPlugin({
             light(world, 'Sun', way(a.sun, b.sun), tone(a.sunColor, b.sunColor), mix(a.sunPower, b.sunPower, k));
             light(world, 'PlanetShine', way(a.shine, b.shine), tone(a.shineColor, b.shineColor), mix(a.shinePower, b.shinePower, k));
             const sky = get(world, 'Sky'), here = k < 0.5 ? a : b;
-            world.insert(sky, Light, { ...world.get(sky, Light), color: { r: here.skyTint.r / here.skyVeil.r, g: here.skyTint.g / here.skyVeil.g, b: here.skyTint.b / here.skyVeil.b, a: 1 } });
+            world.update(sky, Light, (l) => { l.color = { r: here.skyTint.r / here.skyVeil.r, g: here.skyTint.g / here.skyVeil.g, b: here.skyTint.b / here.skyVeil.b, a: 1 }; });
         };
         let stars: Record<string, number> | null = null;
         const grade = (world: World, exposure: number, system: number, clear: number): void => {
@@ -210,18 +210,12 @@ addPlugin({
             throttle += (wanted - throttle) * Math.min(1, dt * 2.2);
 
             for (const plume of PLUMES) {
-                const e = get(world, plume.name);
-                const t = world.get(e, Transform);
                 const wide = plume.width * (0.8 + 0.2 * throttle);
-                t.scale = { x: wide, y: wide, z: plume.length * (0.22 + 1.05 * throttle) };
-                world.insert(e, Transform, t);
+                world.update(get(world, plume.name), Transform, (t) => { t.scale = { x: wide, y: wide, z: plume.length * (0.22 + 1.05 * throttle) }; });
             }
             Material.setUniform(world.get(get(world, 'PlumeL'), MeshRenderer).material, 'u_strength', 0.25 + 1.5 * throttle * throttle);
             Material.setUniform(world.get(get(world, 'PlumeLCore'), MeshRenderer).material, 'u_strength', 0.6 + 7 * throttle * throttle);
-            for (const name of GLOWS) {
-                const e = get(world, name);
-                world.insert(e, Light, { ...world.get(e, Light), intensity: 0.1 + 0.7 * throttle * throttle });
-            }
+            for (const name of GLOWS) world.update(get(world, name), Light, (l) => { l.intensity = 0.1 + 0.7 * throttle * throttle; });
 
             const struck = (code: string): boolean => {
                 const now = input.isKeyDown(code), was = downs.get(code) ?? false;
@@ -285,17 +279,15 @@ addPlugin({
             const orbit = { ...base, height: base.height + (SIGHT.height - base.height) * sight, along: base.along * (1 - sight), pitch: guns.view ? clamp(base.pitch, SIGHT.low, SIGHT.high) : base.pitch };
             const { eye, target } = eyeOf(orbit);
             const camera = get(world, 'Camera');
-            const cam = world.get(camera, Transform);
-            cam.position = turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] });
-            cam.rotation = mulQuat(helm.frame, lookRotation(eye, target));
-            world.insert(camera, Transform, cam);
+            const cam = { position: turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] }), rotation: mulQuat(helm.frame, lookRotation(eye, target)) };
+            world.update(camera, Transform, (t) => { t.position = cam.position; t.rotation = cam.rotation; });
 
-            const root = get(world, 'Ship');
-            const hull = world.get(root, Transform);
             const roll = Math.sin(clock * 0.31) * 0.012, nod = Math.sin(clock * 0.23 + 1.3) * 0.006;
-            hull.rotation = mulQuat(helm.attitude, { x: Math.sin(nod / 2), y: 0, z: Math.sin(roll / 2), w: Math.cos(nod / 2) * Math.cos(roll / 2) });
-            hull.position = { x: 0, y: Math.sin(clock * 0.19) * 0.35, z: 0 };
-            world.insert(root, Transform, hull);
+            const hull = {
+                rotation: mulQuat(helm.attitude, { x: Math.sin(nod / 2), y: 0, z: Math.sin(roll / 2), w: Math.cos(nod / 2) * Math.cos(roll / 2) }),
+                position: { x: 0, y: Math.sin(clock * 0.19) * 0.35, z: 0 },
+            };
+            world.update(get(world, 'Ship'), Transform, (t) => { t.rotation = hull.rotation; t.position = hull.position; });
 
             const gaze = [target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]], far = Math.hypot(gaze[0]!, gaze[1]!, gaze[2]!) || 1;
             gunnery(world, dt, guns.view ? { from: cam.position, way: turnBy(helm.frame, { x: gaze[0]! / far, y: gaze[1]! / far, z: gaze[2]! / far }) } : null, guns.view && (input.isKeyDown('Space') || guns.squeeze));
@@ -400,20 +392,19 @@ addPlugin({
                 const pitch = Math.atan2(helm.gate.y, Math.hypot(helm.gate.x, helm.gate.z) || 1e-6);
                 gateFacing = mulQuat({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, { x: -Math.sin(pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) });
             }
-            const next = get(world, GATES[ahead]!);
-            const there = world.get(next, Transform);
-            there.position = { x: helm.gate.x, y: helm.gate.y, z: helm.gate.z };
-            there.rotation = gateFacing;
-            world.insert(next, Transform, there);
+            world.update(get(world, GATES[ahead]!), Transform, (t) => {
+                t.position = { x: helm.gate.x, y: helm.gate.y, z: helm.gate.z };
+                t.rotation = gateFacing;
+            });
             const behind = get(world, GATES[1 - ahead]!);
-            const left = world.get(behind, Transform);
-            left.position = { x: left.position.x - helm.forward.x * drift, y: left.position.y - helm.forward.y * drift, z: left.position.z - helm.forward.z * drift };
-            world.insert(behind, Transform, left);
+            const was = world.get(behind, Transform).position;
+            const passed = { x: was.x - helm.forward.x * drift, y: was.y - helm.forward.y * drift, z: was.z - helm.forward.z * drift };
+            world.update(behind, Transform, (t) => { t.position = passed; });
             facts.gate = Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z);
-            facts.gatePassed = Math.hypot(left.position.x, left.position.y, left.position.z);
+            facts.gatePassed = Math.hypot(passed.x, passed.y, passed.z);
 
             const axis = turnBy(passedFacing, { x: 0, y: 0, z: 1 });
-            const along = left.position.x * axis.x + left.position.y * axis.y + left.position.z * axis.z;
+            const along = passed.x * axis.x + passed.y * axis.y + passed.z * axis.z;
             const side = Math.sign(along);
             if (passedSide !== 0 && side !== 0 && side !== passedSide && facts.gatePassed < GATE_RADIUS) {
                 flash = 1;
@@ -431,7 +422,7 @@ addPlugin({
             since = Math.min(since + dt, 60);
             const front = Math.min(since / WAVE_SECONDS, 4);
             const burst = get(world, 'GateFlash');
-            world.insert(burst, Light, { ...world.get(burst, Light), intensity: 4 * flash + 2.4 * tunnel });
+            world.update(burst, Light, (l) => { l.intensity = 4 * flash + 2.4 * tunnel; });
             for (const name of GATES) {
                 const field = world.get(get(world, `${name}Field`), MeshRenderer).material;
                 Material.setUniform(field, 'u_strength', 0.45 + 0.9 * flash);
@@ -456,29 +447,20 @@ addPlugin({
 
             for (const lamp of STROBES) {
                 const lit = strobe(clock, lamp.every, lamp.flashes);
-                const e = get(world, lamp.name);
-                const t = world.get(e, Transform);
                 const size = lamp.size * (0.04 + 0.96 * lit);
-                t.scale = { x: size, y: size, z: size };
-                world.insert(e, Transform, t);
+                world.update(get(world, lamp.name), Transform, (t) => { t.scale = { x: size, y: size, z: size }; });
                 const glow = world.findEntityByName(`${lamp.name}Light`);
-                if (glow !== null) world.insert(glow, Light, { ...world.get(glow, Light), intensity: 0.9 * lit });
+                if (glow !== null) world.update(glow, Light, (l) => { l.intensity = 0.9 * lit; });
             }
-            for (const name of STEADY) {
-                const glow = get(world, `${name}Light`);
-                world.insert(glow, Light, { ...world.get(glow, Light), intensity: 0.32 + 0.06 * Math.sin(clock * 2.1) });
-            }
+            for (const name of STEADY) world.update(get(world, `${name}Light`), Light, (l) => { l.intensity = 0.32 + 0.06 * Math.sin(clock * 2.1); });
             facts.strobe = strobe(clock, STROBES[0].every, STROBES[0].flashes);
 
             JETS.forEach((jet, i) => {
                 const want = clamp(helm.jets[jet.turn] * jet.sign, 0, 1);
                 jets[i] = jets[i]! + (want - jets[i]!) * Math.min(1, dt * 14);
                 const burn = jets[i]! * (0.7 + 0.3 * Math.sin(clock * 53 + i * 1.7) * Math.sin(clock * 17 + i));
-                const e = get(world, jet.name);
-                const t = world.get(e, Transform);
                 const wide = burn > 0.02 ? 0.5 + 0.3 * burn : 0.001;
-                t.scale = { x: wide, y: wide, z: burn > 0.02 ? 0.25 + 0.35 * burn : 0.001 };
-                world.insert(e, Transform, t);
+                world.update(get(world, jet.name), Transform, (t) => { t.scale = { x: wide, y: wide, z: burn > 0.02 ? 0.25 + 0.35 * burn : 0.001 }; });
                 const gas = get(world, `${jet.name}Gas`), rate = jets[i]! > 0.03 ? Math.round(70 + 260 * jets[i]!) : 0;
                 if (world.get(gas, ParticleEmitter).rate !== rate) world.update(gas, ParticleEmitter, (p) => { p.rate = rate; });
             });
