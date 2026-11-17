@@ -18,9 +18,10 @@ export class NoSave extends Error {
 /**
  * A save from an earlier server, brought up to this one. Before there was a station (1): every warehouse is empty, nobody is
  * docked and no order to move ore was ever given. Before orders were numbered (2): the orders it remembers are numbered in the
- * order they were answered, and the pilot's count starts from them. Before there were berths (3): nobody has one.
+ * order they were answered, and the pilot's count starts from them. Before there were berths (3): nobody has one. Before the
+ * station bought ore (4): it has bought none, nobody has been paid, and no order remembered was a sale.
  */
-function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<string, unknown>> }): void {
+function upgrade(saved: { version?: unknown; station?: unknown; pilots?: Record<string, Record<string, unknown>> }): void {
     if (typeof saved?.pilots !== 'object' || saved.pilots === null) return;
     if (saved.version === 1) {
         for (const pilot of Object.values(saved.pilots)) { pilot.stored ??= 0; pilot.docked ??= false; pilot.ops ??= []; }
@@ -39,6 +40,14 @@ function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<stri
         // Before there were berths a docked ship lay wherever she had stopped off the station. She is free there now, with no berth.
         for (const pilot of Object.values(saved.pilots)) { delete pilot.docked; pilot.berth = 0; pilot.mooring = 'none'; }
         saved.version = 4;
+    }
+    if (saved.version === 4) {
+        saved.station = { ore: 0 };
+        for (const pilot of Object.values(saved.pilots)) {
+            pilot.credits = 0;
+            for (const op of Array.isArray(pilot.ops) ? pilot.ops as Record<string, unknown>[] : []) { op.sell = false; op.paid = 0; op.credits = 0; }
+        }
+        saved.version = 5;
     }
 }
 /**

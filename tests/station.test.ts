@@ -18,7 +18,7 @@ const placed = (where: { [id: string]: { p?: readonly number[]; q?: readonly num
     let out = 0;
     ids.forEach((id, i) => {
         const want = where[id] ?? {};
-        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: 0, berth: want.berth ?? 0, mooring: want.mooring ?? 'none', moves: 0, p: [...(want.p ?? SECTOR.berths[i % 2]!)] as Vec3, q: [...(want.q ?? [0, 0, 0, 1])] as [number, number, number, number], ops: [] };
+        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: 0, credits: 0, berth: want.berth ?? 0, mooring: want.mooring ?? 'none', moves: 0, p: [...(want.p ?? SECTOR.berths[i % 2]!)] as Vec3, q: [...(want.q ?? [0, 0, 0, 1])] as [number, number, number, number], ops: [] };
         out += want.cargo ?? 0;
     });
     saved.rock.remaining = TOTAL - out;

@@ -42,6 +42,7 @@ export enum TransferRefusal {
     TRANSFER_REFUSAL_EXPIRED = 8,
     TRANSFER_REFUSAL_OUT_OF_ORDER = 9,
     TRANSFER_REFUSAL_NOT_SAVED = 10,
+    TRANSFER_REFUSAL_WRONG_PRICE = 11,
 }
 
 export interface Vec3 {
@@ -476,6 +477,59 @@ export const TransferRequest = {
     decode(bytes: Uint8Array): TransferRequest { return TransferRequest.read(new Reader(bytes), bytes.length); },
 };
 
+export interface SellRequest {
+    op: string;
+    seq: number;
+    grams: number;
+    price: number;
+}
+
+export const SellRequest = {
+    create(init: Partial<SellRequest> = {}): SellRequest {
+        return { op: '', seq: 0, grams: 0, price: 0, ...init };
+    },
+    write(m: SellRequest, w: Writer): void {
+        if (m.op !== '') { w.tag(1, 2); w.string(m.op); }
+        if (m.seq !== 0) { w.tag(2, 0); w.uint32(m.seq); }
+        if (m.grams !== 0) { w.tag(3, 0); w.sint64(m.grams); }
+        if (m.price !== 0) { w.tag(4, 0); w.sint64(m.price); }
+    },
+    read(r: Reader, end: number): SellRequest {
+        const m = SellRequest.create();
+        while (r.pos < end) {
+            const t = r.tag(); const wt = t & 7;
+            switch (t >>> 3) {
+                case 1: if (wt === 2) m.op = r.string(); else r.skip(wt); break;
+                case 2: if (wt === 0) m.seq = r.uint32(); else r.skip(wt); break;
+                case 3: if (wt === 0) m.grams = r.sint64(); else r.skip(wt); break;
+                case 4: if (wt === 0) m.price = r.sint64(); else r.skip(wt); break;
+                default: r.skip(wt);
+            }
+        }
+        return m;
+    },
+    toJSON(m: SellRequest): unknown {
+        const o: Record<string, unknown> = {};
+        o.op = m.op;
+        o.seq = m.seq;
+        o.grams = m.grams;
+        o.price = m.price;
+        return o;
+    },
+    fromJSON(j: unknown): SellRequest {
+        const o = jObj(j, "SellRequest");
+        const m = SellRequest.create();
+        if (o.op != null) m.op = jStr(o.op, "SellRequest.op");
+        if (o.seq != null) m.seq = jInt(o.seq, "SellRequest.seq", 0, 4294967295);
+        if (o.grams != null) m.grams = jInt(o.grams, "SellRequest.grams", -9007199254740991, 9007199254740991);
+        if (o.price != null) m.price = jInt(o.price, "SellRequest.price", -9007199254740991, 9007199254740991);
+        return m;
+    },
+    shape: "SellRequest{1:string op,2:uint32 seq,3:sint64 grams,4:sint64 price}",
+    encode(m: SellRequest): Uint8Array { const w = new Writer(); SellRequest.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): SellRequest { return SellRequest.read(new Reader(bytes), bytes.length); },
+};
+
 export interface Rock {
     id: string;
     at?: Vec3 | undefined;
@@ -589,11 +643,13 @@ export interface Station {
     dockSpeed: number;
     approachRange: number;
     berths: Berth[];
+    buyLot: number;
+    buyPrice: number;
 }
 
 export const Station = {
     create(init: Partial<Station> = {}): Station {
-        return { id: '', name: '', dockSpeed: 0, approachRange: 0, berths: [], ...init };
+        return { id: '', name: '', dockSpeed: 0, approachRange: 0, berths: [], buyLot: 0, buyPrice: 0, ...init };
     },
     write(m: Station, w: Writer): void {
         if (m.id !== '') { w.tag(1, 2); w.string(m.id); }
@@ -602,6 +658,8 @@ export const Station = {
         if (m.dockSpeed !== 0) { w.tag(5, 1); w.double(m.dockSpeed); }
         if (m.approachRange !== 0) { w.tag(6, 1); w.double(m.approachRange); }
         for (const v of m.berths) { w.tag(7, 2); w.bytes(Berth.encode(v)); }
+        if (m.buyLot !== 0) { w.tag(8, 0); w.uint32(m.buyLot); }
+        if (m.buyPrice !== 0) { w.tag(9, 0); w.uint32(m.buyPrice); }
     },
     read(r: Reader, end: number): Station {
         const m = Station.create();
@@ -614,6 +672,8 @@ export const Station = {
                 case 5: if (wt === 1) m.dockSpeed = r.double(); else r.skip(wt); break;
                 case 6: if (wt === 1) m.approachRange = r.double(); else r.skip(wt); break;
                 case 7: if (wt === 2) m.berths.push(Berth.read(r, r.end())); else r.skip(wt); break;
+                case 8: if (wt === 0) m.buyLot = r.uint32(); else r.skip(wt); break;
+                case 9: if (wt === 0) m.buyPrice = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -627,6 +687,8 @@ export const Station = {
         o.dockSpeed = m.dockSpeed;
         o.approachRange = m.approachRange;
         o.berths = m.berths.map((v) => Berth.toJSON(v));
+        o.buyLot = m.buyLot;
+        o.buyPrice = m.buyPrice;
         return o;
     },
     fromJSON(j: unknown): Station {
@@ -638,9 +700,11 @@ export const Station = {
         if (o.dockSpeed != null) m.dockSpeed = jNum(o.dockSpeed, "Station.dockSpeed");
         if (o.approachRange != null) m.approachRange = jNum(o.approachRange, "Station.approachRange");
         if (o.berths != null) m.berths = jArr(o.berths, "Station.berths").map((v) => Berth.fromJSON(v));
+        if (o.buyLot != null) m.buyLot = jInt(o.buyLot, "Station.buyLot", 0, 4294967295);
+        if (o.buyPrice != null) m.buyPrice = jInt(o.buyPrice, "Station.buyPrice", 0, 4294967295);
         return m;
     },
-    shape: "Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths};Vec3{1:double x,2:double y,3:double z};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over}",
+    shape: "Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths,8:uint32 buy_lot,9:uint32 buy_price};Vec3{1:double x,2:double y,3:double z};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over}",
     encode(m: Station): Uint8Array { const w = new Writer(); Station.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): Station { return Station.read(new Reader(bytes), bytes.length); },
 };
@@ -662,11 +726,12 @@ export interface EnterReply {
     nextMove: number;
     berth: number;
     mooring: Mooring;
+    credits: number;
 }
 
 export const EnterReply = {
     create(init: Partial<EnterReply> = {}): EnterReply {
-        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, ...init };
+        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, credits: 0, ...init };
     },
     write(m: EnterReply, w: Writer): void {
         if (m.account !== '') { w.tag(1, 2); w.string(m.account); }
@@ -685,6 +750,7 @@ export const EnterReply = {
         if (m.nextMove !== 0) { w.tag(15, 0); w.uint32(m.nextMove); }
         if (m.berth !== 0) { w.tag(16, 0); w.uint32(m.berth); }
         if (m.mooring !== 0) { w.tag(17, 0); w.int32(m.mooring); }
+        if (m.credits !== 0) { w.tag(18, 0); w.uint32(m.credits); }
     },
     read(r: Reader, end: number): EnterReply {
         const m = EnterReply.create();
@@ -707,6 +773,7 @@ export const EnterReply = {
                 case 15: if (wt === 0) m.nextMove = r.uint32(); else r.skip(wt); break;
                 case 16: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
                 case 17: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
+                case 18: if (wt === 0) m.credits = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -730,6 +797,7 @@ export const EnterReply = {
         o.nextMove = m.nextMove;
         o.berth = m.berth;
         o.mooring = m.mooring;
+        o.credits = m.credits;
         return o;
     },
     fromJSON(j: unknown): EnterReply {
@@ -751,9 +819,10 @@ export const EnterReply = {
         if (o.nextMove != null) m.nextMove = jInt(o.nextMove, "EnterReply.nextMove", 0, 4294967295);
         if (o.berth != null) m.berth = jInt(o.berth, "EnterReply.berth", 0, 4294967295);
         if (o.mooring != null) m.mooring = jInt(o.mooring, "EnterReply.mooring", -2147483648, 2147483647);
+        if (o.credits != null) m.credits = jInt(o.credits, "EnterReply.credits", 0, 4294967295);
         return m;
     },
-    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked,15:uint32 next_move,16:uint32 berth,17:Mooring mooring};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
+    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked,15:uint32 next_move,16:uint32 berth,17:Mooring mooring,18:uint32 credits};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,5:double dock_speed,6:double approach_range,7:repeated Berth berths,8:uint32 buy_lot,9:uint32 buy_price};Berth{1:uint32 id,2:Vec3 at,3:Vec3 approach,4:Vec3 over};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5}",
     encode(m: EnterReply): Uint8Array { const w = new Writer(); EnterReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): EnterReply { return EnterReply.read(new Reader(bytes), bytes.length); },
 };
@@ -898,11 +967,14 @@ export interface TransferReply {
     repeat: boolean;
     next: number;
     seq: number;
+    sell: boolean;
+    paid: number;
+    credits: number;
 }
 
 export const TransferReply = {
     create(init: Partial<TransferReply> = {}): TransferReply {
-        return { op: '', ok: false, why: 0, withdraw: false, grams: 0, cargo: 0, stored: 0, repeat: false, next: 0, seq: 0, ...init };
+        return { op: '', ok: false, why: 0, withdraw: false, grams: 0, cargo: 0, stored: 0, repeat: false, next: 0, seq: 0, sell: false, paid: 0, credits: 0, ...init };
     },
     write(m: TransferReply, w: Writer): void {
         if (m.op !== '') { w.tag(1, 2); w.string(m.op); }
@@ -915,6 +987,9 @@ export const TransferReply = {
         if (m.repeat !== false) { w.tag(8, 0); w.bool(m.repeat); }
         if (m.next !== 0) { w.tag(9, 0); w.uint32(m.next); }
         if (m.seq !== 0) { w.tag(10, 0); w.uint32(m.seq); }
+        if (m.sell !== false) { w.tag(11, 0); w.bool(m.sell); }
+        if (m.paid !== 0) { w.tag(12, 0); w.uint32(m.paid); }
+        if (m.credits !== 0) { w.tag(13, 0); w.uint32(m.credits); }
     },
     read(r: Reader, end: number): TransferReply {
         const m = TransferReply.create();
@@ -931,6 +1006,9 @@ export const TransferReply = {
                 case 8: if (wt === 0) m.repeat = r.bool(); else r.skip(wt); break;
                 case 9: if (wt === 0) m.next = r.uint32(); else r.skip(wt); break;
                 case 10: if (wt === 0) m.seq = r.uint32(); else r.skip(wt); break;
+                case 11: if (wt === 0) m.sell = r.bool(); else r.skip(wt); break;
+                case 12: if (wt === 0) m.paid = r.uint32(); else r.skip(wt); break;
+                case 13: if (wt === 0) m.credits = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -948,6 +1026,9 @@ export const TransferReply = {
         o.repeat = m.repeat;
         o.next = m.next;
         o.seq = m.seq;
+        o.sell = m.sell;
+        o.paid = m.paid;
+        o.credits = m.credits;
         return o;
     },
     fromJSON(j: unknown): TransferReply {
@@ -963,9 +1044,12 @@ export const TransferReply = {
         if (o.repeat != null) m.repeat = jBool(o.repeat, "TransferReply.repeat");
         if (o.next != null) m.next = jInt(o.next, "TransferReply.next", 0, 4294967295);
         if (o.seq != null) m.seq = jInt(o.seq, "TransferReply.seq", 0, 4294967295);
+        if (o.sell != null) m.sell = jBool(o.sell, "TransferReply.sell");
+        if (o.paid != null) m.paid = jInt(o.paid, "TransferReply.paid", 0, 4294967295);
+        if (o.credits != null) m.credits = jInt(o.credits, "TransferReply.credits", 0, 4294967295);
         return m;
     },
-    shape: "TransferReply{1:string op,2:bool ok,3:TransferRefusal why,4:bool withdraw,5:uint32 grams,6:uint32 cargo,7:uint32 stored,8:bool repeat,9:uint32 next,10:uint32 seq};enum TransferRefusal{TRANSFER_REFUSAL_UNSPECIFIED=0,TRANSFER_REFUSAL_NONE=1,TRANSFER_REFUSAL_NOT_DOCKED=2,TRANSFER_REFUSAL_BAD_AMOUNT=3,TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD=4,TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE=5,TRANSFER_REFUSAL_HOLD_FULL=6,TRANSFER_REFUSAL_BAD_ORDER=7,TRANSFER_REFUSAL_EXPIRED=8,TRANSFER_REFUSAL_OUT_OF_ORDER=9,TRANSFER_REFUSAL_NOT_SAVED=10}",
+    shape: "TransferReply{1:string op,2:bool ok,3:TransferRefusal why,4:bool withdraw,5:uint32 grams,6:uint32 cargo,7:uint32 stored,8:bool repeat,9:uint32 next,10:uint32 seq,11:bool sell,12:uint32 paid,13:uint32 credits};enum TransferRefusal{TRANSFER_REFUSAL_UNSPECIFIED=0,TRANSFER_REFUSAL_NONE=1,TRANSFER_REFUSAL_NOT_DOCKED=2,TRANSFER_REFUSAL_BAD_AMOUNT=3,TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD=4,TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE=5,TRANSFER_REFUSAL_HOLD_FULL=6,TRANSFER_REFUSAL_BAD_ORDER=7,TRANSFER_REFUSAL_EXPIRED=8,TRANSFER_REFUSAL_OUT_OF_ORDER=9,TRANSFER_REFUSAL_NOT_SAVED=10,TRANSFER_REFUSAL_WRONG_PRICE=11}",
     encode(m: TransferReply): Uint8Array { const w = new Writer(); TransferReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): TransferReply { return TransferReply.read(new Reader(bytes), bytes.length); },
 };
@@ -1074,11 +1158,13 @@ export interface StateEvent {
     berth: number;
     mooring: Mooring;
     hold: DockRefusal;
+    credits: number;
+    stationOre: number;
 }
 
 export const StateEvent = {
     create(init: Partial<StateEvent> = {}): StateEvent {
-        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, hold: 0, ...init };
+        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, nextMove: 0, berth: 0, mooring: 0, hold: 0, credits: 0, stationOre: 0, ...init };
     },
     write(m: StateEvent, w: Writer): void {
         if (m.tick !== 0) { w.tag(1, 0); w.uint32(m.tick); }
@@ -1096,6 +1182,8 @@ export const StateEvent = {
         if (m.berth !== 0) { w.tag(13, 0); w.uint32(m.berth); }
         if (m.mooring !== 0) { w.tag(14, 0); w.int32(m.mooring); }
         if (m.hold !== 0) { w.tag(15, 0); w.int32(m.hold); }
+        if (m.credits !== 0) { w.tag(16, 0); w.uint32(m.credits); }
+        if (m.stationOre !== 0) { w.tag(17, 0); w.uint32(m.stationOre); }
     },
     read(r: Reader, end: number): StateEvent {
         const m = StateEvent.create();
@@ -1117,6 +1205,8 @@ export const StateEvent = {
                 case 13: if (wt === 0) m.berth = r.uint32(); else r.skip(wt); break;
                 case 14: if (wt === 0) m.mooring = r.int32(); else r.skip(wt); break;
                 case 15: if (wt === 0) m.hold = r.int32(); else r.skip(wt); break;
+                case 16: if (wt === 0) m.credits = r.uint32(); else r.skip(wt); break;
+                case 17: if (wt === 0) m.stationOre = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -1139,6 +1229,8 @@ export const StateEvent = {
         o.berth = m.berth;
         o.mooring = m.mooring;
         o.hold = m.hold;
+        o.credits = m.credits;
+        o.stationOre = m.stationOre;
         return o;
     },
     fromJSON(j: unknown): StateEvent {
@@ -1159,9 +1251,11 @@ export const StateEvent = {
         if (o.berth != null) m.berth = jInt(o.berth, "StateEvent.berth", 0, 4294967295);
         if (o.mooring != null) m.mooring = jInt(o.mooring, "StateEvent.mooring", -2147483648, 2147483647);
         if (o.hold != null) m.hold = jInt(o.hold, "StateEvent.hold", -2147483648, 2147483647);
+        if (o.credits != null) m.credits = jInt(o.credits, "StateEvent.credits", 0, 4294967295);
+        if (o.stationOre != null) m.stationOre = jInt(o.stationOre, "StateEvent.stationOre", 0, 4294967295);
         return m;
     },
-    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move,13:uint32 berth,14:Mooring mooring,15:DockRefusal hold};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6,DOCK_REFUSAL_NOT_SAVED=7}",
+    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move,13:uint32 berth,14:Mooring mooring,15:DockRefusal hold,16:uint32 credits,17:uint32 station_ore};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked,10:uint32 berth,11:Mooring mooring};enum Mooring{MOORING_UNSPECIFIED=0,MOORING_NONE=1,MOORING_ASSIGNED=2,MOORING_DOCKING=3,MOORING_DOCKED=4,MOORING_UNDOCKING=5};enum DockRefusal{DOCK_REFUSAL_UNSPECIFIED=0,DOCK_REFUSAL_NONE=1,DOCK_REFUSAL_TOO_FAR=2,DOCK_REFUSAL_TOO_FAST=3,DOCK_REFUSAL_NO_BERTH_FREE=4,DOCK_REFUSAL_MANEUVERING=6,DOCK_REFUSAL_NOT_SAVED=7}",
     encode(m: StateEvent): Uint8Array { const w = new Writer(); StateEvent.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): StateEvent { return StateEvent.read(new Reader(bytes), bytes.length); },
 };

@@ -38,7 +38,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, berthMark: berthSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, berthMark: berthSeen, stationShown: { credits: '', sell: '', canSell: false }, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -474,7 +474,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
             ink(jobState, online.link === 'online' ? rgb(ICE) : rgb(AMBER));
             say(jobHold, `YOUR HOLD   ${tonnage(online.cargo)} T`);
             ink(jobHold, mining.firing ? rgb(AMBER) : rgb(ICE));
-            say(jobDelivered, `YOUR WAREHOUSE   ${tonnage(online.stored)} T`);
+            say(jobDelivered, online.credits > 0 ? `WAREHOUSE   ${tonnage(online.stored)} T     ${online.credits} CR` : `YOUR WAREHOUSE   ${tonnage(online.stored)} T`);
             ink(jobDelivered, online.docked ? rgb(AMBER) : online.stored > 0 ? rgb(ICE) : rgb(HAZE));
             say(jobState, online.link !== 'online' ? (online.link === 'refused' ? 'REFUSED' : online.link === 'lost' ? 'LINK LOST' : 'CONNECTING') : online.mooring === 'none' ? `${online.name}   ONLINE` : `${online.name}   BERTH ${online.berth}   ${online.mooring === 'assigned' ? 'KEPT' : online.mooring.toUpperCase()}`);
             fill(jobAboard, 0);
@@ -523,6 +523,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         state.locked = targets.probe.locked;
         state.picks = targets.probe.picks.map((pick) => ({ index: pick.index, x: pick.left * scale, y: pick.top * scale }));
         for (const name in state.stationSpots) if (!dock.spots[name]) delete state.stationSpots[name];
+        state.stationShown = dock.shown;
         for (const name in dock.spots) state.stationSpots[name] = { x: dock.spots[name]!.left * scale, y: dock.spots[name]!.top * scale };
         for (const name in state.refitSpots) if (!yard.spots[name]) delete state.refitSpots[name];
         for (const name in yard.spots) state.refitSpots[name] = { x: yard.spots[name]!.left * scale, y: yard.spots[name]!.top * scale };

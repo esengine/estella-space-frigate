@@ -56,6 +56,8 @@ enum TransferRefusal {
   TRANSFER_REFUSAL_OUT_OF_ORDER = 9;
   // It was valid and could not be written to disk, so it was not done. Asked again under the same number and name it is tried again.
   TRANSFER_REFUSAL_NOT_SAVED = 10;
+  // A sale that named a price the station is not paying.
+  TRANSFER_REFUSAL_WRONG_PRICE = 11;
 }
 
 message Vec3 { double x = 1; double y = 2; double z = 3; }
@@ -88,12 +90,17 @@ message DockRequest { bool dock = 1; }
 // remembered beside that number, and refused as expired if not.
 // `grams` is signed so that a client asking for less than nothing is refused by the rules and not by the wire.
 message TransferRequest { string op = 1; bool withdraw = 2; sint64 grams = 3; uint32 seq = 4; }
+// Ore out of the sender's own warehouse to the station, for credits. It is numbered and named as a transfer is, from the same
+// count, and done once as one is. `price` is the price for a lot that the sender's glass showed: the server compares it with
+// its own and refuses a sale that names another. There is no field for what the seller is to be paid.
+message SellRequest { string op = 1; uint32 seq = 2; sint64 grams = 3; sint64 price = 4; }
 
 // ── replies ──
 message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 4; }
 // A berth: where a ship lies in it, and the point above it where she is taken in hand and let go.
 message Berth { uint32 id = 1; Vec3 at = 2; Vec3 approach = 3; Vec3 over = 4; }
-message Station { reserved 4; string id = 1; string name = 2; Vec3 at = 3; double dock_speed = 5; double approach_range = 6; repeated Berth berths = 7; }
+// `buy_lot` grams of ore is what the station buys at a time, for `buy_price` credits.
+message Station { reserved 4; string id = 1; string name = 2; Vec3 at = 3; double dock_speed = 5; double approach_range = 6; repeated Berth berths = 7; uint32 buy_lot = 8; uint32 buy_price = 9; }
 message EnterReply {
   string account = 1;
   string name = 2;
@@ -113,6 +120,7 @@ message EnterReply {
   // The berth kept for her or that she lies in; 0 is none.
   uint32 berth = 16;
   Mooring mooring = 17;
+  uint32 credits = 18;
 }
 message SteerReply { uint32 taken = 1; }
 message MineReply { bool asking = 1; }
@@ -131,6 +139,10 @@ message TransferReply {
   // The number this pilot's next order must carry.
   uint32 next = 9;
   uint32 seq = 10;
+  // For a sale: that it was one, what it paid, and the pilot's credits after it (her credits as they stand, on any reply).
+  bool sell = 11;
+  uint32 paid = 12;
+  uint32 credits = 13;
 }
 
 // ── events ──
@@ -165,4 +177,7 @@ message StateEvent {
   Mooring mooring = 14;
   // With a berth kept for her: what stands between her and being taken in hand, as the server sees her now.
   DockRefusal hold = 15;
+  uint32 credits = 16;
+  // The ore the station has bought, from anyone.
+  uint32 station_ore = 17;
 }

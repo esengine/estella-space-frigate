@@ -104,7 +104,7 @@ async function pilot(creds, fingerprint = contract.fingerprint) {
 }
 const at = (v) => [v.x, v.y, v.z];
 const heading = (level) => { const q = level, x = 2 * (q.x * q.z + q.w * q.y), z = 1 - 2 * (q.x * q.x + q.y * q.y); return Math.atan2(x, z); };
-const sumNow = async () => { const h = await health(); return h.remaining + h.held + h.stored; };
+const sumNow = async () => { const h = await health(); return h.remaining + h.held + h.stored + h.station; };
 
 try {
     // ---- A sector is founded on purpose -----------------------------------------
@@ -115,7 +115,7 @@ try {
     pass('with no save and no --new the server does not start, and creates nothing');
     await start(['--new']);
     assert.equal(existsSync(data), true, 'the new sector is written at once');
-    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: TOTAL, held: 0, stored: 0, total: TOTAL, saving: 'ok' });
+    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: TOTAL, held: 0, stored: 0, station: 0, credits: 0, total: TOTAL, saving: 'ok' });
     pass('founded with --new, a sector holds one rock of ten tonnes and no cargo, and is on disk before anyone arrives');
 
     // ---- Who may come in ----------------------------------------------------------
@@ -287,7 +287,7 @@ try {
     assert.equal(saved.pilots['pilot-a'].cargo, before.a);
     assert.equal(saved.pilots['pilot-b'].cargo, before.b);
     await start();
-    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: before.left, held: before.a + before.b, stored: 0, total: TOTAL, saving: 'ok' });
+    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: before.left, held: before.a + before.b, stored: 0, station: 0, credits: 0, total: TOTAL, saving: 'ok' });
     const ships = await books();
     for (const id of ['pilot-a', 'pilot-b']) assert.ok(Math.hypot(ships[id].flight.pos.x - before.ships[id].flight.pos.x, ships[id].flight.pos.y - before.ships[id].flight.pos.y, ships[id].flight.pos.z - before.ships[id].flight.pos.z) < 0.5, `${id} is where she was`);
     await until('both to be back by themselves', () => a.session.state === 'ready' && b.session.state === 'ready', 15000);
@@ -328,7 +328,7 @@ try {
     await a.api.mine({ on: true });
     await wait(600);
     assert.deepEqual({ a: a.state.cargo, b: b.state.cargo }, last);
-    assert.deepEqual(await health(), { ok: true, pilots: 2, remaining: 0, held: TOTAL, stored: 0, total: TOTAL, saving: 'ok' });
+    assert.deepEqual(await health(), { ok: true, pilots: 2, remaining: 0, held: TOTAL, stored: 0, station: 0, credits: 0, total: TOTAL, saving: 'ok' });
     pass(`mined out, the two holds are ${(last.a / GRAMS).toFixed(2)} t and ${(last.b / GRAMS).toFixed(2)} t: ten tonnes, and an empty rock gives no more`);
 
     assert.ok(sums.seen > 200);
@@ -336,13 +336,15 @@ try {
     pass(`every one of the ${sums.seen} states sent while both pilots were in added up to exactly ten tonnes`);
 
     // ==== The station: carry it, dock, and put it in a warehouse of one's own ================================
-    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, MANEUVERING = 6, DOCK_NOT_SAVED = 7, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
+    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, MANEUVERING = 6, DOCK_NOT_SAVED = 7, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10, WRONG_PRICE = 11;
     const ledger = [];
     /** A line in the books: where every gram is, by the server's own account, and that they are ten tonnes. */
     const note = async (event) => {
-        const h = await health(), sum = h.remaining + h.held + h.stored;
-        ledger.push({ at: new Date().toISOString(), event, remainingT: h.remaining / GRAMS, holdsT: h.held / GRAMS, warehousesT: h.stored / GRAMS, sumT: sum / GRAMS });
+        const h = await health(), sum = h.remaining + h.held + h.stored + h.station;
+        ledger.push({ at: new Date().toISOString(), event, remainingT: h.remaining / GRAMS, holdsT: h.held / GRAMS, warehousesT: h.stored / GRAMS, stationT: h.station / GRAMS, sumT: sum / GRAMS, credits: h.credits });
         assert.equal(sum, TOTAL, `after "${event}" the books hold ${sum} g`);
+        // Credits come only from the station buying ore, at its one price: what has been paid is what its stock was bought for.
+        assert.equal(h.credits, (h.station / SECTOR.station.buys.lot) * SECTOR.station.buys.price, `after "${event}" ${h.credits} credits are out for ${h.station} g bought`);
         return h;
     };
     let ops = 0;
@@ -377,6 +379,7 @@ try {
     like(await mine('pilot-a'), { docked: false, berth: 1, mooring: 'assigned', hold: 'TOO FAR' });
     like(await move(a, 'pilot-a', false, 1 * GRAMS), { ok: false, why: NOT_DOCKED });
     like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED });
+    like(await a.api.sell({ seq: (await mine('pilot-a')).nextMove, op: op('a'), grams: SECTOR.station.buys.lot, price: SECTOR.station.buys.price }), { ok: false, why: NOT_DOCKED, paid: 0, credits: 0 }, 'selling from where she mined');
     await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: false, grams: 1 * GRAMS, docked: true, mooring: M.DOCKED, account: 'pilot-a', at: 'kestrel-station' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
     await note('A, where she mined, says she is docked and tries to store: refused');
     assert.equal((await mine('pilot-a')).stored, 0);
@@ -671,19 +674,154 @@ try {
     await note('A\'s order to take 0.20 t, sent again after 64 others, a stop and start, a dropped link and a kill: refused as expired each time');
     pass('an order is not done a second time after sixty-four others, a restart, a dropped link and a kill: it is refused as expired, and the balances stand');
 
+    // ==== The station buys ore ==================================================================================
+    const LOT = SECTOR.station.buys.lot, PRICE = SECTOR.station.buys.price;
+    assert.deepEqual([LOT, PRICE, a.welcome.station.buyLot, a.welcome.station.buyPrice], [1 * GRAMS, 100, LOT, PRICE]);
+    /** A sale as the game orders it: one lot at the price the station gave, under the pilot's next number and a name of its own. */
+    const trade = async (me, id, o = {}) => me.api.sell({ seq: o.seq ?? (await mine(id)).nextMove, op: o.op ?? op(id.slice(-1)), grams: o.grams ?? LOT, price: o.price ?? PRICE }, o.options);
+    const purse = async () => { const p = await books(), h = await health(); return { a: [p['pilot-a'].stored, p['pilot-a'].credits], b: [p['pilot-b'].stored, p['pilot-b'].credits], station: h.station, credits: h.credits }; };
+    // Everything A carries goes into her warehouse first: a sale is out of a warehouse, never a hold.
+    const aboard = (await mine('pilot-a')).cargo;
+    if (aboard > 0) like(await move(a, 'pilot-a', false, aboard), { ok: true, cargo: 0 });
+    const open = await purse();
+    assert.ok(open.a[0] >= 4 * GRAMS && open.b[0] >= 5 * GRAMS, JSON.stringify(open));
+    assert.deepEqual([open.a[1], open.b[1], open.station, open.credits], [0, 0, 0, 0]);
+    assert.deepEqual([a.welcome.credits, a.state.credits, a.state.stationOre], [0, 0, 0]);
+    await note('before the station has bought anything: no stock, no credits');
+
+    // The delivery: A sells a tonne, B sells a tonne; a hundred credits each, two tonnes in the station.
+    const firstSale = { seq: (await mine('pilot-a')).nextMove, op: op('a') };
+    like(await trade(a, 'pilot-a', firstSale), { seq: firstSale.seq, op: firstSale.op, ok: true, why: NONE, sell: true, grams: LOT, paid: PRICE, credits: PRICE, stored: open.a[0] - LOT, cargo: 0, repeat: false, next: firstSale.seq + 1 });
+    await note('A sells one tonne for 100 credits');
+    like(await trade(b, 'pilot-b'), { ok: true, sell: true, paid: PRICE, credits: PRICE, stored: open.b[0] - LOT });
+    await note('B sells one tonne for 100 credits');
+    assert.deepEqual(await purse(), { a: [open.a[0] - LOT, 100], b: [open.b[0] - LOT, 100], station: 2 * LOT, credits: 200 });
+    await until('both to see it', () => a.state.credits === 100 && a.state.stored === open.a[0] - LOT && a.state.stationOre === 2 * LOT && b.state.credits === 100 && b.state.stationOre === 2 * LOT);
+    pass('A and B each sell one tonne from her own warehouse: each has 100 credits and a tonne less, the station has two tonnes, and it is still ten tonnes in all');
+
+    // The server's price, the server's lot, the seller's own warehouse.
+    const beforeForged = await purse();
+    for (const price of [101, 99, 0, -100, 1_000_000]) like(await trade(a, 'pilot-a', { price }), { ok: false, why: WRONG_PRICE, paid: 0, credits: 100 }, `price ${price}`);
+    for (const grams of [2 * GRAMS, LOT + 1, LOT - 1, 1, 0, -LOT, 9 * GRAMS]) like(await trade(a, 'pilot-a', { grams }), { ok: false, why: BAD_AMOUNT, paid: 0, credits: 100 }, `grams ${grams}`);
+    // What a client adds to say what it is paid, or whose ore it is: one wire refuses the request whole, the other reads only what it knows.
+    const forgedSale = await a.session.request('sell', { seq: (await mine('pilot-a')).nextMove, op: op('a'), grams: LOT, price: PRICE, paid: 99_999, credits: 99_999, account: 'pilot-b', from: 'pilot-b', stationOre: 0 }, { retries: 0, timeoutMs: 1500 }).catch(() => null);
+    const forgedSold = forgedSale?.ok === true ? 1 : 0;
+    if (forgedSale) like(forgedSale, { ok: true, paid: PRICE, credits: 100 + PRICE }, 'a sale that said it was worth 99 999');
+    assert.deepEqual(await purse(), { a: [beforeForged.a[0] - forgedSold * LOT, 100 + forgedSold * PRICE], b: beforeForged.b, station: beforeForged.station + forgedSold * LOT, credits: beforeForged.credits + forgedSold * PRICE });
+    // A pilot with less than a lot in her warehouse sells nothing, whatever the other has.
+    const bAll = (await mine('pilot-b')).stored;
+    like(await move(b, 'pilot-b', true, bAll - 400_000), { ok: true, stored: 400_000 });
+    like(await trade(b, 'pilot-b'), { ok: false, why: NOT_IN_WAREHOUSE, paid: 0, credits: 100 });
+    like(await move(b, 'pilot-b', false, bAll - 400_000), { ok: true, stored: bAll });
+    assert.equal((await mine('pilot-a')).stored, beforeForged.a[0] - forgedSold * LOT);
+    await note('forged prices, amounts and payments, and a sale with less than a lot stored: nothing sold but what the station priced');
+    pass('a sale that names another price or another amount is refused, one that says what it should be paid is paid the station\'s price or not read at all, and a warehouse with less than a lot sells nothing');
+
+    // Once.
+    const mid = await purse();
+    const oneSale = { seq: (await mine('pilot-a')).nextMove, op: op('a') };
+    like(await trade(a, 'pilot-a', oneSale), { ok: true, repeat: false, credits: mid.a[1] + PRICE });
+    for (let n = 0; n < 15; n++) like(await trade(a, 'pilot-a', oneSale), { ok: true, repeat: true, paid: PRICE, credits: mid.a[1] + PRICE, stored: mid.a[0] - LOT });
+    const burstOfSales = await Promise.all(Array.from({ length: 15 }, () => trade(a, 'pilot-a', oneSale)));
+    assert.ok(burstOfSales.every((r) => r.ok && r.repeat && r.credits === mid.a[1] + PRICE));
+    // Ten different sales at once under the one next number: one has it.
+    const sameNumber = (await mine('pilot-a')).nextMove;
+    const rush = await Promise.all(Array.from({ length: 10 }, () => trade(a, 'pilot-a', { seq: sameNumber })));
+    assert.equal(rush.filter((r) => r.ok).length, 1, JSON.stringify(rush.map((r) => [r.ok, r.why])));
+    assert.ok(rush.filter((r) => !r.ok).every((r) => r.why === EXPIRED));
+    assert.deepEqual(await purse(), { a: [mid.a[0] - 2 * LOT, mid.a[1] + 2 * PRICE], b: mid.b, station: mid.station + 2 * LOT, credits: mid.credits + 2 * PRICE });
+    await note('A repeats one sale 31 times and sends ten more at once under one number: two sales in all');
+    pass('a sale is made once however often it is asked: thirty-one repeats of one order, and ten different orders at once under one number, sold two tonnes, not forty-one');
+
+    // An old sale, sent again after sixty-four other orders.
+    const oldSale = { seq: (await mine('pilot-b')).nextMove, op: op('b') };
+    like(await trade(b, 'pilot-b', oldSale), { ok: true, repeat: false });
+    for (let n = 0; n < 64; n++) {
+        if (n % 3 === 0) like(await trade(b, 'pilot-b', { price: 7 }), { ok: false });
+        else like(await move(b, 'pilot-b', n % 3 === 1, 100_000), { ok: true });
+    }
+    const afterMany = await purse();
+    assert.equal((await mine('pilot-b')).nextMove, oldSale.seq + 65);
+    const resold = async (when) => {
+        like(await trade(b, 'pilot-b', oldSale), { ok: false, why: EXPIRED, paid: 0, credits: afterMany.b[1] }, when);
+        assert.deepEqual(await purse(), afterMany, when);
+    };
+    await resold('at once');
+    await restart('gently');
+    await ready(a, b);
+    await resold('after a stop and start');
+    await restart('kill');
+    await ready(a, b);
+    await resold('after a kill');
+    await note('B\'s sale, sent again after 64 other orders, a stop and start and a kill: refused as expired each time');
+    pass('an old sale is not made again after sixty-four moves and refused sales, a restart and a kill: it is refused as expired, and no ore or credits move');
+
+    // A disk that will not take the write: no sale, and no "sold".
+    await rm(`${data}.bak`, { force: true, recursive: true });
+    await mkdir(`${data}.bak`);
+    const unsold = await purse(), stuckSale = { seq: (await mine('pilot-b')).nextMove, op: op('b') };
+    const turnedAway = [];
+    for (let n = 0; n < 4; n++) turnedAway.push(await trade(b, 'pilot-b', stuckSale));
+    assert.ok(turnedAway.every((r) => r.ok === false && r.why === NOT_SAVED && r.repeat === false && r.paid === 0 && r.credits === unsold.b[1] && r.stored === unsold.b[0]), JSON.stringify(turnedAway.map((r) => [r.ok, r.why, r.paid, r.credits])));
+    assert.deepEqual(await purse(), unsold, 'the server holds no sale the disk does not');
+    const diskNow = () => readFile(data, 'utf8').then((text) => { const saved = JSON.parse(text); return [saved.pilots['pilot-b'].stored, saved.pilots['pilot-b'].credits, saved.station.ore]; });
+    assert.deepEqual(await diskNow(), [unsold.b[0], unsold.b[1], unsold.station]);
+    await note('the disk refuses writes: B\'s sale is refused four times, nothing is sold');
+    await restart('kill');
+    assert.deepEqual(await purse(), unsold, 'killed with the disk stuck: still unsold');
+    await ready(a, b);
+    await rm(`${data}.bak`, { recursive: true });
+    like(await trade(b, 'pilot-b', stuckSale), { ok: true, repeat: false, paid: PRICE, credits: unsold.b[1] + PRICE, stored: unsold.b[0] - LOT });
+    for (let n = 0; n < 3; n++) like(await trade(b, 'pilot-b', stuckSale), { ok: true, repeat: true, credits: unsold.b[1] + PRICE });
+    assert.deepEqual(await diskNow(), [unsold.b[0] - LOT, unsold.b[1] + PRICE, unsold.station + LOT]);
+    // Told it was sold, and killed that instant.
+    await restart('kill');
+    assert.deepEqual(await purse(), { a: unsold.a, b: [unsold.b[0] - LOT, unsold.b[1] + PRICE], station: unsold.station + LOT, credits: unsold.credits + PRICE });
+    await until('saving to be well again', async () => (await health()).saving === 'ok', 5000);
+    await note('the disk mends: the same sale is made once, and is there after the server is killed the instant it said so');
+    await ready(a, b);
+    pass('a sale the disk refused is refused however often it is asked and is in no balance; once the disk mends the same order is made exactly once, and killed the instant it said so the server comes back with the ore sold and the credits paid');
+
+    // Stopped dead in the middle of a sale, at each place it could be: all of it or none.
+    for (const point of ['before-write', 'after-write']) {
+        await restart('gently', { SECTOR_CRASH: point });
+        await ready(a, b);
+        const was = await purse(), name = { seq: (await mine('pilot-b')).nextMove, op: op('b') };
+        const child = server;
+        const answer = await trade(b, 'pilot-b', { ...name, options: { retries: 0, timeoutMs: 3000 } }).then(() => 'answered', () => 'no answer');
+        assert.equal(await child.gone, 86, child.said);
+        server = null;
+        assert.equal(answer, 'no answer');
+        await start();
+        const now = await purse();
+        const whole = now.b[0] === was.b[0] - LOT && now.b[1] === was.b[1] + PRICE && now.station === was.station + LOT, none = now.b[0] === was.b[0] && now.b[1] === was.b[1] && now.station === was.station;
+        assert.ok(whole || none, `stopped at ${point}: ${JSON.stringify({ was, now })}`);
+        assert.equal(whole, point === 'after-write', `stopped at ${point}`);
+        await note(`the server is stopped dead ${point.replace('-', ' ')} of a sale: ${whole ? 'ore, stock and credits all moved' : 'none of them did'}`);
+        await ready(a, b);
+        const retry = await trade(b, 'pilot-b', name);
+        assert.deepEqual([retry.ok, retry.repeat, retry.stored, retry.credits], [true, whole, was.b[0] - LOT, was.b[1] + PRICE]);
+        like(await trade(b, 'pilot-b', name), { ok: true, repeat: true });
+        assert.deepEqual(await purse(), { a: was.a, b: [was.b[0] - LOT, was.b[1] + PRICE], station: was.station + LOT, credits: was.credits + PRICE });
+        await note(`she asks again under the same number and name: ${whole ? 'answered, not sold again' : 'sold, once'}`);
+    }
+    const sales = await purse();
+    pass(`stopped dead before and after writing a sale (the write itself, cut short, is the same write as a move of ore, checked above), the server comes back with the warehouse, the station's stock and the credits all changed or none of them; asked again, the sale is made exactly once (the station now holds ${sales.station / GRAMS} t, bought for ${sales.credits} credits)`);
+
     // Signing in again: the same ship in the same berth, the same hold, the same warehouse.
     const leaving = await mine('pilot-a');
     a.session.close();
     await wait(400);
     assert.equal(await occupied('A signed out, docked'), `${lies.a === 1 ? '1:pilot-a:docked 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:docked'}`);
     a = await pilot(CREDS.a);
-    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked, a.welcome.nextMove, a.welcome.berth, a.welcome.mooring], [leaving.cargo, leaving.stored, true, leaving.nextMove, lies.a, M.DOCKED]);
+    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked, a.welcome.nextMove, a.welcome.berth, a.welcome.mooring, a.welcome.credits], [leaving.cargo, leaving.stored, true, leaving.nextMove, lies.a, M.DOCKED, leaving.credits]);
+    assert.ok(leaving.credits >= 300, `she has ${leaving.credits} credits`);
     assert.deepEqual(a.welcome.flight.p, leaving.flight.pos);
     assert.deepEqual(at(a.welcome.flight.p), [...berthFor(lies.a).at]);
     assert.equal(a.welcome.station.name, SECTOR.station.name);
     assert.deepEqual(a.welcome.station.berths.map((berth) => [berth.id, at(berth.at), at(berth.approach)]), BERTHS.map((berth) => [berth.id, [...berth.at], [...berth.approach]]));
     await until('her state', () => a.state?.stored === leaving.stored && a.state.docked && a.state.berth === lies.a);
-    pass('signed in again she has the same ship in the same berth, the same hold and the same warehouse');
+    pass('signed in again she has the same ship in the same berth, the same hold, the same warehouse and the same credits');
 
     // The account signed in a second time while the first is still there: one ship, one berth, and the old seat can do nothing.
     const former = a;
@@ -707,6 +845,7 @@ try {
     like(await a.api.dock({ dock: false }), { docked: false, why: NONE, berth: lies.a, mooring: M.UNDOCKING });
     like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED }, 'the instant she casts off');
     like(await move(a, 'pilot-a', false, 1), { ok: false, why: NOT_DOCKED }, 'the instant she casts off');
+    like(await a.api.sell({ seq: (await mine('pilot-a')).nextMove, op: op('a'), grams: SECTOR.station.buys.lot, price: SECTOR.station.buys.price }), { ok: false, why: NOT_DOCKED, paid: 0 }, 'selling the instant she casts off');
     like(await a.api.dock({ dock: false }), { why: MANEUVERING, mooring: M.UNDOCKING });
     assert.equal(await occupied('A casting off'), `${lies.a === 1 ? '1:pilot-a:undocking 2:pilot-b:docked' : '1:pilot-b:docked 2:pilot-a:undocking'}`);
     const leavingAt = Date.now();
@@ -826,8 +965,8 @@ try {
     assert.deepEqual([kept2.mooring, kept2.berth, kept2.docked, at(kept2.flight.pos)], ['docked', lieNext, true, [...berthFor(lieNext).at]]);
     await occupied('the disk mended, A was told she had docked, and the server was killed that instant: she is in her berth');
     await ready(a, b);
-    like(await move(a, 'pilot-a', false, 1), { ok: true }, 'and her warehouse is open');
-    like(await move(a, 'pilot-a', true, 1), { ok: true });
+    like(await move(a, 'pilot-a', true, 1), { ok: true }, 'and her warehouse is open');
+    like(await move(a, 'pilot-a', false, 1), { ok: true });
     await until('saving to be well again', async () => (await health()).saving === 'ok', 5000);
     await note('A reaches a berth while the disk refuses writes, and again as it mends');
     pass(`a ship that reaches her berth while the disk refuses writes lies there and is not called docked, with her warehouse shut; killed then, she comes back with no berth, as she had been told; when the disk mends she is told ${toldAfter} ms later, and killed that instant she comes back docked`);

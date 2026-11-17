@@ -12,6 +12,8 @@ export const contract = defineContract({
         dock: { req: proto(pb.DockRequest), res: proto(pb.DockReply) },
         // Between the sender's own hold and the sender's own warehouse. What is wrong with an amount is the rules' to say, as a refusal: nothing is checked here.
         transfer: { req: proto(pb.TransferRequest), res: proto(pb.TransferReply) },
+        // Out of the sender's own warehouse, to the station, for credits. The reply is a transfer's: it is the same kind of order.
+        sell: { req: proto(pb.SellRequest), res: proto(pb.TransferReply) },
     },
     events: { state: proto(pb.StateEvent) },
 });
@@ -62,6 +64,7 @@ const TRANSFERS: Record<TransferRefusal, pb.TransferRefusal> = {
     'EXPIRED': pb.TransferRefusal.TRANSFER_REFUSAL_EXPIRED,
     'OUT OF ORDER': pb.TransferRefusal.TRANSFER_REFUSAL_OUT_OF_ORDER,
     'NOT SAVED': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_SAVED,
+    'WRONG PRICE': pb.TransferRefusal.TRANSFER_REFUSAL_WRONG_PRICE,
 };
 export const toTransferRefusal = (why: TransferRefusal): pb.TransferRefusal => TRANSFERS[why];
 export const fromTransferRefusal = (why: pb.TransferRefusal): TransferRefusal => (Object.keys(TRANSFERS) as TransferRefusal[]).find((text) => TRANSFERS[text] === why) ?? 'BAD ORDER';

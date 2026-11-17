@@ -35,6 +35,8 @@ export const SECTOR = {
         tug: { speed: 16, turn: 0.3 },
         // A berth kept for a pilot who has gone is given up after this.
         reserveMs: 30_000,
+        // What the station buys: ore, a lot at a time out of the seller's own warehouse, at one price. A test price, fixed.
+        buys: { lot: 1 * GRAMS, price: 100 },
     },
 } as const;
 
@@ -87,13 +89,18 @@ export type DockRefusal = '' | 'TOO FAR' | 'TOO FAST' | 'NO BERTH FREE' | 'MANEU
  * Why ore did not move between a hold and a warehouse. '' is that it did.
  * EXPIRED: its number was answered long ago and the answer is no longer kept; it was not done again. OUT OF ORDER: its number is
  * ahead of the next. NOT SAVED: it was valid and could not be written, so it was not done; asked again it will be tried again.
+ * WRONG PRICE: a sale that named a price the station is not paying.
  */
-export type TransferRefusal = '' | 'NOT DOCKED' | 'BAD AMOUNT' | 'NOT ENOUGH IN THE HOLD' | 'NOT ENOUGH IN THE WAREHOUSE' | 'HOLD FULL' | 'BAD ORDER' | 'EXPIRED' | 'OUT OF ORDER' | 'NOT SAVED';
+export type TransferRefusal = '' | 'NOT DOCKED' | 'BAD AMOUNT' | 'NOT ENOUGH IN THE HOLD' | 'NOT ENOUGH IN THE WAREHOUSE' | 'HOLD FULL' | 'BAD ORDER' | 'EXPIRED' | 'OUT OF ORDER' | 'NOT SAVED' | 'WRONG PRICE';
 
 export interface PilotView { account: string; name: string; p: Vec3; q: Quat4; v: Vec3; th: number; mining: boolean; docked: boolean; berth: number; mooring: Mooring; cargo: number }
 
 /** What came of an order to move ore, kept under the order's own name so that asking again is told the same and nothing moves twice. */
-export interface Transfer { seq: number; op: string; ok: boolean; why: TransferRefusal; withdraw: boolean; grams: number; cargo: number; stored: number }
+export interface Transfer {
+    seq: number; op: string; ok: boolean; why: TransferRefusal; withdraw: boolean; grams: number; cargo: number; stored: number;
+    /** A sale to the station and not a move between hold and warehouse; what it paid, if it was made; and the pilot's credits after it. */
+    sell: boolean; paid: number; credits: number;
+}
 
 export const berthOf = (id: number) => SECTOR.station.berths.find((berth) => berth.id === id) ?? null;
 

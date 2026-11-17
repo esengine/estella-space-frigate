@@ -29,6 +29,8 @@ export interface SavedPilot {
     q: Quat4;
     /** The last few answers, so that an order asked again straight away is told what it was told. Being forgotten here undoes nothing. */
     ops: Transfer[];
+    /** What the station has paid her for ore, less nothing yet: there is nothing to spend it on. */
+    credits: number;
     /**
      * When a berth that is only kept for her is given up, in milliseconds of the clock on the wall: set the moment her pilot
      * goes, and 0 while her pilot is at her helm or nothing is only kept. It is a time and not a count, so that a server stopped
@@ -38,9 +40,11 @@ export interface SavedPilot {
 }
 
 export interface Saved {
-    version: 4;
+    version: 5;
     sector: string;
     rock: { id: string; total: number; remaining: number };
+    /** The ore the station has bought. It is still ore of this sector: the rock, the holds, the warehouses and this are the whole. */
+    station: { ore: number };
     pilots: Record<string, SavedPilot>;
 }
 
@@ -59,7 +63,7 @@ export const ANSWERS_KEPT = 8;
 const UNSAVED_SAID_MS = 400;
 
 interface Pilot {
-    account: Account; cargo: number; stored: number; moves: number; ops: Transfer[]; flight: Flight; here: boolean;
+    account: Account; cargo: number; stored: number; credits: number; moves: number; ops: Transfer[]; flight: Flight; here: boolean;
     berth: number; mooring: Mooring;
     /** While the station has her in hand: which leg of the way in or out she is on, and the way she is being moved, for others to draw her by. */
     leg: number; vel: Vec;
@@ -72,7 +76,7 @@ interface Pilot {
 }
 
 export function freshSave(): Saved {
-    return { version: 4, sector: SECTOR.id, rock: { id: SECTOR.rock.id, total: SECTOR.rock.total, remaining: SECTOR.rock.total }, pilots: {} };
+    return { version: 5, sector: SECTOR.id, rock: { id: SECTOR.rock.id, total: SECTOR.rock.total, remaining: SECTOR.rock.total }, station: { ore: 0 }, pilots: {} };
 }
 
 const whole = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0;
@@ -82,9 +86,10 @@ const whole = (n: unknown): n is number => typeof n === 'number' && Number.isInt
  * sector was founded with; and that a berth is a berth the station has, held by one pilot.
  */
 export function auditSave(saved: Saved): string {
-    if (saved === null || typeof saved !== 'object' || saved.version !== 4 || saved.sector !== SECTOR.id || saved.rock?.id !== SECTOR.rock.id || typeof saved.pilots !== 'object' || saved.pilots === null) return 'the save is for another sector or version';
+    if (saved === null || typeof saved !== 'object' || saved.version !== 5 || saved.sector !== SECTOR.id || saved.rock?.id !== SECTOR.rock.id || typeof saved.pilots !== 'object' || saved.pilots === null) return 'the save is for another sector or version';
     if (!whole(saved.rock.total) || !whole(saved.rock.remaining) || saved.rock.total !== SECTOR.rock.total) return 'the rock is not the one this sector holds';
-    let held = 0;
+    if (!whole(saved.station?.ore)) return 'the station has no stock this server wrote';
+    let held = 0, credits = 0;
     const taken = new Set<number>();
     for (const [id, pilot] of Object.entries(saved.pilots)) {
         if (!whole(pilot.cargo) || !whole(pilot.stored) || !whole(pilot.moves) || !vec3(pilot.p) || !quat4(pilot.q) || !Array.isArray(pilot.ops)) return `pilot ${id} is not a pilot this server wrote`;
@@ -93,9 +98,15 @@ export function auditSave(saved: Saved): string {
         if (pilot.berth !== 0) taken.add(pilot.berth);
         if (pilot.lapses !== undefined && (!whole(pilot.lapses) || (pilot.lapses !== 0 && pilot.mooring !== 'assigned'))) return `pilot ${id} has a berth due to be given up that is not one only kept`;
         for (const op of pilot.ops) if (typeof op?.op !== 'string' || typeof op.ok !== 'boolean' || !whole(op.cargo) || !whole(op.stored) || !whole(op.seq) || op.seq < 1 || op.seq > pilot.moves) return `pilot ${id} has an order to move ore this server did not write`;
+        if (!whole(pilot.credits)) return `pilot ${id} has credits this server did not write`;
         held += pilot.cargo + pilot.stored;
+        credits += pilot.credits;
     }
-    if (held + saved.rock.remaining !== saved.rock.total) return `ore does not add up: ${held} g held and stored + ${saved.rock.remaining} g left is not ${saved.rock.total} g`;
+    // The station pays one price, a lot at a time, and credits come from nowhere else: what has been paid is what its stock was bought for.
+    const { lot, price } = SECTOR.station.buys;
+    if (saved.station.ore % lot !== 0 || credits !== (saved.station.ore / lot) * price) return `credits do not add up: ${credits} paid for ${saved.station.ore} g bought at ${price} a lot`;
+    held += saved.station.ore;
+    if (held + saved.rock.remaining !== saved.rock.total) return `ore does not add up: ${held} g held, stored and bought + ${saved.rock.remaining} g left is not ${saved.rock.total} g`;
     return '';
 }
 
@@ -130,6 +141,7 @@ export function tug(f: Flight, to: Vec, facing: Quat, dt: number): { there: bool
 export function createSector(saved: Saved = freshSave(), accounts: readonly Account[] = TEST_ACCOUNTS, opts: { clock?: () => number; keeper?: boolean } = {}) {
     const fault = auditSave(saved);
     if (fault) throw new Error(fault);
+    let bought = saved.station.ore;
     let remaining = saved.rock.remaining, tick = 0, turn = 0, dirty = false, owed = 0, failed = '';
     let wall = (opts.clock ?? Date.now)();
     const keeper = opts.keeper === true;
@@ -148,7 +160,7 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         // still there (the server was killed under her) has thirty seconds from now, which is the soonest she can have gone.
         const lapses = mooring === 'assigned' ? (kept?.lapses || wall + SECTOR.station.reserveMs) : 0;
         pilots.set(account.id, {
-            account, cargo: kept?.cargo ?? 0, stored: kept?.stored ?? 0, moves: kept?.moves ?? 0, ops: kept ? kept.ops.map((op) => ({ ...op })) : [],
+            account, cargo: kept?.cargo ?? 0, stored: kept?.stored ?? 0, credits: kept?.credits ?? 0, moves: kept?.moves ?? 0, ops: kept ? kept.ops.map((op) => ({ ...op })) : [],
             flight, here: false, berth, mooring, leg: 0, vel: STILL, lapses, hold: '', arrived: -1,
             orders: { ...NO_ORDERS }, waiting: [], taken: 0, ack: 0, starved: 0, dropped: 0, wantsMine: false, mining: false, why: 'NOT MINING',
         });
@@ -254,14 +266,15 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
      * it, and only when that returns are the balances, the number and the answer changed. If it throws, nothing has
      * happened: the order is told NOT SAVED, keeps its number, and asked again is done then, once.
      */
-    const transfer = (id: string, seq: unknown, op: unknown, withdraw: unknown, grams: unknown, persist?: (after: Saved) => void): Transfer & { fresh: boolean; moved: boolean; next: number } => {
+    const order = (id: string, seq: unknown, op: unknown, withdraw: unknown, grams: unknown, persist: ((after: Saved) => void) | undefined, sale: { price: unknown } | null): Transfer & { fresh: boolean; moved: boolean; next: number } => {
         const pilot = pilots.get(id)!;
-        const shown = (): Pick<Transfer, 'seq' | 'op' | 'withdraw' | 'grams'> => ({
+        const sell = sale !== null;
+        const shown = (): Pick<Transfer, 'seq' | 'op' | 'withdraw' | 'grams' | 'sell' | 'paid'> => ({
             seq: whole(seq) && seq <= 0xffffffff ? seq : 0, op: typeof op === 'string' ? op.slice(0, 64) : '', withdraw: withdraw === true,
-            grams: whole(grams) && grams <= SECTOR.rock.total ? grams : 0,
+            grams: whole(grams) && grams <= SECTOR.rock.total ? grams : 0, sell, paid: 0,
         });
         /** A refusal that takes no number: the order was not one, or was not this pilot's next. */
-        const turnAway = (why: TransferRefusal) => ({ ...shown(), ok: false, why, cargo: pilot.cargo, stored: pilot.stored, fresh: false, moved: false, next: pilot.moves + 1 });
+        const turnAway = (why: TransferRefusal) => ({ ...shown(), ok: false, why, cargo: pilot.cargo, stored: pilot.stored, credits: pilot.credits, fresh: false, moved: false, next: pilot.moves + 1 });
         const remember = (answer: Transfer): Transfer[] => [...pilot.ops, answer].slice(-ANSWERS_KEPT);
         if (!pilot.here || typeof op !== 'string' || op.length < 8 || op.length > 64 || typeof withdraw !== 'boolean' || !whole(seq) || seq < 1 || seq > 0xffffffff) return turnAway('BAD ORDER');
         if (seq <= pilot.moves) {
@@ -272,31 +285,50 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
         let why: TransferRefusal = '';
         if (pilot.mooring !== 'docked') why = 'NOT DOCKED';
         else if (typeof grams !== 'number' || !Number.isInteger(grams) || grams <= 0 || grams > SECTOR.rock.total) why = 'BAD AMOUNT';
+        // A sale is one lot, at the station's price, out of what is in her own warehouse. The price she names is what her glass
+        // showed her: it is only ever compared, and what she is paid is the station's figure, never one she sent.
+        else if (sell && grams !== SECTOR.station.buys.lot) why = 'BAD AMOUNT';
+        else if (sell && sale.price !== SECTOR.station.buys.price) why = 'WRONG PRICE';
+        else if (sell && grams > pilot.stored) why = 'NOT ENOUGH IN THE WAREHOUSE';
+        else if (sell) why = '';
         else if (withdraw && grams > pilot.stored) why = 'NOT ENOUGH IN THE WAREHOUSE';
         else if (withdraw && pilot.cargo + grams > SECTOR.capacity) why = 'HOLD FULL';
         else if (!withdraw && grams > pilot.cargo) why = 'NOT ENOUGH IN THE HOLD';
         if (why) {
-            const refused: Transfer = { ...shown(), ok: false, why, cargo: pilot.cargo, stored: pilot.stored };
+            const refused: Transfer = { ...shown(), ok: false, why, cargo: pilot.cargo, stored: pilot.stored, credits: pilot.credits };
             pilot.moves = seq;
             pilot.ops = remember(refused);
             dirty = true;
             return { ...refused, fresh: true, moved: false, next: pilot.moves + 1 };
         }
-        const amount = grams as number;
-        const cargo = withdraw ? pilot.cargo + amount : pilot.cargo - amount, stored = withdraw ? pilot.stored - amount : pilot.stored + amount;
-        const done: Transfer = { seq, op, ok: true, why: '', withdraw, grams: amount, cargo, stored };
+        const amount = grams as number, paid = sell ? SECTOR.station.buys.price : 0;
+        // A sale is one thing: her warehouse down a lot, the station's stock up a lot, her credits up the price. They are worked
+        // out together here, written together below, and made true together after that; none of them can be without the others.
+        const cargo = sell ? pilot.cargo : withdraw ? pilot.cargo + amount : pilot.cargo - amount;
+        const stored = sell || withdraw ? pilot.stored - amount : pilot.stored + amount;
+        const credits = pilot.credits + paid, stock = bought + (sell ? amount : 0);
+        const done: Transfer = { seq, op, ok: true, why: '', withdraw: sell ? false : withdraw, grams: amount, cargo, stored, sell, paid, credits };
         const ops = remember(done);
         if (persist) {
             const after = save();
-            after.pilots[id] = { ...after.pilots[id]!, cargo, stored, moves: seq, ops: ops.map((one) => ({ ...one })) };
+            after.station.ore = stock;
+            after.pilots[id] = { ...after.pilots[id]!, cargo, stored, credits, moves: seq, ops: ops.map((one) => ({ ...one })) };
             try { persist(after); } catch (err) {
                 failed = err instanceof Error ? err.message : String(err);
                 return turnAway('NOT SAVED');
             }
         }
-        pilot.cargo = cargo; pilot.stored = stored; pilot.moves = seq; pilot.ops = ops;
+        pilot.cargo = cargo; pilot.stored = stored; pilot.credits = credits; bought = stock; pilot.moves = seq; pilot.ops = ops;
+        if (!persist) dirty = true;
         return { ...done, fresh: true, moved: true, next: pilot.moves + 1 };
     };
+    const transfer = (id: string, seq: unknown, op: unknown, withdraw: unknown, grams: unknown, persist?: (after: Saved) => void) => order(id, seq, op, withdraw, grams, persist, null);
+    /**
+     * Ore out of this pilot's own warehouse to the station, for credits. It is an order like a move of ore: it takes the
+     * pilot's next number, is refused as a value, is written before it is made, and is never done twice. `price` is the
+     * price her glass showed; a sale that names another is refused, and nothing she sends is what she is paid.
+     */
+    const sell = (id: string, seq: unknown, op: unknown, grams: unknown, price: unknown, persist?: (after: Saved) => void) => order(id, seq, op, false, grams, persist, { price });
 
     /** Whether a ship with a berth kept for her is taken in hand now: she is at her approach point and slow enough, as the server has flown her. */
     const clearance = (pilot: Pilot): DockRefusal => mayDock(between(pilot.flight.pos, point(berthOf(pilot.berth)!.approach)), pilot.flight.speed);
@@ -402,10 +434,10 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     const welcome = (id: string) => {
         const pilot = pilots.get(id)!, station = SECTOR.station;
         return {
-            account: id, name: pilot.account.name, flight: copyFlight(pilot.flight), cargo: pilot.cargo, stored: pilot.stored, docked: pilot.mooring === 'docked', berth: pilot.berth, mooring: pilot.mooring, next: pilot.moves + 1,
+            account: id, name: pilot.account.name, flight: copyFlight(pilot.flight), cargo: pilot.cargo, stored: pilot.stored, credits: pilot.credits, docked: pilot.mooring === 'docked', berth: pilot.berth, mooring: pilot.mooring, next: pilot.moves + 1,
             sector: {
                 id: SECTOR.id, name: SECTOR.name, rock: { id: SECTOR.rock.id, at: [...SECTOR.rock.at] as Vec3, total: SECTOR.rock.total, remaining }, range: SECTOR.range, rate: SECTOR.rate, capacity: SECTOR.capacity,
-                station: { id: station.id, name: station.name, at: [...station.at] as Vec3, approachRange: station.approachRange, dockSpeed: station.dockSpeed, berths: station.berths.map((berth) => ({ id: berth.id, at: [...berth.at] as Vec3, over: [...berth.over] as Vec3, approach: [...berth.approach] as Vec3 })) },
+                station: { id: station.id, name: station.name, at: [...station.at] as Vec3, approachRange: station.approachRange, dockSpeed: station.dockSpeed, buys: { ...station.buys }, berths: station.berths.map((berth) => ({ id: berth.id, at: [...berth.at] as Vec3, over: [...berth.over] as Vec3, approach: [...berth.approach] as Vec3 })) },
             },
         };
     };
@@ -413,9 +445,9 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     const stateFor = (id: string) => {
         const pilot = pilots.get(id)!;
         return {
-            tick, rock: remaining, flight: copyFlight(pilot.flight), ack: pilot.ack, waiting: pilot.waiting.length, starved: pilot.starved, dropped: pilot.dropped,
+            tick, rock: remaining, bought, flight: copyFlight(pilot.flight), ack: pilot.ack, waiting: pilot.waiting.length, starved: pilot.starved, dropped: pilot.dropped,
             you: {
-                p: tuple(pilot.flight.pos), cargo: pilot.cargo, stored: pilot.stored, docked: pilot.mooring === 'docked', berth: pilot.berth, mooring: pilot.mooring,
+                p: tuple(pilot.flight.pos), cargo: pilot.cargo, stored: pilot.stored, credits: pilot.credits, docked: pilot.mooring === 'docked', berth: pilot.berth, mooring: pilot.mooring,
                 // In her berth and not yet called docked: said at once to a check, and to her glass only once it has lasted.
                 hold: pilot.mooring === 'assigned' ? pilot.hold : pilot.arrived >= UNSAVED_SAID_MS ? 'NOT SAVED' : '' as DockRefusal, arrived: pilot.arrived >= 0, next: pilot.moves + 1, mining: pilot.mining, why: pilot.why, station: stationRange(pilot.flight),
             },
@@ -426,18 +458,19 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     const save = (): Saved => {
         const out = freshSave();
         out.rock.remaining = remaining;
+        out.station.ore = bought;
         for (const pilot of pilots.values()) {
             const l = pilot.flight.level;
-            out.pilots[pilot.account.id] = { cargo: pilot.cargo, stored: pilot.stored, berth: pilot.berth, mooring: pilot.mooring, moves: pilot.moves, p: tuple(pilot.flight.pos), q: [l.x, l.y, l.z, l.w], ops: pilot.ops.map((op) => ({ ...op })), lapses: pilot.mooring === 'assigned' ? pilot.lapses : 0 };
+            out.pilots[pilot.account.id] = { cargo: pilot.cargo, stored: pilot.stored, berth: pilot.berth, mooring: pilot.mooring, credits: pilot.credits, moves: pilot.moves, p: tuple(pilot.flight.pos), q: [l.x, l.y, l.z, l.w], ops: pilot.ops.map((op) => ({ ...op })), lapses: pilot.mooring === 'assigned' ? pilot.lapses : 0 };
         }
         return out;
     };
 
     /** The sector's ore, wherever it is: what the rock has left, what is in holds, what is in warehouses. They are always the whole. */
-    const ore = (): { remaining: number; held: number; stored: number; total: number } => {
-        let held = 0, stored = 0;
-        for (const pilot of pilots.values()) { held += pilot.cargo; stored += pilot.stored; }
-        return { remaining, held, stored, total: SECTOR.rock.total };
+    const ore = (): { remaining: number; held: number; stored: number; station: number; credits: number; total: number } => {
+        let held = 0, stored = 0, credits = 0;
+        for (const pilot of pilots.values()) { held += pilot.cargo; stored += pilot.stored; credits += pilot.credits; }
+        return { remaining, held, stored, station: bought, credits, total: SECTOR.rock.total };
     };
 
     /**
@@ -463,7 +496,7 @@ export function createSector(saved: Saved = freshSave(), accounts: readonly Acco
     });
 
     return {
-        login, enter, leave, steer, mine, dock, transfer, step, welcome, stateFor, save, ore, berths, committed, unwritten,
+        login, enter, leave, steer, mine, dock, transfer, sell, step, welcome, stateFor, save, ore, berths, committed, unwritten,
         /** The highest helm order taken from this pilot's seat. */
         taken: (id: string): number => pilots.get(id)?.taken ?? 0,
         /** The wall's clock as the sector has it. */

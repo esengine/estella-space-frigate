@@ -23,7 +23,7 @@ const placed = (at: { [id: string]: { cargo?: number; stored?: number; docked?: 
         // Docked is in her own berth; at the station and not docked is on its approach point, where the station will take her in hand when she has a berth.
         const want = at[id] ?? {}, berth = STATION.berths[i]!;
         const p = want.docked ? [...berth.at] : want.atStation ? [...berth.approach] : [...SECTOR.berths[i]!];
-        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: want.stored ?? 0, berth: want.docked ? berth.id : 0, mooring: want.docked ? 'docked' : 'none', moves: 0, p: p as [number, number, number], q: [0, 0, 0, 1], ops: [] };
+        saved.pilots[id] = { cargo: want.cargo ?? 0, stored: want.stored ?? 0, credits: 0, berth: want.docked ? berth.id : 0, mooring: want.docked ? 'docked' : 'none', moves: 0, p: p as [number, number, number], q: [0, 0, 0, 1], ops: [] };
         out += (want.cargo ?? 0) + (want.stored ?? 0);
     });
     saved.rock.remaining = TOTAL - out;
@@ -41,7 +41,7 @@ describe('a pilot\'s warehouse', () => {
         expect(order(s, A, false, 1_500_000)).toMatchObject({ seq: 1, ok: true, why: '', withdraw: false, grams: 1_500_000, cargo: 500_000, stored: 1_500_000, fresh: true, moved: true, next: 2 });
         expect(balances(s, A)).toEqual({ cargo: 500_000, stored: 1_500_000, next: 2 });
         expect(order(s, A, true, 400_000)).toMatchObject({ seq: 2, ok: true, withdraw: true, cargo: 900_000, stored: 1_100_000, next: 3 });
-        expect(s.ore()).toEqual({ remaining: 5 * GRAMS, held: 900_000 + 3 * GRAMS, stored: 1_100_000, total: TOTAL });
+        expect(s.ore()).toEqual({ remaining: 5 * GRAMS, held: 900_000 + 3 * GRAMS, stored: 1_100_000, station: 0, credits: 0, total: TOTAL });
     });
 
     it('is hers alone: nothing the other pilot sends reaches it, and nothing she sends reaches theirs', () => {
@@ -220,7 +220,7 @@ describe('a pilot\'s warehouse', () => {
         const name = op();
         expect(order(s, A, false, 1_250_000, { name, persist: (after) => writeSave(file, after) }).ok).toBe(true);
         const back = createSector(loadSave(file));
-        expect(back.ore()).toEqual({ remaining: 5 * GRAMS, held: 750_000 + 3 * GRAMS, stored: 1_250_000, total: TOTAL });
+        expect(back.ore()).toEqual({ remaining: 5 * GRAMS, held: 750_000 + 3 * GRAMS, stored: 1_250_000, station: 0, credits: 0, total: TOTAL });
         back.enter(A);
         expect(back.welcome(A)).toMatchObject({ cargo: 750_000, stored: 1_250_000, docked: true, next: 2 });
         expect(order(back, A, false, 1_250_000, { seq: 1, name })).toMatchObject({ ok: true, fresh: false, moved: false });

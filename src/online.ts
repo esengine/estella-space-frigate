@@ -31,7 +31,12 @@ export const online = {
     station: {
         name: SECTOR.station.name as string, at: [...SECTOR.station.at] as Vec3, approachRange: SECTOR.station.approachRange as number, dockSpeed: SECTOR.station.dockSpeed as number,
         berths: SECTOR.station.berths.map((berth) => ({ id: berth.id as number, at: [...berth.at] as Vec3, over: [...berth.over] as Vec3, approach: [...berth.approach] as Vec3 })),
+        /** What the station buys ore for, as it told this client on the way in: grams to a lot, and credits for one. */
+        buys: { lot: SECTOR.station.buys.lot as number, price: SECTOR.station.buys.price as number },
     },
+    /** This pilot's credits, and the ore the station has bought from anyone: the server's word. */
+    credits: 0,
+    stationOre: 0,
     /** Ore in this pilot's own warehouse at the station, and whether the server has her docked there. Both are the server's word. */
     stored: 0,
     docked: false,
@@ -44,7 +49,7 @@ export const online = {
     /** The number of the last helm order given this sign-in. */
     numbered: 0,
     /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
-    move: { seq: 0, op: '', withdraw: false, grams: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
+    move: { seq: 0, op: '', withdraw: false, grams: 0, sell: false, price: 0, paid: 0, credits: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
     /** The number the server will take for this pilot's next order to move ore. */
     nextMove: 1,
     mining: false,
@@ -115,6 +120,7 @@ async function enter(): Promise<void> {
     online.sector = reply.sectorName;
     online.cargo = reply.cargo;
     online.stored = reply.stored;
+    online.credits = reply.credits;
     online.docked = reply.docked;
     online.berth = reply.berth;
     online.mooring = fromMooring(reply.mooring);
@@ -123,6 +129,7 @@ async function enter(): Promise<void> {
     if (reply.station) online.station = {
         name: reply.station.name, at: fromVec(reply.station.at), approachRange: reply.station.approachRange, dockSpeed: reply.station.dockSpeed,
         berths: reply.station.berths.map((berth) => ({ id: berth.id, at: fromVec(berth.at), over: fromVec(berth.over), approach: fromVec(berth.approach) })),
+        buys: { lot: reply.station.buyLot, price: reply.station.buyPrice },
     };
     online.capacity = reply.capacity;
     online.range = reply.range;
@@ -152,6 +159,8 @@ export function connectOnline(): void {
         online.rock.remaining = state.remaining;
         online.cargo = state.cargo;
         online.stored = state.stored;
+        online.credits = state.credits;
+        online.stationOre = state.stationOre;
         online.docked = state.docked;
         const was = online.mooring;
         online.berth = state.berth;
@@ -201,11 +210,12 @@ export function askToDock(want: boolean): void {
 
 function sendMove(): void {
     if (!api || online.move.state !== 'pending') return;
-    const { seq, op, withdraw, grams } = online.move;
+    const { seq, op, withdraw, grams, sell, price } = online.move;
     moving = true;
     movedAt = Date.now();
     online.move.tries++;
-    api.transfer({ seq, op, withdraw, grams }, { retries: 0, timeoutMs: 4000 }).then((reply) => {
+    // A sale goes out as a move of ore does, under the same count: asked again it is the same order, and the server makes it once.
+    (sell ? api.sell({ seq, op, grams, price }, { retries: 0, timeoutMs: 4000 }) : api.transfer({ seq, op, withdraw, grams }, { retries: 0, timeoutMs: 4000 })).then((reply) => {
         moving = false;
         if (online.move.op !== reply.op || online.move.state !== 'pending') return;
         const why = fromTransferRefusal(reply.why);
@@ -213,8 +223,8 @@ function sendMove(): void {
         if (!reply.ok && why === 'NOT SAVED') { online.move = { ...online.move, why }; return; }
         // The server never took this number, so the order has not been seen under it: it goes again under the number it gives.
         if (!reply.ok && why === 'OUT OF ORDER' && reply.next > 0) { online.move = { ...online.move, seq: reply.next, why: '' }; return; }
-        online.move = { ...online.move, state: reply.ok ? 'done' : 'refused', why, cargo: reply.cargo, stored: reply.stored, at: Date.now(), repeat: reply.repeat };
-        if (reply.ok) { online.cargo = reply.cargo; online.stored = reply.stored; }
+        online.move = { ...online.move, state: reply.ok ? 'done' : 'refused', why, cargo: reply.cargo, stored: reply.stored, paid: reply.paid, credits: reply.credits, at: Date.now(), repeat: reply.repeat };
+        if (reply.ok) { online.cargo = reply.cargo; online.stored = reply.stored; online.credits = reply.credits; }
     }, () => { moving = false; });
 }
 
@@ -225,7 +235,20 @@ function sendMove(): void {
 export function moveOre(withdraw: boolean, grams: number): boolean {
     if (online.link !== 'online' || online.move.state === 'pending' || !api) return false;
     const op = `${online.account}-${Date.now().toString(36)}-${(++named).toString(36)}-${Math.random().toString(36).slice(2, 10)}`.slice(0, 64);
-    online.move = { seq: online.nextMove, op, withdraw, grams, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
+    online.move = { seq: online.nextMove, op, withdraw, grams, sell: false, price: 0, paid: 0, credits: online.credits, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
+    sendMove();
+    return true;
+}
+
+/**
+ * Order one lot of ore sold to the station out of this pilot's warehouse, at the price the station gave on the way in. One
+ * order at a time, a move of ore or a sale: while one is out there is no second. What is paid is the server's to say.
+ */
+export function sellOre(): boolean {
+    if (online.link !== 'online' || online.move.state === 'pending' || !api) return false;
+    const op = `${online.account}-${Date.now().toString(36)}-${(++named).toString(36)}-${Math.random().toString(36).slice(2, 10)}`.slice(0, 64);
+    const { lot, price } = online.station.buys;
+    online.move = { seq: online.nextMove, op, withdraw: false, grams: lot, sell: true, price, paid: 0, credits: online.credits, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
     sendMove();
     return true;
 }
