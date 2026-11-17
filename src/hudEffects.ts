@@ -1,11 +1,12 @@
 import {
-    Assets, Canvas, CanvasEffect, Material, Name, Parent, Quality, ScaleMode, UIPointerEvents, UIVisual, UIWorldAnchor,
-    defineSystem, GetWorld, spawnUIEntity,
+    Assets, Canvas, CanvasEffect, Material, Name, Parent, Quality, ScaleMode, Time, UINode, UIPointerEvents, UIVisual, UIWorldAnchor,
+    defineSystem, GetWorld, Res, spawnUIEntity,
 } from 'esengine';
 import type { App, Entity, QualityLevel, World } from 'esengine';
 import { clamp } from './flight';
 import { DESIGN } from './hudKit';
 import { mining } from './hudMining';
+import { graphics } from './hudSettings';
 import { ship } from './shipState';
 
 const MATERIALS = {
@@ -40,6 +41,7 @@ export function installHudEffects(app: App): void {
     let marks: Entity | null = null;
     let sheet: Entity | null = null;
     let since = 0;
+    let covered = 0;
     const sent = new Map<string, number>();
     const plain = new Map<string, number>();
     const level = (): QualityLevel => app.getResource(Quality)?.report().level ?? 'high';
@@ -48,7 +50,7 @@ export function installHudEffects(app: App): void {
         (err: unknown) => { console.error(`space-frigate HUD effects did not load: ${err instanceof Error ? err.message : String(err)}`); },
     );
 
-    app.addSystem(defineSystem([GetWorld()], (world) => {
+    app.addSystem(defineSystem([GetWorld(), Res(Time)], (world, time) => {
         if (!materials) return;
         const display = world.findEntityByName('Hud'), root = world.findEntityByName('HudRoot');
         if (display === null || root === null) return;
@@ -65,6 +67,9 @@ export function installHudEffects(app: App): void {
         for (const anchored of world.getEntitiesWithComponents([UIWorldAnchor, Parent])) {
             if (world.get(anchored, Parent).entity === root) world.setParent(anchored, marks);
         }
+        covered = graphics.open || graphics.applying ? 1 : covered * (1 - Math.min(1, Math.min(time.delta, 0.05) * 8));
+        const shown = Math.round((1 - covered) * 100) / 100;
+        if (world.get(marks, UINode).opacity !== shown) world.update(marks, UINode, (n) => { n.opacity = shown; });
         const tier = TIERS[level()];
         effectOn(world, display, tier.lens ? lens : null);
         effectOn(world, sheet, tier.marks ? materials.marks : null);
