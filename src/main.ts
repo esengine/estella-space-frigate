@@ -1,4 +1,4 @@
-import { addPlugin, defineSystem, Particle, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
+import { addPlugin, Assets, defineSystem, Particle, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
@@ -16,6 +16,7 @@ import { installSky } from './sky';
 import { createPlanetfall, fall } from './planetfall';
 import { graphics } from './hudSettings';
 import { KINDS, galaxy, ringSun, systemAt, voyageSeed } from './worlds';
+import { readyKind, showKind } from './planetKinds';
 
 const PLUMES = [
     { name: 'PlumeL', width: 4.0, length: 2.3 },
@@ -28,6 +29,7 @@ const GLOWS = ['EngineGlowL', 'EngineGlowR', 'EngineGlowNL', 'EngineGlowNR'] as 
 const GATES = ['GateA', 'GateB'] as const;
 const BODY = ['Planet', 'Atmosphere', 'Ring'] as const;
 const GATE_RADIUS = 170;
+const PLANET_MATERIAL = 'assets/materials/world-planet.esmaterial';
 // Dust in the space she sails through, to give her way something to be seen against: sparse, short and dim, a few motes at a time.
 // The long lines belong to a jump, which gets them by itself from the speed it runs the field past at.
 const DUST = { from: 0.3, full: 1, rate: 150, glow: 1.9 } as const;
@@ -67,7 +69,12 @@ addPlugin({
         if (online.enabled) { helm.fixed = true; foes.peace = true; }
         app.insertResource(Playthrough, { facts });
         installSky();
-        installLoading(app);
+        installLoading(app, async () => {
+            const assets = app.getResource(Assets);
+            const { handle } = await assets.loadMaterial(PLANET_MATERIAL);
+            showKind(handle, systemAt(ship.system).surface.kind);
+            assets.releaseMaterial(handle);
+        });
         installHud(app);
         installAudio(app);
         const ids = new Map<string, Entity>();
@@ -159,7 +166,7 @@ addPlugin({
             const planet = get(world, 'Planet'), air = get(world, 'Atmosphere'), ring = get(world, 'Ring');
             world.update(planet, Transform, (t) => { t.position = { ...here.at }; t.rotation = { ...look.tilt }; t.scale = { x: here.radius, y: here.radius, z: here.radius }; });
             const ground = world.get(planet, MeshRenderer).material;
-            Material.setUniform(ground, 'u_kind', look.kind);
+            showKind(ground, look.kind);
             look.palette.forEach((color, i) => Material.setUniform(ground, `u_c${i}`, tone(color)));
             Material.setUniform(ground, 'u_accent', tone(look.accent));
             Material.setUniform(ground, 'u_pole', tone(look.pole));
@@ -420,6 +427,7 @@ addPlugin({
                 if (ship.jump < 0 && !online.enabled) {
                     leaving = ship.system;
                     ship.bound = nextSystem(ship.system);
+                    readyKind(app, world, get(world, 'Planet'), systemAt(ship.bound).surface.kind);
                     ship.jump = 0;
                     ship.jumps++;
                 }

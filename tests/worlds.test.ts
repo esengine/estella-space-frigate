@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { FIELD, KINDS, galaxy, hsl, makeSystem, ringSun, systemAt, voyageSeed, type StarSystem } from '../src/worlds';
+import { FIELD, KINDS, KIND_SWITCHES, galaxy, hsl, kindSwitches, makeSystem, ringSun, systemAt, voyageSeed, type Kind, type StarSystem } from '../src/worlds';
 
 const length = (v: { x: number; y: number; z: number }): number => Math.hypot(v.x, v.y, v.z);
 const many = (voyage: number, count: number): StarSystem[] => Array.from({ length: count }, (_, index) => makeSystem(voyage, index));
@@ -90,11 +90,23 @@ describe('the worlds a voyage passes', () => {
         expect(voyageSeed('?headless', () => 0)).toBe(0);
     });
 
-    it('are drawn by a shader that knows every kind the voyage can hold', () => {
+    it('are drawn by a shader with one switch for each kind the voyage can hold, and only that kind compiled', () => {
         const shader = readFileSync(new URL('../assets/materials/planet.esshader', import.meta.url), 'utf8');
-        for (const name of ['giant', 'ice', 'desert', 'lava', 'ocean', 'frozen', 'terran']) expect(shader).toMatch(new RegExp(`vec3 ${name}\\(`));
-        expect(shader).toMatch(/range\(0,6\)/);
-        expect(shader).toMatch(/glow \*= u_kind < 5\.5 \? mix\(0\.25, 1\.0, night\) : night;/);
+        expect(KIND_SWITCHES).toHaveLength(KINDS.length);
+        ['giant', 'ice', 'desert', 'lava', 'ocean', 'frozen', 'terran'].forEach((name, kind) => {
+            const flag = KIND_SWITCHES[kind]!;
+            expect(shader).toContain(`#pragma switch ${flag}\n`);
+            expect(shader).toMatch(new RegExp(`#ifdef ${flag}\\nvec3 ${name}\\(`));
+            expect(shader).toMatch(new RegExp(`defined\\(${flag}\\)\\n    vec3 col = ${name}\\(`));
+            const on = kindSwitches(kind as Kind);
+            expect(Object.keys(on).filter((key) => on[key])).toEqual([flag]);
+        });
+        expect(shader).not.toContain('u_kind');
+        expect(shader).toMatch(/frozen\(D, glow\);\n    glow \*= mix\(0\.25, 1\.0, night\);/);
+        expect(shader).toMatch(/terran\(D, glow\);\n    glow \*= night;/);
+        const material = JSON.parse(readFileSync(new URL('../assets/materials/world-planet.esmaterial', import.meta.url), 'utf8'));
+        expect(material.switches).toEqual({ PLANET_GIANT: true });
+        expect(material.properties).not.toHaveProperty('u_kind');
         const ring = readFileSync(new URL('../assets/materials/ring.esshader', import.meta.url), 'utf8');
         for (const uniform of ['u_split', 'u_second']) expect(ring).toContain(`#pragma param ${uniform} `);
         for (const uniform of ['u_c0', 'u_c5', 'u_accent', 'u_pole', 'u_glow', 'u_seed', 'u_shape', 'u_spot']) expect(shader).toContain(`#pragma param ${uniform} `);

@@ -6,8 +6,10 @@
   "depthTest": true,
   "depthWrite": true,
   "cull": 1,
+  "switches": {
+    "PLANET_GIANT": true
+  },
   "properties": {
-    "u_kind": 0,
     "u_sun": [
       -0.62,
       0.5,
