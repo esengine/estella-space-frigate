@@ -14,7 +14,7 @@ export const loading = { share: 0, done: false, cover: false, error: '' };
 
 type Phase = 'working' | 'shading' | 'switching' | 'settling' | 'lifting' | 'gone';
 
-export function installLoading(app: App): void {
+export function installLoading(app: App, beforePrograms: () => Promise<void>): void {
     let fonts: { regular: number; strong: number } | null = null;
     let asked = false, baked = false, staged = false, target = 0, subject = '';
     let phase: Phase = 'working', clock = 0, quiet = 0;
@@ -35,7 +35,7 @@ export function installLoading(app: App): void {
                 target = progress.total > 0 ? STAGED_SHARE * progress.done / progress.total : STAGED_SHARE;
                 subject = progress.label;
             }).then(() => { baked = true; }, (error: unknown) => { loading.error = error instanceof Error ? error.message : String(error); });
-            void scenes.prepare('main').then(() => scenes.readyRenderPrograms('main')).then(() => { staged = true; }, () => { staged = true; });
+            void scenes.prepare('main').then(beforePrograms).then(() => scenes.readyRenderPrograms('main')).then(() => { staged = true; }, () => { staged = true; });
         }
         if (fonts && !screen) {
             const kit = createKit(world, {} as Textures, fonts);

@@ -3,6 +3,9 @@ export interface Tone { r: number; g: number; b: number; a: 1 }
 
 export const KINDS = ['gas giant', 'ice giant', 'desert world', 'lava world', 'ocean world', 'frozen world', 'terran world'] as const;
 export type Kind = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export const KIND_SWITCHES = ['PLANET_GIANT', 'PLANET_ICE', 'PLANET_DESERT', 'PLANET_LAVA', 'PLANET_OCEAN', 'PLANET_FROZEN', 'PLANET_TERRAN'] as const;
+
+export const kindSwitches = (kind: Kind): Record<string, boolean> => Object.fromEntries(KIND_SWITCHES.map((name, i) => [name, i === kind]));
 
 export interface Ring { normal: Vec; inner: number; outer: number; bright: Tone; dim: Tone; split: number; gap: number; second: Tone }
 
