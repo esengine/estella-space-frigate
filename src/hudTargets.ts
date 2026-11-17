@@ -1,6 +1,7 @@
 import { FillMethod, FillOrigin, TextAlign, UINode, UIVisual, UIVisualType, UIWorldAnchor, placeOnScreen } from 'esengine';
 import type { Entity } from 'esengine';
 import { contract } from './contract';
+import { director } from './director';
 import { clamp } from './flight';
 import { GUNNERY, guns } from './gunnery';
 import { METRES, helm, turnBy } from './helm';
@@ -223,7 +224,8 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         const clear = keptClear(box.width, world.get(marker, UINode).insetLeft.value, 64, anchor.onScreen);
         if (!sameRoom(anchor.edgeInsets, clear)) world.update(marker, UIWorldAnchor, (anchored) => { anchored.edgeInsets = clear; });
         place(callout, world.get(marker, UINode).insetLeft.value > box.width - 380 ? -246 : 86, 2);
-        const quiet = ship.jump >= 0 || ship.away;
+        // Under the harbour's camera the waypoint has done its work: the berth itself is what is being looked at.
+        const quiet = ship.jump >= 0 || ship.away || director.on;
         fade(callout, guns.view || quiet ? 0 : 1);
         fade(bracket, anchor.clamped || quiet ? 0 : 1);
         fade(diamond, anchor.clamped || quiet ? 0 : 1);

@@ -1,6 +1,7 @@
 import { AttenuationModel, Audio, AudioListener, AudioSource, GetWorld, Input, Playthrough, Res, Transform, calculateAttenuation, defineSystem } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { contract } from './contract';
+import { director } from './director';
 import { guns } from './gunnery';
 import { helm, turnBy, type Vec } from './helm';
 import { mining } from './hudMining';
@@ -62,7 +63,7 @@ export function installAudio(app: App): void {
 
         const now: ShipSound = {
             throttle: ship.throttle, order: helm.order, rudder: helm.rudder, elevation: helm.elevation, mode: helm.mode, arrivals: helm.arrivals,
-            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps, impacts: ship.impacts, blow: ship.blow?.closing ?? 0, foeShots: foes.shots, stung: foes.stung, kills: foes.kills, contracts: contract.completions, refits: refit.installs,
+            firing: mining.firing, heat: mining.heat, overheated: mining.overheated, broken: mining.broken, shots: guns.shots, jumps: ship.jumps, impacts: ship.impacts, blow: ship.blow?.closing ?? 0, foeShots: foes.shots, stung: foes.stung, kills: foes.kills, contracts: contract.completions, refits: refit.installs, berthings: director.confirmed,
         };
         const hum = engineVoice(now.throttle), cut = beamVoice(now.firing, now.heat);
         engine = voice(world, engine, 'EngineSound', SOUNDS.engine, ENGINE_AT, ENGINE_REACH, hum, 1.2);

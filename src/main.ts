@@ -14,6 +14,7 @@ import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
 import { PLANETFALL, createPlanetfall, fall } from './planetfall';
+import { DIRECTOR, director, stepDirector, type Rig } from './director';
 import { graphics } from './hudSettings';
 import { KINDS, galaxy, ringSun, systemAt, voyageSeed } from './worlds';
 import { readyKind, showKind } from './planetKinds';
@@ -105,6 +106,7 @@ addPlugin({
         let wide = FOV;
         let open = false;
 let veiled = false, fallen = 0;
+let welcomed = 0;
         const gunnery = createGunnery(app);
         const impacts = createImpacts(app);
         const raiders = createRaiders(app);
@@ -297,6 +299,27 @@ let veiled = false, fallen = 0;
             const { eye, target } = eyeOf(orbit);
             const camera = get(world, 'Camera');
             const cam = { position: turnBy(helm.frame, { x: eye[0], y: eye[1], z: eye[2] }), rotation: mulQuat(helm.frame, lookRotation(eye, target)) };
+            // While the station has her in hand the harbour's director has the camera, unless her pilot has taken the view back.
+            // It works in the sector's coordinates; she is drawn at the origin, so its camera is put about her afterwards.
+            let staged: Rig | null = null;
+            if (online.enabled) {
+                const here = online.pos, look = turnBy(helm.frame, { x: target[0], y: target[1], z: target[2] });
+                const before = director.action;
+                staged = stepDirector({
+                    dt, mooring: online.link === 'online' ? online.mooring : 'none', berth: online.berth, ship: here, aspect: (globalThis.innerWidth || 16) / (globalThis.innerHeight || 9),
+                    own: { eye: [here[0] + cam.position.x, here[1] + cam.position.y, here[2] + cam.position.z], target: [here[0] + look.x, here[1] + look.y, here[2] + look.z], fov: wide },
+                    took: drag.x !== 0 || drag.y !== 0 || wheel !== 0 || space,
+                    arrivedDocked: online.welcomes !== welcomed,
+                });
+                welcomed = online.welcomes;
+                // Cast off, the view she will be handed is made ready behind her: astern and above, her bow ahead.
+                if (director.action === 'out' && before !== 'out') { hand = { ...DIRECTOR.chase }; tour = false; }
+                if (staged) {
+                    const at = [staged.eye[0] - here[0], staged.eye[1] - here[1], staged.eye[2] - here[2]], to = [staged.target[0] - here[0], staged.target[1] - here[1], staged.target[2] - here[2]];
+                    cam.position = { x: at[0]!, y: at[1]!, z: at[2]! };
+                    cam.rotation = lookRotation(at, to);
+                }
+            }
             // Falling through air she is shaken: a few rates at once that never fall into step, so it reads as buffeting and not as a hum.
             const rattle = fall.shake;
             const jolt = rattle <= 0.002 ? { a: 0, b: 0, c: 0 } : {
@@ -359,7 +382,7 @@ let veiled = false, fallen = 0;
                 if (leap.over) ship.jump = -1;
             }
             pace += (clamp(ship.speed / TOP_SPEED, 0, 1) - pace) * Math.min(1, dt * 1.5);
-            const tunnel = leap.tunnel, fov = FOV + SPEED_WIDEN * pace * pace + JUMP.widen * leap.stretch + PLANETFALL.widen * fall.heat;
+            const tunnel = leap.tunnel, fov = staged ? staged.fov : FOV + SPEED_WIDEN * pace * pace + JUMP.widen * leap.stretch + PLANETFALL.widen * fall.heat;
             if (Math.abs(fov - wide) > 0.01) {
                 wide = fov;
                 world.update(camera, Camera, (c) => { c.fov = fov; });

@@ -1,5 +1,6 @@
 import { TextAlign, UIVisual } from 'esengine';
 import { AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Log } from './hudKit';
+import { DIRECTOR, director } from './director';
 import { moveOre, online, pressDock, sellOre } from './online';
 import { GRAMS, tonnage } from './shared/sector';
 
@@ -56,7 +57,7 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
     const down: Record<string, boolean> = {};
     const struck = (frame: Frame, code: string): boolean => { const held = frame.held(code), was = down[code] === true; down[code] = held; return held && !was; };
     const inside = (p: { left: number; top: number } | null, x: number, y: number, w: number, h: number): boolean => !!p && p.left >= x && p.left <= x + w && p.top >= y && p.top <= y + h;
-    let answered = '', refusedAt = 0, told = 'none0', was: string = 'none';
+    let answered = '', refusedAt = 0, told = 'none0', was: string = 'none', seat = 0;
 
     const update = (frame: Frame): void => {
         const keys = { store: struck(frame, 'KeyJ'), take: struck(frame, 'KeyK'), leave: struck(frame, 'KeyH'), sell: struck(frame, 'KeyN') };
@@ -88,9 +89,15 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
             shown.credits = ''; shown.sell = ''; shown.canSell = false;
             return;
         }
-        const left = frame.across / 2 - PANEL.w / 2, top = PANEL.top;
+        // Under the harbour's camera she lies in the left of the picture, and the panel takes the right; in her pilot's own view it
+        // stands where it always has. It comes up a moment after the server says she is docked, never before.
+        const aside = director.on && director.shot === 'berthed';
+        seat += ((aside ? 1 : 0) - seat) * Math.min(1, frame.dt * 6);
+        const left = frame.across / 2 - PANEL.w / 2 + (frame.across / 2 - PANEL.w / 2 - 18) * seat, top = PANEL.top + 26 * seat;
+        const up = Math.max(0, Math.min(1, (director.sinceDocked - DIRECTOR.panelAfter) / DIRECTOR.panelFade));
         place(panel, left, top);
-        fade(panel, 1);
+        fade(panel, up);
+        if (up < 0.6) { for (const name in spots) delete spots[name]; shown.credits = ''; shown.sell = ''; shown.canSell = false; said.text = ''; return; }
         say(title, `${online.station.name}   BERTH ${online.berth}`);
         say(hold, `${tonnage(online.cargo)} T`);
         say(store, `${tonnage(online.stored)} T`);

@@ -316,7 +316,7 @@ try {
     // A client that says it is docked, far from the station, and orders its ore stored.
     // The key is held first, then the lie and the frames that read the key go in one piece, so no state from the server can put the truth back in between.
     await b.page.keyboard.down('KeyJ');
-    await b.page.evaluate(() => { const o = window.__spaceHud.online; o.docked = true; o.mooring = 'docked'; o.berth = 2; window.__estellaCooked.step(2); });
+    await b.page.evaluate(() => { const o = window.__spaceHud.online; o.docked = true; o.mooring = 'docked'; o.berth = 2; window.__spaceHud.director.sinceDocked = 60; window.__estellaCooked.step(1); o.docked = true; o.mooring = 'docked'; o.berth = 2; window.__spaceHud.director.sinceDocked = 60; window.__estellaCooked.step(1); });
     await b.page.keyboard.up('KeyJ');
     await b.step(1);
     await b.until('the station to answer B', (s) => s.move.state === 'refused' || s.move.state === 'done', 10000);

@@ -1,3 +1,4 @@
+import { director } from './director';
 import { TextAlign, UIVisual } from 'esengine';
 import { METRES, helm, turnBack } from './helm';
 import { ALERT, AMBER, HAZE, ICE, rgb, type Frame, type Kit, type Rock } from './hudKit';
@@ -25,9 +26,13 @@ export function buildScope(kit: Kit, rocks: readonly Rock[], probe: TargetProbe)
     const blips = rocks.map((rock) => post(String(rock.index)));
     const half = (v: number): number => Math.round(v * 2) / 2;
     const k = R / SCOPE.range;
+    let away = 0;
 
     return (frame) => {
         place(scope, half(frame.across / 2), SCOPE.top);
+        // The tactical scope goes with the rest of the fighting glass while the station has her.
+        away += ((director.on ? 1 : 0) - away) * Math.min(1, frame.dt * 5);
+        fade(scope, 1 - away);
         const lean = SCOPE.tilt - frame.sway.x * 0.6;
         tilt(plane, -lean, frame.sway.y * 0.5);
         turn(sweep, -frame.time * SCOPE.sweep);

@@ -17,6 +17,7 @@ import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
 import { buildRefit } from './hudRefit';
 import { berthSeen, installSector, pilotsSeen } from './hudSector';
+import { director } from './director';
 import { buildStation } from './hudStation';
 import { flyOnline, online } from './online';
 import { GRAMS, approach, inHand, tonnage } from './shared/sector';
@@ -38,7 +39,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, berthMark: berthSeen, stationShown: { credits: '', sell: '', canSell: false }, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, berthMark: berthSeen, director, stationShown: { credits: '', sell: '', canSell: false }, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -259,7 +260,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
     const sway = { x: 0, y: 0, yaw: 0, pitch: 0, primed: false };
 
     const began = ship.time;
-    let full = false, hot = false, combat = 0;
+    let full = false, hot = false, combat = 0, staging = 0;
 
     return (dt, input) => {
         const screen = app.getResource(ScreenOverlay);
@@ -297,12 +298,16 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         };
         const age = ship.time - began;
         combat += ((guns.view ? 1 : 0) - combat) * Math.min(1, dt * 8);
+        staging += ((director.on ? 1 : 0) - staging) * Math.min(1, dt * 5);
         for (const e of [holdTitle, holdValue, holdTrack, holdBar, holdNote]) fade(e, 1 - combat);
         ink(identityBar, guns.view ? rgb(AMBER) : rgb(ICE, 0.9), UIVisual);
         const boot = clamp(age / BOOT_SECONDS, 0, 1);
         for (const [group, from, most] of groups) {
             const up = (age - from) / 0.6;
-            fade(group, most * ease(up) * (up > 0 && up < 1.4 && Math.sin(age * 71 + from * 9) > 0.55 ? 0.45 : 1) * (group === systems ? 1 - combat : 1));
+            // In the station's hands there is nothing to fight or steer: the fighting and steering glass is put away, and what says
+            // where she is, what is being done with her, the link and the way back to her own view stays.
+            const put = group === systems || group === gauge || group === desk.root ? 1 - staging : 1;
+            fade(group, most * ease(up) * (up > 0 && up < 1.4 && Math.sin(age * 71 + from * 9) > 0.55 ? 0.45 : 1) * (group === systems ? 1 - combat : 1) * put);
         }
         if (boot >= 1 && !state.booted) { state.booted = true; log.say('HELM DISPLAY ONLINE'); }
         const test = clamp((age - 0.6) / 1.6, 0, 1), sweep = Math.sin(Math.PI * test), settle = test * test * (3 - 2 * test);
@@ -338,7 +343,13 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         say(transitNote, ship.system === ship.bound ? 'ARRIVED' : 'GATE TRANSIT');
         say(transitName, `${bound.name} SYSTEM`);
 
-        if (guns.view) {
+        if (director.on) {
+            // The harbour has the camera: said so, with the way to take the view back.
+            ink(viewTitle, rgb(ICE));
+            say(viewTitle, 'HARBOUR VIEW');
+            say(viewMode, 'DRAG TO LOOK FREELY');
+            ink(viewMode, rgb(AMBER));
+        } else if (guns.view) {
             say(viewTitle, 'COMBAT');
             ink(viewTitle, rgb(AMBER));
             say(viewMode, guns.ready > 0 ? `${guns.ready} READY TO FIRE` : 'GUNS TRAINING');
