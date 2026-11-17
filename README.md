@@ -6,7 +6,7 @@ Made with the [Estella engine](https://github.com/esengine/estella).
 
 ![Cruising, turning on thrusters, mining, gunnery, and a jump through a gate to a ringed planet](docs/demo.gif)
 
-A frigate on patrol: fly her, mine asteroids, fight off raiders with five turrets, and jump through gates from one star system to the next: a banded gas giant, a ringed ice giant and a rust-red desert world. Rocks are solid: running into one costs shield, then hull, and knocks both of you off course. Once you take the helm, raiders arrive in waves and make firing passes; lock one with `T`, face it with `L`, and shoot it down. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
+A frigate on patrol: fly her, mine asteroids, fight off raiders with five turrets, and jump through gates from one star system to the next: a banded gas giant, a ringed ice giant and a rust-red desert world. Rocks are solid: running into one costs shield, then hull, and knocks both of you off course. Once you take the helm, raiders arrive in waves and make firing passes; lock one with `T`, face it with `L`, and shoot it down. She sails with a first contract: mine 10 tonnes of ore and deliver it to the gate. The panel at the top of the glass keeps the tonnage aboard and delivered and names the next key to press, the key's button blinks, and the gate's marker lights up once the ore is aboard. Every model, texture, sound and the whole HUD is generated from recipes. There are no hand-painted textures and no models from an outside tool.
 
 ## Controls
 

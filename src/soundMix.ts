@@ -41,6 +41,7 @@ export interface ShipSound {
     foeShots: number;
     stung: number;
     kills: number;
+    contracts: number;
 }
 
 export interface Voice { playing: boolean; volume: number; pitch: number }
@@ -62,6 +63,7 @@ export function cuesBetween(before: ShipSound, now: ShipSound): Cue[] {
     else if (now.mode === 'manual' && now.elevation !== before.elevation) cues.push({ sound: 'helmOrder', volume: 0.3, pitch: now.elevation > before.elevation ? 1.04 : 0.96 });
     else if (now.mode === 'manual' && now.rudder !== before.rudder) cues.push({ sound: 'helmOrder', volume: 0.3, pitch: 1 });
     if (now.arrivals > before.arrivals) cues.push({ sound: 'arrival', volume: 0.35, pitch: 1 });
+    if (now.contracts > before.contracts) cues.push({ sound: 'arrival', volume: 0.5, pitch: 1.5 });
     if (now.overheated && !before.overheated) cues.push({ sound: 'alarm', volume: 0.3, pitch: 1 });
     if (now.broken > before.broken) cues.push({ sound: 'rockBreak', volume: 0.45, pitch: 1 });
     if (now.shots > before.shots) cues.push({ sound: 'gun', volume: 0.85, pitch: 0.92 + 0.03 * (now.shots % 5) });

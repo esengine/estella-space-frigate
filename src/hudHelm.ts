@@ -1,5 +1,6 @@
 import { TextAlign, UIVisual } from 'esengine';
 import type { Entity } from 'esengine';
+import { contract } from './contract';
 import { guns } from './gunnery';
 import { ELEVATION_ORDERS, ENGINE_ORDERS, PITCH_RATE, RUDDER_ORDERS, engage, helm, setElevation, setEngine, setRudder, steady } from './helm';
 import { AMBER, HAZE, ICE, rgb, type Frame, type Kit } from './hudKit';
@@ -100,7 +101,7 @@ export function buildHelm(kit: Kit, probe: TargetProbe): Desk {
                 c.press();
                 consumed = true;
             }
-            const lit = c.lit();
+            const lit = c.lit() || (c.name === contract.cue && frame.time % 0.8 < 0.5);
             ink(c.cap, lit ? rgb(AMBER, 0.95) : rgb(ICE, over ? 0.95 : 0.55), UIVisual);
             ink(c.text, lit ? rgb(AMBER) : over ? rgb(ICE) : rgb(HAZE));
         }

@@ -1,5 +1,6 @@
 import { FillMethod, FillOrigin, TextAlign, UINode, UIVisual, UIVisualType, UIWorldAnchor, placeOnScreen } from 'esengine';
 import type { Entity } from 'esengine';
+import { contract } from './contract';
 import { clamp } from './flight';
 import { GUNNERY, guns } from './gunnery';
 import { METRES, helm, turnBy } from './helm';
@@ -48,6 +49,7 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
 
     const marker = centred(node(root, 'Waypoint', { left: 0, top: 0, width: 72, height: 72 }), 72, 72);
     world.insert(marker, UIWorldAnchor, { offset: { ...helm.gate }, clampToEdges: true, edgeMargin: 64, edgeInsets: { ...KEPT_CLEAR } });
+    const beacon = sliced(marker, 'WaypointBeacon', { left: -30, top: -30, width: 132, height: 132 }, textures.bracket, 34, rgb(AMBER));
     const bracket = sliced(marker, 'WaypointBracket', { left: -6, top: -6, width: 84, height: 84 }, textures.bracket, 34);
     const diamond = image(marker, 'WaypointDiamond', { left: 20, top: 20, width: 32, height: 32 }, textures.diamond);
     const chevron = image(marker, 'WaypointChevron', { left: 12, top: 12, width: 48, height: 48 }, textures.chevron, rgb(AMBER));
@@ -224,9 +226,14 @@ export function buildTargets(kit: Kit, rocks: readonly Rock[], log: Log): { upda
         fade(callout, guns.view || quiet ? 0 : 1);
         fade(bracket, anchor.clamped || quiet ? 0 : 1);
         fade(diamond, anchor.clamped || quiet ? 0 : 1);
-        fade(chevron, anchor.clamped && !quiet ? 0.75 + 0.25 * Math.sin(frame.time * 5) : 0);
+        const due = contract.stage === 'return' && !quiet, beat = 0.5 + 0.5 * Math.sin(frame.time * 6);
+        fade(chevron, anchor.clamped && !quiet ? (due ? 0.55 + 0.45 * beat : 0.75 + 0.25 * Math.sin(frame.time * 5)) : 0);
         if (anchor.clamped && frame.lens) turn(chevron, towardOnScreen(frame.lens, gate));
-        say(waypointName, `NAV ${pad(helm.leg, 2)}  ${helm.gateName}`);
+        fade(beacon, due && !guns.view ? 0.25 + 0.75 * beat : 0);
+        ink(bracket, due ? rgb(AMBER) : rgb(0xffffff), UIVisual);
+        ink(diamond, due ? rgb(AMBER) : rgb(0xffffff), UIVisual);
+        ink(waypointName, rgb(AMBER, due ? 0.6 + 0.4 * beat : 1));
+        say(waypointName, due ? `DELIVER ORE  ${helm.gateName}` : `NAV ${pad(helm.leg, 2)}  ${helm.gateName}`);
         say(waypointRange, reach(away));
         say(waypointEta, ship.speed > 1 ? `ETA ${stamp((away * METRES) / ship.speed)}` : 'ETA  HOLDING');
 

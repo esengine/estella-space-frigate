@@ -10,6 +10,7 @@ import {
     ALERT, AMBER, Contact, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
 } from './hudKit';
+import { CONTRACT, advise, contract, deliver } from './contract';
 import { guns } from './gunnery';
 import { buildGunnery } from './hudGunnery';
 import { MINING, installMining, mining } from './hudMining';
@@ -31,7 +32,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, contract: contract, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -217,6 +218,23 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
     const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
+    const JOB = { w: 480, h: 134, top: 26, bar: 440 };
+    const job = sliced(root, 'Contract', { left: 0, top: JOB.top, width: JOB.w, height: JOB.h }, textures.plate, 26);
+    label(job, 'ContractTitle', { left: 20, top: 12, width: 200, height: 14 }, { size: 10, color: rgb(AMBER), spacing: 2.6, content: 'CONTRACT' });
+    const jobState = label(job, 'ContractState', { right: 20, top: 12, width: 220, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 2.2, align: TextAlign.Right });
+    label(job, 'ContractGoal', { left: 20, top: 30, width: JOB.bar, height: 20 }, { size: 14, color: rgb(ICE), spacing: 1.2, content: `MINE ${CONTRACT.goal} T OF ORE AND DELIVER IT TO THE GATE` });
+    const jobHold = label(job, 'ContractHold', { left: 20, top: 55, width: 200, height: 16 }, { size: 11, color: rgb(HAZE), spacing: 1.6 });
+    const jobDelivered = label(job, 'ContractDelivered', { right: 20, top: 55, width: 240, height: 16 }, { size: 11, color: rgb(HAZE), spacing: 1.6, align: TextAlign.Right });
+    image(job, 'ContractTrack', { left: 20, top: 76, width: JOB.bar, height: 6 }, textures.barTrack, rgb(ICE));
+    const jobBar = (name: string): Entity => node(job, name, { left: 20, top: 76, width: JOB.bar, height: 6 }, { visualType: UIVisualType.Filled, texture: textures.barFill, color: rgb(ICE), fillMethod: FillMethod.Horizontal, fillOrigin: FillOrigin.Left, fillAmount: 0 });
+    const jobAboard = jobBar('ContractAboard'), jobDone = jobBar('ContractDone');
+    solid(job, 'ContractRule', { left: 20, right: 20, top: 91, height: 1 }, rgb(ICE, 0.16));
+    const jobHint = label(job, 'ContractHint', { left: 10, top: 99, width: JOB.w - 20, height: 24 }, { size: 15, color: rgb(AMBER), spacing: 1, align: TextAlign.Center });
+    const notice = centred(node(root, 'Notice', { left: 0, top: 0, width: 760, height: 64 }), 760, 64);
+    image(notice, 'NoticeShade', { left: -60, top: -70, width: 880, height: 204 }, textures.shade);
+    const noticeNote = label(notice, 'NoticeNote', { left: 0, top: 0, width: 760, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
+    const noticeName = label(notice, 'NoticeName', { left: 0, top: 22, width: 760, height: 36 }, { size: 28, color: rgb(ICE), spacing: 5, align: TextAlign.Center });
+    let briefed = -1, stage = contract.stage;
     let jumps = ship.jumps, landed = true, impacts = ship.impacts, breaches = ship.breaches, mended = ship.hull, stung = foes.stung, stungAt = -10;
     const press = { down: false, at: 0, left: 0, top: 0, travel: 0 };
     const groups: readonly (readonly [Entity, number, number])[] = [[identity, 0, 1], [view, 0.15, 1], [systems, 0.35, 1], [gauge, 0.5, 1], [desk.root, 0.9, 1]];
@@ -283,6 +301,8 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         if (helm.arrived) {
             log.say(mining.hold > 0 ? `DELIVERED ${mining.hold.toFixed(1)} T   NAV ${pad(helm.leg, 2)} ${helm.gateName}` : `GATE REACHED   NAV ${pad(helm.leg, 2)} ${helm.gateName}`, AMBER);
             mining.delivered = Math.round((mining.delivered + mining.hold) * 10) / 10;
+            if (deliver(mining.hold, ship.time)) log.say(`CONTRACT COMPLETE   ${CONTRACT.goal} T OF ORE DELIVERED`, AMBER);
+            else if (mining.hold > 0 && !contract.done) log.say(`CONTRACT   ${(CONTRACT.goal - contract.delivered).toFixed(1)} T STILL TO DELIVER`, AMBER);
             mining.hold = 0;
         }
 
@@ -399,6 +419,42 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         ink(holdBar, laden ? rgb(AMBER) : rgb(ICE), UIVisual);
         say(holdNote, laden ? `HOLD FULL  RETURN TO ${helm.gateName}` : mining.reason ? mining.reason : `${mining.delivered.toFixed(1)} T DELIVERED`);
         ink(holdNote, laden || mining.reason ? rgb(AMBER) : rgb(HAZE));
+
+        const picked = targets.probe.selected >= 0 ? rocks[targets.probe.selected]! : null;
+        const advice = advise({
+            hold: mining.hold,
+            target: picked === null ? 'none' : picked.foe !== undefined ? 'raider' : picked.big ? 'major' : 'rock',
+            locked: targets.probe.locked,
+            inRange: picked !== null && Math.hypot(picked.at.x, picked.at.y, picked.at.z) <= MINING.range,
+            armed: mining.armed, firing: mining.firing, reason: mining.reason, combat: guns.view,
+            mode: helm.mode, stopped: helm.order <= 0, away: ship.away, gate: helm.gateName,
+        });
+        contract.stage = advice.stage; contract.cue = advice.cue; contract.text = advice.text;
+        if (state.booted && briefed < 0) { briefed = ship.time; log.say(`CONTRACT ACCEPTED   MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`, AMBER); }
+        if (advice.stage !== stage) {
+            if (advice.stage === 'return') log.say(`CONTRACT ORE ABOARD   RETURN TO ${helm.gateName}`, AMBER);
+            stage = advice.stage;
+        }
+        const blink = 0.72 + 0.28 * Math.sin(ship.time * 6);
+        place(job, across / 2 - JOB.w / 2, JOB.top);
+        fade(job, ease((age - 0.25) / 0.6));
+        say(jobState, advice.stage === 'done' ? 'COMPLETE' : advice.stage === 'return' ? 'RETURN TO GATE' : 'IN PROGRESS');
+        ink(jobState, advice.stage === 'done' ? rgb(ICE) : advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
+        say(jobHold, `IN HOLD   ${mining.hold.toFixed(1)} T`);
+        ink(jobHold, advice.stage === 'return' ? rgb(AMBER) : rgb(HAZE));
+        say(jobDelivered, `DELIVERED   ${contract.delivered.toFixed(1)} / ${CONTRACT.goal} T`);
+        ink(jobDelivered, advice.stage === 'done' ? rgb(ICE) : rgb(HAZE));
+        fill(jobAboard, Math.round(clamp((contract.delivered + mining.hold) / CONTRACT.goal, 0, 1) * 40) / 40);
+        ink(jobAboard, rgb(AMBER, 0.55), UIVisual);
+        fill(jobDone, Math.round(clamp(contract.delivered / CONTRACT.goal, 0, 1) * 40) / 40);
+        say(jobHint, advice.text);
+        ink(jobHint, advice.stage === 'done' ? rgb(ICE, 0.9) : rgb(AMBER, advice.urgent ? blink : 0.9));
+        const told = contract.done ? ship.time - contract.doneAt : briefed >= 0 ? ship.time - briefed : -1;
+        const showing = told >= 0 && told < CONTRACT.banner && (contract.done || !ship.away);
+        place(notice, across / 2, contract.done ? 292 : 250);
+        fade(notice, showing ? clamp(told * 3, 0, 1) * clamp((CONTRACT.banner - told) * 1.2, 0, 1) : 0);
+        say(noticeNote, contract.done ? 'CONTRACT COMPLETE' : 'NEW CONTRACT');
+        say(noticeName, contract.done ? `${CONTRACT.goal} T OF ORE DELIVERED` : `MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`);
         entries.forEach((entry, i) => {
             const line = logLines[i]!, old = ship.time - entry.at;
             say(line, `${stamp(entry.at)}   ${entry.text}`);
