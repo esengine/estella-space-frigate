@@ -10,6 +10,7 @@ const watched = (process.argv[4] ?? 'space-frigate:hud,space-frigate:helm').spli
 const throttles = (process.env.FRIGATE_THROTTLE ?? '1').split(',').map(Number);
 const counted = Number(process.env.FRIGATE_COUNTED ?? 60);
 const coverage = process.env.FRIGATE_COVERAGE === '1';
+const bake = process.env.FRIGATE_BAKE ? `&bake=${process.env.FRIGATE_BAKE}` : '';
 const angle = process.platform === 'win32' ? 'd3d11' : process.platform === 'darwin' ? 'metal' : 'swiftshader';
 const READ = ['getBuiltin(', 'getBuiltinMethods('];
 const servers = await Promise.all(webs.map((web) => serveHost(path.join(root, web))));
@@ -33,7 +34,7 @@ const open = async (web, server) => {
         await cdp.send('Profiler.enable');
         await cdp.send('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
     }
-    await page.goto(`${origin}/?headless&seed=${seed}`, { waitUntil: 'load', timeout: 300000 });
+    await page.goto(`${origin}/?headless&seed=${seed}${bake}`, { waitUntil: 'load', timeout: 300000 });
     await page.waitForFunction(() => window.__estellaCooked?.facts().ready, null, { timeout: 1200000, polling: 1000 });
     await page.waitForFunction(() => window.__spaceHud?.ready, null, { timeout: 300000, polling: 1000 });
     await page.evaluate(() => { window.__spaceHud.foes.peace = true; });
