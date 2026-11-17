@@ -5,7 +5,7 @@ import {
 import { loading as boot } from './loading';
 import type { App, Entity, World } from 'esengine';
 import { SHOTS, SHOT_SECONDS, clamp } from './flight';
-import { METRES, helm, stepHelm } from './helm';
+import { METRES, followFlight, helm, helmOrders, stepHelm } from './helm';
 import {
     ALERT, AMBER, Contact, DESIGN, EDGE, FONTS, HAZE, ICE, TEXTURES, createKit, ease, pad, reach, rgb, stamp,
     type Frame, type Log, type Rgba, type Rock, type Textures,
@@ -17,7 +17,7 @@ import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
 import { buildRefit } from './hudRefit';
 import { installSector, pilotsSeen } from './hudSector';
-import { online } from './online';
+import { flyOnline, online } from './online';
 import { tonnage } from './shared/sector';
 import { refit } from './refit';
 import { buildSettings } from './hudSettings';
@@ -48,16 +48,23 @@ export function installHud(app: App): void {
     const contacts: Rock[] = [];
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input)], (world, time, input) => {
         if (world.findEntityByName('Camera') === null) return;
-        const moved = stepHelm({
+        const dt = Math.min(time.delta, 0.05);
+        const keys = {
             ahead: input.isKeyDown('KeyW'), astern: input.isKeyDown('KeyS'), port: input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft'), starboard: input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight'),
             climb: input.isKeyDown('KeyE') || input.isKeyDown('ArrowUp'), dive: input.isKeyDown('KeyQ') || input.isKeyDown('ArrowDown'), steady: input.isKeyDown('KeyX'), approach: input.isKeyDown('KeyV'), align: input.isKeyDown('KeyB'), level: input.isKeyDown('KeyZ'), planet: input.isKeyDown('KeyP'),
-        }, Math.min(time.delta, 0.05));
+        };
+        let moved;
+        if (online.enabled) {
+            // In a sector the server flies her: the helm gives its orders, and what is shown is this client's prediction of the server's flight.
+            const flown = flyOnline(dt, helmOrders(keys, dt));
+            ship.throttle = flown.shown.throttle;
+            ship.speed = flown.shown.speed;
+            moved = followFlight(flown.shown, flown.jets, flown.went, dt);
+        } else moved = stepHelm(keys, dt);
         if (majors.length === 0) {
             for (let i = MAJOR_FROM; i < ROCKS; i++) { const e = world.findEntityByName(`Rock${i}`); if (e !== null) majors.push(e); }
         }
-        for (const e of majors) world.update(e, Transform, (t) => { t.position = { x: t.position.x + moved.x, y: t.position.y + moved.y, z: t.position.z + moved.z }; });
-        if (online.enabled && !ship.away) online.pos = [online.pos[0] - moved.x, online.pos[1] - moved.y, online.pos[2] - moved.z];
-    }, { name: 'space-frigate:helm' }));
+        for (const e of majors) world.update(e, Transform, (t) => { t.position = { x: t.position.x + moved.x, y: t.position.y + moved.y, z: t.position.z + moved.z }; });    }, { name: 'space-frigate:helm' }));
     app.addSystem(defineSystem([GetWorld(), Res(Time), Res(Input), Query(Transform, Contact)], (world, time, input, seen) => {
         if (update) {
             seen.forEach((_, t, c) => {

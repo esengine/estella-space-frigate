@@ -52,10 +52,4 @@ export function allot(remaining: number, wants: readonly number[], first: number
 
 export type Refusal = '' | 'NOT MINING' | 'OUT OF RANGE' | 'ROCK EXHAUSTED' | 'HOLD FULL';
 
-export interface PilotView { account: string; name: string; p: Vec3; q: Quat4; th: number; mining: boolean; cargo: number }
-
-export type ServerMessage =
-    | { t: 'welcome'; v: number; you: { account: string; name: string; p: Vec3; q: Quat4; cargo: number }; sector: { id: string; name: string; rock: { id: string; at: Vec3; total: number; remaining: number }; range: number; rate: number; capacity: number } }
-    | { t: 'refused'; why: string }
-    | { t: 'bye'; why: string }
-    | { t: 'state'; tick: number; rock: number; you: { p: Vec3; cargo: number; mining: boolean; why: Refusal }; others: PilotView[] };
+export interface PilotView { account: string; name: string; p: Vec3; q: Quat4; v: Vec3; th: number; mining: boolean; cargo: number }

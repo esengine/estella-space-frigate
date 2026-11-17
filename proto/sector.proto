@@ -1,6 +1,7 @@
 // The wire form of everything a frigate and the sector server say to each other.
 // Ore is counted in whole grams, so what two holds and a rock carry always adds up exactly.
-// The rules (who may mine, how fast, how far) live in src/shared/sector.ts and server/world.ts; this file is only the shape.
+// A client never says where it is: it sends the helm's orders, numbered, and the server flies the ship.
+// The rules (how a frigate flies, who may mine, how fast, how far) live in src/shared and server/world.ts; this file is only the shape.
 syntax = "proto3";
 
 package sector;
@@ -17,9 +18,23 @@ enum Refusal {
 message Vec3 { double x = 1; double y = 2; double z = 3; }
 message Quat { double x = 1; double y = 2; double z = 3; double w = 4; }
 
+// A ship in flight, whole: enough to carry on flying her from.
+message Flight {
+  Vec3 p = 1;
+  Quat level = 2;
+  double yaw_rate = 3;
+  double pitch_rate = 4;
+  double roll_rate = 5;
+  double bank = 6;
+  double throttle = 7;
+  double speed = 8;
+}
+
 // ── requests ──
 message Empty {}
-message PoseRequest { Vec3 p = 1; Quat q = 2; double throttle = 3; }
+// One step's orders from the helm. `seq` counts up from 1 for each sign-in; the server flies one a step, in order.
+message Orders { uint32 seq = 1; double order = 2; double rudder = 3; double elevation = 4; double roll = 5; }
+message SteerRequest { repeated Orders orders = 1; }
 message MineRequest { bool on = 1; }
 
 // ── replies ──
@@ -27,8 +42,7 @@ message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 
 message EnterReply {
   string account = 1;
   string name = 2;
-  Vec3 p = 3;
-  Quat q = 4;
+  Flight flight = 3;
   uint32 cargo = 5;
   string sector = 6;
   string sector_name = 7;
@@ -37,6 +51,7 @@ message EnterReply {
   uint32 rate = 10;
   uint32 capacity = 11;
 }
+message SteerReply { uint32 taken = 1; }
 message MineReply { bool asking = 1; }
 
 // ── events ──
@@ -48,13 +63,17 @@ message Pilot {
   double throttle = 5;
   bool mining = 6;
   uint32 cargo = 7;
+  Vec3 v = 8;
 }
 message StateEvent {
   uint32 tick = 1;
   uint32 remaining = 2;
-  Vec3 p = 3;
+  // Your own ship as the server has flown her, after the orders up to and including `ack`.
+  Flight flight = 3;
   uint32 cargo = 4;
   bool mining = 5;
   Refusal why = 6;
   repeated Pilot others = 7;
+  uint32 ack = 8;
+  uint32 waiting = 9;
 }

@@ -47,25 +47,29 @@ node ../../sdk/node_modules/vitest/vitest.mjs run
 
 ## Two pilots, one sector
 
-A sector server keeps one rock of ten tonnes and what each pilot has mined from it, and writes both to disk. It is the engine's session host (`esengine/session`) behind a WebSocket, speaking the messages in `proto/sector.proto` as protobuf; `src/shared/sector.ts` and `server/world.ts` hold the rules. A client sends where she is and whether she wants to mine, never an amount: the server pays by its own clock, to a pilot it has signed in, within reach of the rock, until the rock is empty.
+A sector server flies every ship and keeps one rock of ten tonnes and what each pilot has mined from it. It is the engine's session host (`esengine/session`) behind a WebSocket, speaking the messages in `proto/sector.proto` as protobuf.
+
+- **The server flies.** A client sends the helm's orders (engine, rudder, elevation, roll), numbered a step at a time, and nothing else: there is no request that says where a ship is. The server flies one order a step, thirty steps a second by its own clock, with the rules in `src/shared/steer.ts`: the drive follows its order and the hull follows the drive, the thrusters turn her no faster than they can push, and her speed has a top. The game offline flies by the same file.
+- **The helm still answers at once.** The client flies its own orders as it sends them (`src/shared/predict.ts`), and when the server's word comes it is taken as the truth and the orders it has not flown yet are flown again on top of it. What is left over is eased in, not jumped to. The other pilot's ship is drawn where her last report puts her now, carried on by the way she was making.
+- **The server pays.** Ore is paid by the server's clock to a pilot it has signed in, who is asking, where the server has flown her within reach of the rock, until the rock is empty.
+- **A sector is founded on purpose.** The first start needs `--new`, and writes the sector at once. After that a missing save stops the server: it never starts an empty world because it could not find the one it had. Each write keeps the save before it as `.bak`.
 
 ```bash
-node examples/space-frigate/server/run.mjs --port 8090 --data examples/space-frigate/server-data/sector.json
+node examples/space-frigate/server/run.mjs --port 8090 --data examples/space-frigate/server-data/sector.json --new
 ```
 
-Then open the web export twice, once as each test account:
+Leave `--new` off every start after the first. Then open the web export twice, once as each test account:
 
 ```
 http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-a&token=test-token-a
 http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-b&token=test-token-b
 ```
 
-`T` locks the shared rock and `F` mines it. `Ctrl+C` (or `stop` on its input) stops the server and saves; it also saves every second while anything changes. `&wire=json` asks for text frames, to read a session in a debugger. `GET /healthz` gives the books. After a change to `proto/sector.proto`, `node pipeline/bin/estella.mjs proto gen examples/space-frigate` writes `src/proto` again.
+She flies as she does offline; `T` locks the shared rock and `F` mines it. `Ctrl+C` (or `stop` on its input) stops the server and saves; it also saves every second while anything changes. `&wire=json` asks for text frames, to read a session in a debugger. `GET /healthz` gives the ore books and `GET /pilots` each ship as the server has her. After a change to `proto/sector.proto`, `node pipeline/bin/estella.mjs proto gen examples/space-frigate` writes `src/proto` again.
 
-`node examples/space-frigate/tools/check-sector.mjs` drives the server as its own process over real sockets (sign-in, a second sign-in taking the seat, replayed and invented requests, a stop and start, a kill, mining to the last gram); `tools/check-online.mjs` does it with two copies of the game in a browser.
+Checks: `tests/flight.test.ts` and `tests/sector.test.ts` hold the rules, a simulated slow link among them. `node examples/space-frigate/tools/check-sector.mjs` drives the server as its own process over real sockets (forged places, floods of orders, a second sign-in taking the helm, a dropped link, a stop and start, a kill, a lost save, mining to the last gram). `tools/check-online.mjs` flies two copies of the game in a browser through a relay that holds every byte back (`SECTOR_DELAY_MS`, 100 each way by default) and writes what it measured to `output/space-frigate/online/report.json`.
 
-Not yet: movement is the client's word held to a frigate's speed, not a helm the server flies; the other 39 rocks of the field are put away in a sector; a sector has no gate out and no raiders; the two accounts and their tokens are fixed test values.
-
+Not yet: a ship in a sector sails through rocks, because the server does not work out collisions and the client no longer does it alone; the other 39 rocks of the field are put away; a sector has no gate out, no planet to land on and no raiders; the two accounts and their tokens are fixed test values; the save is one JSON file.
 Assets are regenerated from their recipes with `python3 tools/generate.py`.
 
 ## License

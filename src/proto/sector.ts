@@ -112,6 +112,79 @@ export const Quat = {
     decode(bytes: Uint8Array): Quat { return Quat.read(new Reader(bytes), bytes.length); },
 };
 
+export interface Flight {
+    p?: Vec3 | undefined;
+    level?: Quat | undefined;
+    yawRate: number;
+    pitchRate: number;
+    rollRate: number;
+    bank: number;
+    throttle: number;
+    speed: number;
+}
+
+export const Flight = {
+    create(init: Partial<Flight> = {}): Flight {
+        return { yawRate: 0, pitchRate: 0, rollRate: 0, bank: 0, throttle: 0, speed: 0, ...init };
+    },
+    write(m: Flight, w: Writer): void {
+        if (m.p !== undefined) { w.tag(1, 2); w.bytes(Vec3.encode(m.p)); }
+        if (m.level !== undefined) { w.tag(2, 2); w.bytes(Quat.encode(m.level)); }
+        if (m.yawRate !== 0) { w.tag(3, 1); w.double(m.yawRate); }
+        if (m.pitchRate !== 0) { w.tag(4, 1); w.double(m.pitchRate); }
+        if (m.rollRate !== 0) { w.tag(5, 1); w.double(m.rollRate); }
+        if (m.bank !== 0) { w.tag(6, 1); w.double(m.bank); }
+        if (m.throttle !== 0) { w.tag(7, 1); w.double(m.throttle); }
+        if (m.speed !== 0) { w.tag(8, 1); w.double(m.speed); }
+    },
+    read(r: Reader, end: number): Flight {
+        const m = Flight.create();
+        while (r.pos < end) {
+            const t = r.tag(); const wt = t & 7;
+            switch (t >>> 3) {
+                case 1: if (wt === 2) m.p = Vec3.read(r, r.end()); else r.skip(wt); break;
+                case 2: if (wt === 2) m.level = Quat.read(r, r.end()); else r.skip(wt); break;
+                case 3: if (wt === 1) m.yawRate = r.double(); else r.skip(wt); break;
+                case 4: if (wt === 1) m.pitchRate = r.double(); else r.skip(wt); break;
+                case 5: if (wt === 1) m.rollRate = r.double(); else r.skip(wt); break;
+                case 6: if (wt === 1) m.bank = r.double(); else r.skip(wt); break;
+                case 7: if (wt === 1) m.throttle = r.double(); else r.skip(wt); break;
+                case 8: if (wt === 1) m.speed = r.double(); else r.skip(wt); break;
+                default: r.skip(wt);
+            }
+        }
+        return m;
+    },
+    toJSON(m: Flight): unknown {
+        const o: Record<string, unknown> = {};
+        if (m.p !== undefined) o.p = Vec3.toJSON(m.p);
+        if (m.level !== undefined) o.level = Quat.toJSON(m.level);
+        o.yawRate = m.yawRate;
+        o.pitchRate = m.pitchRate;
+        o.rollRate = m.rollRate;
+        o.bank = m.bank;
+        o.throttle = m.throttle;
+        o.speed = m.speed;
+        return o;
+    },
+    fromJSON(j: unknown): Flight {
+        const o = jObj(j, "Flight");
+        const m = Flight.create();
+        if (o.p != null) m.p = Vec3.fromJSON(o.p);
+        if (o.level != null) m.level = Quat.fromJSON(o.level);
+        if (o.yawRate != null) m.yawRate = jNum(o.yawRate, "Flight.yawRate");
+        if (o.pitchRate != null) m.pitchRate = jNum(o.pitchRate, "Flight.pitchRate");
+        if (o.rollRate != null) m.rollRate = jNum(o.rollRate, "Flight.rollRate");
+        if (o.bank != null) m.bank = jNum(o.bank, "Flight.bank");
+        if (o.throttle != null) m.throttle = jNum(o.throttle, "Flight.throttle");
+        if (o.speed != null) m.speed = jNum(o.speed, "Flight.speed");
+        return m;
+    },
+    shape: "Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w}",
+    encode(m: Flight): Uint8Array { const w = new Writer(); Flight.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): Flight { return Flight.read(new Reader(bytes), bytes.length); },
+};
+
 export interface Empty {
 }
 
@@ -145,52 +218,100 @@ export const Empty = {
     decode(bytes: Uint8Array): Empty { return Empty.read(new Reader(bytes), bytes.length); },
 };
 
-export interface PoseRequest {
-    p?: Vec3 | undefined;
-    q?: Quat | undefined;
-    throttle: number;
+export interface Orders {
+    seq: number;
+    order: number;
+    rudder: number;
+    elevation: number;
+    roll: number;
 }
 
-export const PoseRequest = {
-    create(init: Partial<PoseRequest> = {}): PoseRequest {
-        return { throttle: 0, ...init };
+export const Orders = {
+    create(init: Partial<Orders> = {}): Orders {
+        return { seq: 0, order: 0, rudder: 0, elevation: 0, roll: 0, ...init };
     },
-    write(m: PoseRequest, w: Writer): void {
-        if (m.p !== undefined) { w.tag(1, 2); w.bytes(Vec3.encode(m.p)); }
-        if (m.q !== undefined) { w.tag(2, 2); w.bytes(Quat.encode(m.q)); }
-        if (m.throttle !== 0) { w.tag(3, 1); w.double(m.throttle); }
+    write(m: Orders, w: Writer): void {
+        if (m.seq !== 0) { w.tag(1, 0); w.uint32(m.seq); }
+        if (m.order !== 0) { w.tag(2, 1); w.double(m.order); }
+        if (m.rudder !== 0) { w.tag(3, 1); w.double(m.rudder); }
+        if (m.elevation !== 0) { w.tag(4, 1); w.double(m.elevation); }
+        if (m.roll !== 0) { w.tag(5, 1); w.double(m.roll); }
     },
-    read(r: Reader, end: number): PoseRequest {
-        const m = PoseRequest.create();
+    read(r: Reader, end: number): Orders {
+        const m = Orders.create();
         while (r.pos < end) {
             const t = r.tag(); const wt = t & 7;
             switch (t >>> 3) {
-                case 1: if (wt === 2) m.p = Vec3.read(r, r.end()); else r.skip(wt); break;
-                case 2: if (wt === 2) m.q = Quat.read(r, r.end()); else r.skip(wt); break;
-                case 3: if (wt === 1) m.throttle = r.double(); else r.skip(wt); break;
+                case 1: if (wt === 0) m.seq = r.uint32(); else r.skip(wt); break;
+                case 2: if (wt === 1) m.order = r.double(); else r.skip(wt); break;
+                case 3: if (wt === 1) m.rudder = r.double(); else r.skip(wt); break;
+                case 4: if (wt === 1) m.elevation = r.double(); else r.skip(wt); break;
+                case 5: if (wt === 1) m.roll = r.double(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
         return m;
     },
-    toJSON(m: PoseRequest): unknown {
+    toJSON(m: Orders): unknown {
         const o: Record<string, unknown> = {};
-        if (m.p !== undefined) o.p = Vec3.toJSON(m.p);
-        if (m.q !== undefined) o.q = Quat.toJSON(m.q);
-        o.throttle = m.throttle;
+        o.seq = m.seq;
+        o.order = m.order;
+        o.rudder = m.rudder;
+        o.elevation = m.elevation;
+        o.roll = m.roll;
         return o;
     },
-    fromJSON(j: unknown): PoseRequest {
-        const o = jObj(j, "PoseRequest");
-        const m = PoseRequest.create();
-        if (o.p != null) m.p = Vec3.fromJSON(o.p);
-        if (o.q != null) m.q = Quat.fromJSON(o.q);
-        if (o.throttle != null) m.throttle = jNum(o.throttle, "PoseRequest.throttle");
+    fromJSON(j: unknown): Orders {
+        const o = jObj(j, "Orders");
+        const m = Orders.create();
+        if (o.seq != null) m.seq = jInt(o.seq, "Orders.seq", 0, 4294967295);
+        if (o.order != null) m.order = jNum(o.order, "Orders.order");
+        if (o.rudder != null) m.rudder = jNum(o.rudder, "Orders.rudder");
+        if (o.elevation != null) m.elevation = jNum(o.elevation, "Orders.elevation");
+        if (o.roll != null) m.roll = jNum(o.roll, "Orders.roll");
         return m;
     },
-    shape: "PoseRequest{1:Vec3 p,2:Quat q,3:double throttle};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w}",
-    encode(m: PoseRequest): Uint8Array { const w = new Writer(); PoseRequest.write(m, w); return w.finish(); },
-    decode(bytes: Uint8Array): PoseRequest { return PoseRequest.read(new Reader(bytes), bytes.length); },
+    shape: "Orders{1:uint32 seq,2:double order,3:double rudder,4:double elevation,5:double roll}",
+    encode(m: Orders): Uint8Array { const w = new Writer(); Orders.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): Orders { return Orders.read(new Reader(bytes), bytes.length); },
+};
+
+export interface SteerRequest {
+    orders: Orders[];
+}
+
+export const SteerRequest = {
+    create(init: Partial<SteerRequest> = {}): SteerRequest {
+        return { orders: [], ...init };
+    },
+    write(m: SteerRequest, w: Writer): void {
+        for (const v of m.orders) { w.tag(1, 2); w.bytes(Orders.encode(v)); }
+    },
+    read(r: Reader, end: number): SteerRequest {
+        const m = SteerRequest.create();
+        while (r.pos < end) {
+            const t = r.tag(); const wt = t & 7;
+            switch (t >>> 3) {
+                case 1: if (wt === 2) m.orders.push(Orders.read(r, r.end())); else r.skip(wt); break;
+                default: r.skip(wt);
+            }
+        }
+        return m;
+    },
+    toJSON(m: SteerRequest): unknown {
+        const o: Record<string, unknown> = {};
+        o.orders = m.orders.map((v) => Orders.toJSON(v));
+        return o;
+    },
+    fromJSON(j: unknown): SteerRequest {
+        const o = jObj(j, "SteerRequest");
+        const m = SteerRequest.create();
+        if (o.orders != null) m.orders = jArr(o.orders, "SteerRequest.orders").map((v) => Orders.fromJSON(v));
+        return m;
+    },
+    shape: "SteerRequest{1:repeated Orders orders};Orders{1:uint32 seq,2:double order,3:double rudder,4:double elevation,5:double roll}",
+    encode(m: SteerRequest): Uint8Array { const w = new Writer(); SteerRequest.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): SteerRequest { return SteerRequest.read(new Reader(bytes), bytes.length); },
 };
 
 export interface MineRequest {
@@ -287,8 +408,7 @@ export const Rock = {
 export interface EnterReply {
     account: string;
     name: string;
-    p?: Vec3 | undefined;
-    q?: Quat | undefined;
+    flight?: Flight | undefined;
     cargo: number;
     sector: string;
     sectorName: string;
@@ -305,8 +425,7 @@ export const EnterReply = {
     write(m: EnterReply, w: Writer): void {
         if (m.account !== '') { w.tag(1, 2); w.string(m.account); }
         if (m.name !== '') { w.tag(2, 2); w.string(m.name); }
-        if (m.p !== undefined) { w.tag(3, 2); w.bytes(Vec3.encode(m.p)); }
-        if (m.q !== undefined) { w.tag(4, 2); w.bytes(Quat.encode(m.q)); }
+        if (m.flight !== undefined) { w.tag(3, 2); w.bytes(Flight.encode(m.flight)); }
         if (m.cargo !== 0) { w.tag(5, 0); w.uint32(m.cargo); }
         if (m.sector !== '') { w.tag(6, 2); w.string(m.sector); }
         if (m.sectorName !== '') { w.tag(7, 2); w.string(m.sectorName); }
@@ -322,8 +441,7 @@ export const EnterReply = {
             switch (t >>> 3) {
                 case 1: if (wt === 2) m.account = r.string(); else r.skip(wt); break;
                 case 2: if (wt === 2) m.name = r.string(); else r.skip(wt); break;
-                case 3: if (wt === 2) m.p = Vec3.read(r, r.end()); else r.skip(wt); break;
-                case 4: if (wt === 2) m.q = Quat.read(r, r.end()); else r.skip(wt); break;
+                case 3: if (wt === 2) m.flight = Flight.read(r, r.end()); else r.skip(wt); break;
                 case 5: if (wt === 0) m.cargo = r.uint32(); else r.skip(wt); break;
                 case 6: if (wt === 2) m.sector = r.string(); else r.skip(wt); break;
                 case 7: if (wt === 2) m.sectorName = r.string(); else r.skip(wt); break;
@@ -340,8 +458,7 @@ export const EnterReply = {
         const o: Record<string, unknown> = {};
         o.account = m.account;
         o.name = m.name;
-        if (m.p !== undefined) o.p = Vec3.toJSON(m.p);
-        if (m.q !== undefined) o.q = Quat.toJSON(m.q);
+        if (m.flight !== undefined) o.flight = Flight.toJSON(m.flight);
         o.cargo = m.cargo;
         o.sector = m.sector;
         o.sectorName = m.sectorName;
@@ -356,8 +473,7 @@ export const EnterReply = {
         const m = EnterReply.create();
         if (o.account != null) m.account = jStr(o.account, "EnterReply.account");
         if (o.name != null) m.name = jStr(o.name, "EnterReply.name");
-        if (o.p != null) m.p = Vec3.fromJSON(o.p);
-        if (o.q != null) m.q = Quat.fromJSON(o.q);
+        if (o.flight != null) m.flight = Flight.fromJSON(o.flight);
         if (o.cargo != null) m.cargo = jInt(o.cargo, "EnterReply.cargo", 0, 4294967295);
         if (o.sector != null) m.sector = jStr(o.sector, "EnterReply.sector");
         if (o.sectorName != null) m.sectorName = jStr(o.sectorName, "EnterReply.sectorName");
@@ -367,9 +483,47 @@ export const EnterReply = {
         if (o.capacity != null) m.capacity = jInt(o.capacity, "EnterReply.capacity", 0, 4294967295);
         return m;
     },
-    shape: "EnterReply{1:string account,2:string name,3:Vec3 p,4:Quat q,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining}",
+    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining}",
     encode(m: EnterReply): Uint8Array { const w = new Writer(); EnterReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): EnterReply { return EnterReply.read(new Reader(bytes), bytes.length); },
+};
+
+export interface SteerReply {
+    taken: number;
+}
+
+export const SteerReply = {
+    create(init: Partial<SteerReply> = {}): SteerReply {
+        return { taken: 0, ...init };
+    },
+    write(m: SteerReply, w: Writer): void {
+        if (m.taken !== 0) { w.tag(1, 0); w.uint32(m.taken); }
+    },
+    read(r: Reader, end: number): SteerReply {
+        const m = SteerReply.create();
+        while (r.pos < end) {
+            const t = r.tag(); const wt = t & 7;
+            switch (t >>> 3) {
+                case 1: if (wt === 0) m.taken = r.uint32(); else r.skip(wt); break;
+                default: r.skip(wt);
+            }
+        }
+        return m;
+    },
+    toJSON(m: SteerReply): unknown {
+        const o: Record<string, unknown> = {};
+        o.taken = m.taken;
+        return o;
+    },
+    fromJSON(j: unknown): SteerReply {
+        const o = jObj(j, "SteerReply");
+        const m = SteerReply.create();
+        if (o.taken != null) m.taken = jInt(o.taken, "SteerReply.taken", 0, 4294967295);
+        return m;
+    },
+    shape: "SteerReply{1:uint32 taken}",
+    encode(m: SteerReply): Uint8Array { const w = new Writer(); SteerReply.write(m, w); return w.finish(); },
+    decode(bytes: Uint8Array): SteerReply { return SteerReply.read(new Reader(bytes), bytes.length); },
 };
 
 export interface MineReply {
@@ -418,6 +572,7 @@ export interface Pilot {
     throttle: number;
     mining: boolean;
     cargo: number;
+    v?: Vec3 | undefined;
 }
 
 export const Pilot = {
@@ -432,6 +587,7 @@ export const Pilot = {
         if (m.throttle !== 0) { w.tag(5, 1); w.double(m.throttle); }
         if (m.mining !== false) { w.tag(6, 0); w.bool(m.mining); }
         if (m.cargo !== 0) { w.tag(7, 0); w.uint32(m.cargo); }
+        if (m.v !== undefined) { w.tag(8, 2); w.bytes(Vec3.encode(m.v)); }
     },
     read(r: Reader, end: number): Pilot {
         const m = Pilot.create();
@@ -445,6 +601,7 @@ export const Pilot = {
                 case 5: if (wt === 1) m.throttle = r.double(); else r.skip(wt); break;
                 case 6: if (wt === 0) m.mining = r.bool(); else r.skip(wt); break;
                 case 7: if (wt === 0) m.cargo = r.uint32(); else r.skip(wt); break;
+                case 8: if (wt === 2) m.v = Vec3.read(r, r.end()); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -459,6 +616,7 @@ export const Pilot = {
         o.throttle = m.throttle;
         o.mining = m.mining;
         o.cargo = m.cargo;
+        if (m.v !== undefined) o.v = Vec3.toJSON(m.v);
         return o;
     },
     fromJSON(j: unknown): Pilot {
@@ -471,9 +629,10 @@ export const Pilot = {
         if (o.throttle != null) m.throttle = jNum(o.throttle, "Pilot.throttle");
         if (o.mining != null) m.mining = jBool(o.mining, "Pilot.mining");
         if (o.cargo != null) m.cargo = jInt(o.cargo, "Pilot.cargo", 0, 4294967295);
+        if (o.v != null) m.v = Vec3.fromJSON(o.v);
         return m;
     },
-    shape: "Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w}",
+    shape: "Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w}",
     encode(m: Pilot): Uint8Array { const w = new Writer(); Pilot.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): Pilot { return Pilot.read(new Reader(bytes), bytes.length); },
 };
@@ -481,25 +640,29 @@ export const Pilot = {
 export interface StateEvent {
     tick: number;
     remaining: number;
-    p?: Vec3 | undefined;
+    flight?: Flight | undefined;
     cargo: number;
     mining: boolean;
     why: Refusal;
     others: Pilot[];
+    ack: number;
+    waiting: number;
 }
 
 export const StateEvent = {
     create(init: Partial<StateEvent> = {}): StateEvent {
-        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ...init };
+        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, ...init };
     },
     write(m: StateEvent, w: Writer): void {
         if (m.tick !== 0) { w.tag(1, 0); w.uint32(m.tick); }
         if (m.remaining !== 0) { w.tag(2, 0); w.uint32(m.remaining); }
-        if (m.p !== undefined) { w.tag(3, 2); w.bytes(Vec3.encode(m.p)); }
+        if (m.flight !== undefined) { w.tag(3, 2); w.bytes(Flight.encode(m.flight)); }
         if (m.cargo !== 0) { w.tag(4, 0); w.uint32(m.cargo); }
         if (m.mining !== false) { w.tag(5, 0); w.bool(m.mining); }
         if (m.why !== 0) { w.tag(6, 0); w.int32(m.why); }
         for (const v of m.others) { w.tag(7, 2); w.bytes(Pilot.encode(v)); }
+        if (m.ack !== 0) { w.tag(8, 0); w.uint32(m.ack); }
+        if (m.waiting !== 0) { w.tag(9, 0); w.uint32(m.waiting); }
     },
     read(r: Reader, end: number): StateEvent {
         const m = StateEvent.create();
@@ -508,11 +671,13 @@ export const StateEvent = {
             switch (t >>> 3) {
                 case 1: if (wt === 0) m.tick = r.uint32(); else r.skip(wt); break;
                 case 2: if (wt === 0) m.remaining = r.uint32(); else r.skip(wt); break;
-                case 3: if (wt === 2) m.p = Vec3.read(r, r.end()); else r.skip(wt); break;
+                case 3: if (wt === 2) m.flight = Flight.read(r, r.end()); else r.skip(wt); break;
                 case 4: if (wt === 0) m.cargo = r.uint32(); else r.skip(wt); break;
                 case 5: if (wt === 0) m.mining = r.bool(); else r.skip(wt); break;
                 case 6: if (wt === 0) m.why = r.int32(); else r.skip(wt); break;
                 case 7: if (wt === 2) m.others.push(Pilot.read(r, r.end())); else r.skip(wt); break;
+                case 8: if (wt === 0) m.ack = r.uint32(); else r.skip(wt); break;
+                case 9: if (wt === 0) m.waiting = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -522,11 +687,13 @@ export const StateEvent = {
         const o: Record<string, unknown> = {};
         o.tick = m.tick;
         o.remaining = m.remaining;
-        if (m.p !== undefined) o.p = Vec3.toJSON(m.p);
+        if (m.flight !== undefined) o.flight = Flight.toJSON(m.flight);
         o.cargo = m.cargo;
         o.mining = m.mining;
         o.why = m.why;
         o.others = m.others.map((v) => Pilot.toJSON(v));
+        o.ack = m.ack;
+        o.waiting = m.waiting;
         return o;
     },
     fromJSON(j: unknown): StateEvent {
@@ -534,14 +701,16 @@ export const StateEvent = {
         const m = StateEvent.create();
         if (o.tick != null) m.tick = jInt(o.tick, "StateEvent.tick", 0, 4294967295);
         if (o.remaining != null) m.remaining = jInt(o.remaining, "StateEvent.remaining", 0, 4294967295);
-        if (o.p != null) m.p = Vec3.fromJSON(o.p);
+        if (o.flight != null) m.flight = Flight.fromJSON(o.flight);
         if (o.cargo != null) m.cargo = jInt(o.cargo, "StateEvent.cargo", 0, 4294967295);
         if (o.mining != null) m.mining = jBool(o.mining, "StateEvent.mining");
         if (o.why != null) m.why = jInt(o.why, "StateEvent.why", -2147483648, 2147483647);
         if (o.others != null) m.others = jArr(o.others, "StateEvent.others").map((v) => Pilot.fromJSON(v));
+        if (o.ack != null) m.ack = jInt(o.ack, "StateEvent.ack", 0, 4294967295);
+        if (o.waiting != null) m.waiting = jInt(o.waiting, "StateEvent.waiting", 0, 4294967295);
         return m;
     },
-    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Vec3 p,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others};Vec3{1:double x,2:double y,3:double z};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo};Quat{1:double x,2:double y,3:double z,4:double w}",
+    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v}",
     encode(m: StateEvent): Uint8Array { const w = new Writer(); StateEvent.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): StateEvent { return StateEvent.read(new Reader(bytes), bytes.length); },
 };

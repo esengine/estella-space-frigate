@@ -2,13 +2,13 @@ import { MeshRenderer, Transform, UIWorldAnchor } from 'esengine';
 import type { Entity } from 'esengine';
 import { helm, mulQuat, turnBy } from './helm';
 import { AMBER, HAZE, ICE, KEPT_CLEAR, reach, rgb, type Frame, type Kit, type Rock } from './hudKit';
-import { SHARED_ROCK, connectOnline, online, parkedRock, sendPose } from './online';
+import { SHARED_ROCK, connectOnline, online, parkedRock } from './online';
 import { tonnage, type Quat4, type Vec3 } from './shared/sector';
 import { ship } from './shipState';
 
 interface Seen { entity: Entity; tag: Entity; name: Entity; note: Entity; p: Vec3; q: Quat4; here: boolean }
 
-export const pilotsSeen: { account: string; x: number; y: number; z: number; mining: boolean }[] = [];
+export const pilotsSeen: { account: string; x: number; y: number; z: number; mining: boolean; sx: number; sy: number; sz: number }[] = [];
 
 export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) => void {
     if (!online.enabled) return () => undefined;
@@ -41,12 +41,11 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
     };
 
     return (frame) => {
-        if (online.berth) {
-            const to = online.berth, by = { x: to[0] - online.pos[0], y: to[1] - online.pos[1], z: to[2] - online.pos[2] };
+        if (online.leap) {
+            const by = { x: online.leap[0], y: online.leap[1], z: online.leap[2] };
             for (const major of majors) world.update(major.entity, Transform, (t) => { t.position = { x: t.position.x - by.x, y: t.position.y - by.y, z: t.position.z - by.z }; });
             helm.gate = { x: helm.gate.x - by.x, y: helm.gate.y - by.y, z: helm.gate.z - by.z };
-            online.pos = [...to] as Vec3;
-            online.berth = null;
+            online.leap = null;
         }
         const me = online.pos, rock = online.rock.at;
         const there = { x: rock[0] - me[0], y: rock[1] - me[1], z: rock[2] - me[2] };
@@ -54,13 +53,14 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         shared.at.x = there.x; shared.at.y = there.y; shared.at.z = there.z;
 
         for (const one of seen.values()) one.here = false;
-        const share = Math.min(1, frame.dt * 10);
+        // Each ship is drawn where her last report puts her now, carried on by the way she was making, and eased toward it so a late report does not jerk her.
+        const share = Math.min(1, frame.dt * 12), since = Math.min(0.25, Math.max(0, (Date.now() - online.othersAt) / 1000));
         pilotsSeen.length = 0;
         for (const other of online.others) {
             let one = seen.get(other.account);
             if (!one) { one = meet(other.account, other.p, other.q); seen.set(other.account, one); }
             one.here = true;
-            for (let axis = 0; axis < 3; axis++) one.p[axis] = one.p[axis]! + (other.p[axis]! - one.p[axis]!) * share;
+            for (let axis = 0; axis < 3; axis++) one.p[axis] = one.p[axis]! + (other.p[axis]! + other.v[axis]! * since - one.p[axis]!) * share;
             const same = one.q[0] * other.q[0] + one.q[1] * other.q[1] + one.q[2] * other.q[2] + one.q[3] * other.q[3] < 0 ? -1 : 1;
             for (let axis = 0; axis < 4; axis++) one.q[axis] = one.q[axis]! + (other.q[axis]! * same - one.q[axis]!) * share;
             const length = Math.hypot(one.q[0], one.q[1], one.q[2], one.q[3]) || 1;
@@ -75,13 +75,12 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
             say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
             ink(one.note, other.mining ? rgb(AMBER) : rgb(HAZE));
             ink(one.name, rgb(other.mining ? AMBER : ICE));
-            pilotsSeen.push({ account: other.account, x: at.x, y: at.y, z: at.z, mining: other.mining });
+            pilotsSeen.push({ account: other.account, x: at.x, y: at.y, z: at.z, mining: other.mining, sx: one.p[0], sy: one.p[1], sz: one.p[2] });
         }
         for (const one of seen.values()) {
             if (one.here) continue;
             fade(one.tag, 0);
             if (hullMesh && world.get(one.entity, MeshRenderer).enabled) world.update(one.entity, MeshRenderer, (m) => { m.enabled = false; });
         }
-        sendPose(helm.attitude, ship.throttle);
     };
 }

@@ -1,18 +1,11 @@
 import { FIELD_DRIFT, ship } from './shipState';
+import { PITCH_RATE, ROLL_RATE, TURN_RATE, about, attitudeOf, forwardOf, mulQuat, turnBack, turnBy, turnShip, within, type Flight, type Orders, type Quat, type Vec } from './shared/steer';
 
-export type Vec = { x: number; y: number; z: number };
-export type Quat = { x: number; y: number; z: number; w: number };
+export { PITCH_RATE, PITCH_THRUST, ROLL_RATE, ROLL_THRUST, TURN_RATE, YAW_THRUST, mulQuat, turnBack, turnBy } from './shared/steer';
+export type { Quat, Vec } from './shared/steer';
 
 export const METRES = 1 / FIELD_DRIFT;
-export const TURN_RATE = 0.3;
-export const PITCH_RATE = 0.24;
-export const YAW_THRUST = 0.14;
-export const PITCH_THRUST = 0.11;
-export const ROLL_RATE = 0.35;
-export const ROLL_THRUST = 0.2;
 const LEVEL = 0.004;
-const THRUST_GAIN = 4;
-const BANK = 0.5;
 const GATES = ['KESTREL GATE', 'TARN RELAY', 'OSSA ANCHORAGE'] as const;
 const REPEAT = 0.32;
 
@@ -22,23 +15,7 @@ export const ELEVATION_ORDERS = [-1, -0.5, 0, 0.5, 1] as const;
 const GATE_REACH = 260;
 export const STANDOFF = 200;
 
-export const mulQuat = (a: Quat, b: Quat): Quat => ({
-    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
-    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
-    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
-    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-});
-
-export function turnBy(q: Quat, v: Vec): Vec {
-    const tx = 2 * (q.y * v.z - q.z * v.y), ty = 2 * (q.z * v.x - q.x * v.z), tz = 2 * (q.x * v.y - q.y * v.x);
-    return { x: v.x + q.w * tx + (q.y * tz - q.z * ty), y: v.y + q.w * ty + (q.z * tx - q.x * tz), z: v.z + q.w * tz + (q.x * ty - q.y * tx) };
-}
-
-export const turnBack = (q: Quat, v: Vec): Vec => turnBy({ x: -q.x, y: -q.y, z: -q.z, w: q.w }, v);
-
-const about = (axis: 'x' | 'y' | 'z', angle: number): Quat => ({ x: 0, y: 0, z: 0, w: Math.cos(angle / 2), [axis]: Math.sin(angle / 2) });
 const facing = (yaw: number, pitch: number, roll = 0): Quat => mulQuat(mulQuat(about('y', yaw), about('x', -pitch)), about('z', roll));
-const within = (v: number, most: number): number => Math.max(-most, Math.min(most, v));
 
 function toward(from: Quat, to: Quat, share: number): Quat {
     const same = from.x * to.x + from.y * to.y + from.z * to.z + from.w * to.w < 0 ? -1 : 1;
@@ -97,12 +74,13 @@ export function setElevation(order: number): void { helm.elevation = within(orde
 export function steady(): void { helm.rudder = 0; helm.elevation = 0; helm.mode = 'manual'; }
 export function engage(mode: HelmMode): void {
     if (mode === 'approach' && !helm.aim) return;
-    if (mode === 'planet' && !helm.target) return;
+    if (mode === 'planet' && (!helm.target || helm.fixed)) return;
     helm.mode = helm.mode === mode ? 'manual' : mode;
     if (helm.mode === 'manual') steady();
 }
 
-export function stepHelm(keys: HelmKeys, dt: number): Vec {
+/** The helm's part: keys and autopilots become the orders the ship is to fly by. Nothing moves here. */
+export function helmOrders(keys: HelmKeys, dt: number): Orders {
     if (tapped('ahead', keys.ahead, dt, true)) setEngine(stepped(ENGINE_ORDERS, helm.order, 1));
     if (tapped('astern', keys.astern, dt, true)) setEngine(stepped(ENGINE_ORDERS, helm.order, -1));
     if (tapped('port', keys.port, dt, true)) setRudder(stepped(RUDDER_ORDERS, helm.rudder, -1));
@@ -118,41 +96,41 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
     if (helm.mode === 'approach' && !helm.aim) steady();
     if (helm.mode === 'approach' && helm.aim && Math.hypot(helm.aim.x, helm.aim.y, helm.aim.z) < STANDOFF) { steady(); setEngine(0); }
 
-    let want = { yaw: -helm.rudder * TURN_RATE, pitch: helm.elevation * PITCH_RATE, roll: 0 };
+    let roll = 0;
     const to = helm.mode === 'approach' ? helm.aim : helm.mode === 'align' ? helm.gate : helm.mode === 'planet' ? helm.target : null;
     if (to) {
         const ahead = turnBack(helm.level, to);
-        want = { yaw: within(Math.atan2(ahead.x, ahead.z) * 1.4, TURN_RATE), pitch: within(Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z) || 1e-6) * 1.4, PITCH_RATE), roll: 0 };
-        helm.rudder = -want.yaw / TURN_RATE;
-        helm.elevation = want.pitch / PITCH_RATE;
+        helm.rudder = -within(Math.atan2(ahead.x, ahead.z) * 1.4, TURN_RATE) / TURN_RATE;
+        helm.elevation = within(Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z) || 1e-6) * 1.4, PITCH_RATE) / PITCH_RATE;
     }
     if (helm.mode === 'level') {
         const climb = Math.asin(Math.max(-1, Math.min(1, helm.forward.y)));
         if (Math.abs(helm.lean) < LEVEL && Math.abs(climb) < LEVEL && Math.abs(helm.rollRate) + Math.abs(helm.pitchRate) + Math.abs(helm.yawRate) < LEVEL) {
             steady();
         } else {
-            want = { yaw: 0, pitch: within(-climb * 1.4 * Math.max(0, Math.cos(helm.lean)), PITCH_RATE), roll: within(-helm.lean * 1.4, ROLL_RATE) };
             helm.rudder = 0;
-            helm.elevation = want.pitch / PITCH_RATE;
+            helm.elevation = within(-climb * 1.4 * Math.max(0, Math.cos(helm.lean)), PITCH_RATE) / PITCH_RATE;
+            roll = within(-helm.lean * 1.4, ROLL_RATE) / ROLL_RATE;
         }
     }
-    const push = { yaw: within((want.yaw - helm.yawRate) * THRUST_GAIN, YAW_THRUST), pitch: within((want.pitch - helm.pitchRate) * THRUST_GAIN, PITCH_THRUST), roll: within((want.roll - helm.rollRate) * THRUST_GAIN, ROLL_THRUST) };
-    helm.yawRate += push.yaw * dt;
-    helm.pitchRate += push.pitch * dt;
-    helm.rollRate += push.roll * dt;
-    helm.jets = { yaw: push.yaw / YAW_THRUST, pitch: push.pitch / PITCH_THRUST, roll: push.roll / ROLL_THRUST };
-    helm.level = toward(helm.level, mulQuat(mulQuat(mulQuat(helm.level, about('y', helm.yawRate * dt)), about('x', -helm.pitchRate * dt)), about('z', helm.rollRate * dt)), 1);
+    return { order: helm.order, rudder: helm.rudder, elevation: helm.elevation, roll };
+}
+
+/** What the display and the rest of the game read off a ship in flight: her attitude, her heading, how she leans. */
+function read(f: Pick<Flight, 'level' | 'yawRate' | 'pitchRate' | 'rollRate' | 'bank'>, dt: number): void {
+    helm.level = f.level;
+    helm.yawRate = f.yawRate; helm.pitchRate = f.pitchRate; helm.rollRate = f.rollRate; helm.roll = f.bank;
     helm.helmAngle = -helm.yawRate / TURN_RATE;
-    helm.roll += ((-helm.yawRate / TURN_RATE) * BANK - helm.roll) * Math.min(1, dt * 1.8);
-    helm.attitude = mulQuat(helm.level, about('z', helm.roll));
+    helm.attitude = attitudeOf(f);
     helm.frame = toward(helm.frame, helm.level, Math.min(1, dt * 1.6));
-    helm.forward = turnBy(helm.level, { x: 0, y: 0, z: 1 });
+    helm.forward = forwardOf(f);
     helm.yaw = Math.atan2(helm.forward.x, helm.forward.z);
     helm.pitch = Math.asin(Math.max(-1, Math.min(1, helm.forward.y)));
     helm.lean = Math.atan2(turnBy(helm.level, { x: 1, y: 0, z: 0 }).y, turnBy(helm.level, { x: 0, y: 1, z: 0 }).y);
+}
 
-    const run = ship.speed * FIELD_DRIFT * dt * helm.surge;
-    const moved = { x: -helm.forward.x * run, y: -helm.forward.y * run, z: -helm.forward.z * run };
+/** The world goes by the ship by `moved`: the gate with it, and the gate is reached when she comes to it. */
+function pass(moved: Vec): Vec {
     if (!ship.away) helm.gate = { x: helm.gate.x + moved.x, y: helm.gate.y + moved.y, z: helm.gate.z + moved.z };
     helm.arrived = false;
     if (!ship.away && !helm.fixed && Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z) < GATE_REACH) {
@@ -165,4 +143,21 @@ export function stepHelm(keys: HelmKeys, dt: number): Vec {
         if (helm.mode === 'align') steady();
     }
     return moved;
+}
+
+/** A ship flown here, by this helm: the orders are taken, she turns by them, and the world goes by at the speed she has. */
+export function stepHelm(keys: HelmKeys, dt: number): Vec {
+    const orders = helmOrders(keys, dt);
+    const flown = { level: helm.level, yawRate: helm.yawRate, pitchRate: helm.pitchRate, rollRate: helm.rollRate, bank: helm.roll };
+    helm.jets = turnShip(flown, orders, dt);
+    read(flown, dt);
+    const run = ship.speed * FIELD_DRIFT * dt * helm.surge;
+    return pass({ x: -helm.forward.x * run, y: -helm.forward.y * run, z: -helm.forward.z * run });
+}
+
+/** A ship flown elsewhere (the sector's): the helm shows the flight it is given, and the world goes by as far as she went since the last one. */
+export function followFlight(shown: Flight, jets: { yaw: number; pitch: number; roll: number }, went: Vec, dt: number): Vec {
+    helm.jets = jets;
+    read(shown, dt);
+    return pass({ x: -went.x, y: -went.y, z: -went.z });
 }

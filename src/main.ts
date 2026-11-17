@@ -9,6 +9,7 @@ import { createImpacts } from './impacts';
 import { createRaiders, foes } from './raiders';
 import { JUMP, jumpAt, nextSystem } from './jump';
 import { ship, TOP_SPEED, FIELD_DRIFT } from './shipState';
+import { driveShip } from './shared/steer';
 import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
@@ -210,7 +211,8 @@ addPlugin({
             clock += dt;
 
             wanted = helm.order;
-            throttle += (wanted - throttle) * Math.min(1, dt * 2.2);
+            if (online.enabled) throttle = ship.throttle;
+            else { const engine = { throttle, speed: ship.speed }; driveShip(engine, wanted, dt); throttle = engine.throttle; ship.speed = engine.speed; }
 
             for (const plume of PLUMES) {
                 const wide = plume.width * (0.8 + 0.2 * throttle);
@@ -310,7 +312,6 @@ addPlugin({
             ship.time = clock;
             ship.throttle = throttle;
             ship.wanted = wanted;
-            ship.speed += (throttle * TOP_SPEED - ship.speed) * Math.min(1, dt * 0.8);
             ship.tour = tour;
             ship.shot = Math.floor(clock / SHOT_SECONDS) % SHOTS.length;
 

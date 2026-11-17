@@ -2,7 +2,7 @@ import { Material, MeshRenderer, Particle, Transform } from 'esengine';
 import type { App, Entity, World } from 'esengine';
 import { IMPACT, absorb, clearance, rockMass, spinFrom, strike, touch } from './collision';
 import { helm, setEngine, turnBack, turnBy, type Vec } from './helm';
-import { parkedRock, pinnedRock } from './online';
+import { online, parkedRock, pinnedRock } from './online';
 import { SHIELD } from './shieldShape';
 import { DRIFTING_ROCKS, FIELD_DRIFT, FIELD_HALF_LENGTH, TOP_SPEED, ship } from './shipState';
 
@@ -51,7 +51,7 @@ export function createImpacts(app: App): (world: World, dt: number, cruise: numb
             quiet[i] = Math.max(0, quiet[i]! - dt);
             let place = { x: at[0]!, y: at[1]!, z: at[2]! };
             const radius = t.scale.x * IMPACT.rockBody;
-            if (!leaving && Math.hypot(place.x, place.y, place.z) < radius + REACH) {
+            if (!leaving && !online.enabled && Math.hypot(place.x, place.y, place.z) < radius + REACH) {
                 const local = turnBack(helm.attitude, place);
                 const contact = touch(local, radius);
                 if (contact) {
