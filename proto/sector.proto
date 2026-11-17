@@ -31,6 +31,12 @@ enum TransferRefusal {
   TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE = 5;
   TRANSFER_REFUSAL_HOLD_FULL = 6;
   TRANSFER_REFUSAL_BAD_ORDER = 7;
+  // Its number was answered long ago and the answer is no longer kept. It was not done again.
+  TRANSFER_REFUSAL_EXPIRED = 8;
+  // Its number is ahead of the pilot's next.
+  TRANSFER_REFUSAL_OUT_OF_ORDER = 9;
+  // It was valid and could not be written to disk, so it was not done. Asked again under the same number and name it is tried again.
+  TRANSFER_REFUSAL_NOT_SAVED = 10;
 }
 
 message Vec3 { double x = 1; double y = 2; double z = 3; }
@@ -57,9 +63,11 @@ message MineRequest { bool on = 1; }
 // To make fast to the station (true) or cast off (false). The server decides, from where it has flown the ship.
 message DockRequest { bool dock = 1; }
 // Ore between the sender's own hold and the sender's own warehouse; no field names anyone else's.
-// `op` names this order: an order asked again under the same name is answered as it was, and done once.
+// `seq` is this pilot's number for the order: 1, 2, 3 for as long as the sector lives, and the server says which is next.
+// An order at or below a number already answered is never done: it is answered as it was if `op`, its own name, is still
+// remembered beside that number, and refused as expired if not.
 // `grams` is signed so that a client asking for less than nothing is refused by the rules and not by the wire.
-message TransferRequest { string op = 1; bool withdraw = 2; sint64 grams = 3; }
+message TransferRequest { string op = 1; bool withdraw = 2; sint64 grams = 3; uint32 seq = 4; }
 
 // ── replies ──
 message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 4; }
@@ -78,11 +86,13 @@ message EnterReply {
   Station station = 12;
   uint32 stored = 13;
   bool docked = 14;
+  // The number this pilot's next order to move ore must carry.
+  uint32 next_move = 15;
 }
 message SteerReply { uint32 taken = 1; }
 message MineReply { bool asking = 1; }
 message DockReply { bool docked = 1; DockRefusal why = 2; }
-// A reply that says `ok` is a promise: the move is on the server's disk before it is sent.
+// A reply that says `ok` is a promise: the move is on the server's disk before it is sent, and before it is true anywhere else.
 message TransferReply {
   string op = 1;
   bool ok = 2;
@@ -93,6 +103,9 @@ message TransferReply {
   uint32 stored = 7;
   // True when this order had been answered before: this is that answer again, and nothing moved this time.
   bool repeat = 8;
+  // The number this pilot's next order must carry.
+  uint32 next = 9;
+  uint32 seq = 10;
 }
 
 // ── events ──
@@ -120,4 +133,5 @@ message StateEvent {
   uint32 waiting = 9;
   uint32 stored = 10;
   bool docked = 11;
+  uint32 next_move = 12;
 }

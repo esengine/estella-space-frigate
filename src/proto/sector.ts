@@ -27,6 +27,9 @@ export enum TransferRefusal {
     TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE = 5,
     TRANSFER_REFUSAL_HOLD_FULL = 6,
     TRANSFER_REFUSAL_BAD_ORDER = 7,
+    TRANSFER_REFUSAL_EXPIRED = 8,
+    TRANSFER_REFUSAL_OUT_OF_ORDER = 9,
+    TRANSFER_REFUSAL_NOT_SAVED = 10,
 }
 
 export interface Vec3 {
@@ -412,16 +415,18 @@ export interface TransferRequest {
     op: string;
     withdraw: boolean;
     grams: number;
+    seq: number;
 }
 
 export const TransferRequest = {
     create(init: Partial<TransferRequest> = {}): TransferRequest {
-        return { op: '', withdraw: false, grams: 0, ...init };
+        return { op: '', withdraw: false, grams: 0, seq: 0, ...init };
     },
     write(m: TransferRequest, w: Writer): void {
         if (m.op !== '') { w.tag(1, 2); w.string(m.op); }
         if (m.withdraw !== false) { w.tag(2, 0); w.bool(m.withdraw); }
         if (m.grams !== 0) { w.tag(3, 0); w.sint64(m.grams); }
+        if (m.seq !== 0) { w.tag(4, 0); w.uint32(m.seq); }
     },
     read(r: Reader, end: number): TransferRequest {
         const m = TransferRequest.create();
@@ -431,6 +436,7 @@ export const TransferRequest = {
                 case 1: if (wt === 2) m.op = r.string(); else r.skip(wt); break;
                 case 2: if (wt === 0) m.withdraw = r.bool(); else r.skip(wt); break;
                 case 3: if (wt === 0) m.grams = r.sint64(); else r.skip(wt); break;
+                case 4: if (wt === 0) m.seq = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -441,6 +447,7 @@ export const TransferRequest = {
         o.op = m.op;
         o.withdraw = m.withdraw;
         o.grams = m.grams;
+        o.seq = m.seq;
         return o;
     },
     fromJSON(j: unknown): TransferRequest {
@@ -449,9 +456,10 @@ export const TransferRequest = {
         if (o.op != null) m.op = jStr(o.op, "TransferRequest.op");
         if (o.withdraw != null) m.withdraw = jBool(o.withdraw, "TransferRequest.withdraw");
         if (o.grams != null) m.grams = jInt(o.grams, "TransferRequest.grams", -9007199254740991, 9007199254740991);
+        if (o.seq != null) m.seq = jInt(o.seq, "TransferRequest.seq", 0, 4294967295);
         return m;
     },
-    shape: "TransferRequest{1:string op,2:bool withdraw,3:sint64 grams}",
+    shape: "TransferRequest{1:string op,2:bool withdraw,3:sint64 grams,4:uint32 seq}",
     encode(m: TransferRequest): Uint8Array { const w = new Writer(); TransferRequest.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): TransferRequest { return TransferRequest.read(new Reader(bytes), bytes.length); },
 };
@@ -581,11 +589,12 @@ export interface EnterReply {
     station?: Station | undefined;
     stored: number;
     docked: boolean;
+    nextMove: number;
 }
 
 export const EnterReply = {
     create(init: Partial<EnterReply> = {}): EnterReply {
-        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, ...init };
+        return { account: '', name: '', cargo: 0, sector: '', sectorName: '', range: 0, rate: 0, capacity: 0, stored: 0, docked: false, nextMove: 0, ...init };
     },
     write(m: EnterReply, w: Writer): void {
         if (m.account !== '') { w.tag(1, 2); w.string(m.account); }
@@ -601,6 +610,7 @@ export const EnterReply = {
         if (m.station !== undefined) { w.tag(12, 2); w.bytes(Station.encode(m.station)); }
         if (m.stored !== 0) { w.tag(13, 0); w.uint32(m.stored); }
         if (m.docked !== false) { w.tag(14, 0); w.bool(m.docked); }
+        if (m.nextMove !== 0) { w.tag(15, 0); w.uint32(m.nextMove); }
     },
     read(r: Reader, end: number): EnterReply {
         const m = EnterReply.create();
@@ -620,6 +630,7 @@ export const EnterReply = {
                 case 12: if (wt === 2) m.station = Station.read(r, r.end()); else r.skip(wt); break;
                 case 13: if (wt === 0) m.stored = r.uint32(); else r.skip(wt); break;
                 case 14: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
+                case 15: if (wt === 0) m.nextMove = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -640,6 +651,7 @@ export const EnterReply = {
         if (m.station !== undefined) o.station = Station.toJSON(m.station);
         o.stored = m.stored;
         o.docked = m.docked;
+        o.nextMove = m.nextMove;
         return o;
     },
     fromJSON(j: unknown): EnterReply {
@@ -658,9 +670,10 @@ export const EnterReply = {
         if (o.station != null) m.station = Station.fromJSON(o.station);
         if (o.stored != null) m.stored = jInt(o.stored, "EnterReply.stored", 0, 4294967295);
         if (o.docked != null) m.docked = jBool(o.docked, "EnterReply.docked");
+        if (o.nextMove != null) m.nextMove = jInt(o.nextMove, "EnterReply.nextMove", 0, 4294967295);
         return m;
     },
-    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,4:double dock_range,5:double dock_speed}",
+    shape: "EnterReply{1:string account,2:string name,3:Flight flight,5:uint32 cargo,6:string sector,7:string sector_name,8:Rock rock,9:double range,10:uint32 rate,11:uint32 capacity,12:Station station,13:uint32 stored,14:bool docked,15:uint32 next_move};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};Rock{1:string id,2:Vec3 at,3:uint32 total,4:uint32 remaining};Station{1:string id,2:string name,3:Vec3 at,4:double dock_range,5:double dock_speed}",
     encode(m: EnterReply): Uint8Array { const w = new Writer(); EnterReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): EnterReply { return EnterReply.read(new Reader(bytes), bytes.length); },
 };
@@ -793,11 +806,13 @@ export interface TransferReply {
     cargo: number;
     stored: number;
     repeat: boolean;
+    next: number;
+    seq: number;
 }
 
 export const TransferReply = {
     create(init: Partial<TransferReply> = {}): TransferReply {
-        return { op: '', ok: false, why: 0, withdraw: false, grams: 0, cargo: 0, stored: 0, repeat: false, ...init };
+        return { op: '', ok: false, why: 0, withdraw: false, grams: 0, cargo: 0, stored: 0, repeat: false, next: 0, seq: 0, ...init };
     },
     write(m: TransferReply, w: Writer): void {
         if (m.op !== '') { w.tag(1, 2); w.string(m.op); }
@@ -808,6 +823,8 @@ export const TransferReply = {
         if (m.cargo !== 0) { w.tag(6, 0); w.uint32(m.cargo); }
         if (m.stored !== 0) { w.tag(7, 0); w.uint32(m.stored); }
         if (m.repeat !== false) { w.tag(8, 0); w.bool(m.repeat); }
+        if (m.next !== 0) { w.tag(9, 0); w.uint32(m.next); }
+        if (m.seq !== 0) { w.tag(10, 0); w.uint32(m.seq); }
     },
     read(r: Reader, end: number): TransferReply {
         const m = TransferReply.create();
@@ -822,6 +839,8 @@ export const TransferReply = {
                 case 6: if (wt === 0) m.cargo = r.uint32(); else r.skip(wt); break;
                 case 7: if (wt === 0) m.stored = r.uint32(); else r.skip(wt); break;
                 case 8: if (wt === 0) m.repeat = r.bool(); else r.skip(wt); break;
+                case 9: if (wt === 0) m.next = r.uint32(); else r.skip(wt); break;
+                case 10: if (wt === 0) m.seq = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -837,6 +856,8 @@ export const TransferReply = {
         o.cargo = m.cargo;
         o.stored = m.stored;
         o.repeat = m.repeat;
+        o.next = m.next;
+        o.seq = m.seq;
         return o;
     },
     fromJSON(j: unknown): TransferReply {
@@ -850,9 +871,11 @@ export const TransferReply = {
         if (o.cargo != null) m.cargo = jInt(o.cargo, "TransferReply.cargo", 0, 4294967295);
         if (o.stored != null) m.stored = jInt(o.stored, "TransferReply.stored", 0, 4294967295);
         if (o.repeat != null) m.repeat = jBool(o.repeat, "TransferReply.repeat");
+        if (o.next != null) m.next = jInt(o.next, "TransferReply.next", 0, 4294967295);
+        if (o.seq != null) m.seq = jInt(o.seq, "TransferReply.seq", 0, 4294967295);
         return m;
     },
-    shape: "TransferReply{1:string op,2:bool ok,3:TransferRefusal why,4:bool withdraw,5:uint32 grams,6:uint32 cargo,7:uint32 stored,8:bool repeat};enum TransferRefusal{TRANSFER_REFUSAL_UNSPECIFIED=0,TRANSFER_REFUSAL_NONE=1,TRANSFER_REFUSAL_NOT_DOCKED=2,TRANSFER_REFUSAL_BAD_AMOUNT=3,TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD=4,TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE=5,TRANSFER_REFUSAL_HOLD_FULL=6,TRANSFER_REFUSAL_BAD_ORDER=7}",
+    shape: "TransferReply{1:string op,2:bool ok,3:TransferRefusal why,4:bool withdraw,5:uint32 grams,6:uint32 cargo,7:uint32 stored,8:bool repeat,9:uint32 next,10:uint32 seq};enum TransferRefusal{TRANSFER_REFUSAL_UNSPECIFIED=0,TRANSFER_REFUSAL_NONE=1,TRANSFER_REFUSAL_NOT_DOCKED=2,TRANSFER_REFUSAL_BAD_AMOUNT=3,TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD=4,TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE=5,TRANSFER_REFUSAL_HOLD_FULL=6,TRANSFER_REFUSAL_BAD_ORDER=7,TRANSFER_REFUSAL_EXPIRED=8,TRANSFER_REFUSAL_OUT_OF_ORDER=9,TRANSFER_REFUSAL_NOT_SAVED=10}",
     encode(m: TransferReply): Uint8Array { const w = new Writer(); TransferReply.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): TransferReply { return TransferReply.read(new Reader(bytes), bytes.length); },
 };
@@ -947,11 +970,12 @@ export interface StateEvent {
     waiting: number;
     stored: number;
     docked: boolean;
+    nextMove: number;
 }
 
 export const StateEvent = {
     create(init: Partial<StateEvent> = {}): StateEvent {
-        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, ...init };
+        return { tick: 0, remaining: 0, cargo: 0, mining: false, why: 0, others: [], ack: 0, waiting: 0, stored: 0, docked: false, nextMove: 0, ...init };
     },
     write(m: StateEvent, w: Writer): void {
         if (m.tick !== 0) { w.tag(1, 0); w.uint32(m.tick); }
@@ -965,6 +989,7 @@ export const StateEvent = {
         if (m.waiting !== 0) { w.tag(9, 0); w.uint32(m.waiting); }
         if (m.stored !== 0) { w.tag(10, 0); w.uint32(m.stored); }
         if (m.docked !== false) { w.tag(11, 0); w.bool(m.docked); }
+        if (m.nextMove !== 0) { w.tag(12, 0); w.uint32(m.nextMove); }
     },
     read(r: Reader, end: number): StateEvent {
         const m = StateEvent.create();
@@ -982,6 +1007,7 @@ export const StateEvent = {
                 case 9: if (wt === 0) m.waiting = r.uint32(); else r.skip(wt); break;
                 case 10: if (wt === 0) m.stored = r.uint32(); else r.skip(wt); break;
                 case 11: if (wt === 0) m.docked = r.bool(); else r.skip(wt); break;
+                case 12: if (wt === 0) m.nextMove = r.uint32(); else r.skip(wt); break;
                 default: r.skip(wt);
             }
         }
@@ -1000,6 +1026,7 @@ export const StateEvent = {
         o.waiting = m.waiting;
         o.stored = m.stored;
         o.docked = m.docked;
+        o.nextMove = m.nextMove;
         return o;
     },
     fromJSON(j: unknown): StateEvent {
@@ -1016,9 +1043,10 @@ export const StateEvent = {
         if (o.waiting != null) m.waiting = jInt(o.waiting, "StateEvent.waiting", 0, 4294967295);
         if (o.stored != null) m.stored = jInt(o.stored, "StateEvent.stored", 0, 4294967295);
         if (o.docked != null) m.docked = jBool(o.docked, "StateEvent.docked");
+        if (o.nextMove != null) m.nextMove = jInt(o.nextMove, "StateEvent.nextMove", 0, 4294967295);
         return m;
     },
-    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked}",
+    shape: "StateEvent{1:uint32 tick,2:uint32 remaining,3:Flight flight,4:uint32 cargo,5:bool mining,6:Refusal why,7:repeated Pilot others,8:uint32 ack,9:uint32 waiting,10:uint32 stored,11:bool docked,12:uint32 next_move};Flight{1:Vec3 p,2:Quat level,3:double yaw_rate,4:double pitch_rate,5:double roll_rate,6:double bank,7:double throttle,8:double speed};Vec3{1:double x,2:double y,3:double z};Quat{1:double x,2:double y,3:double z,4:double w};enum Refusal{REFUSAL_UNSPECIFIED=0,REFUSAL_NONE=1,REFUSAL_NOT_MINING=2,REFUSAL_OUT_OF_RANGE=3,REFUSAL_ROCK_EXHAUSTED=4,REFUSAL_HOLD_FULL=5};Pilot{1:string account,2:string name,3:Vec3 p,4:Quat q,5:double throttle,6:bool mining,7:uint32 cargo,8:Vec3 v,9:bool docked}",
     encode(m: StateEvent): Uint8Array { const w = new Writer(); StateEvent.write(m, w); return w.finish(); },
     decode(bytes: Uint8Array): StateEvent { return StateEvent.read(new Reader(bytes), bytes.length); },
 };

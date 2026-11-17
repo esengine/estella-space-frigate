@@ -1,0 +1,8 @@
+{
+  "uuid": "e9044c7f-dc8e-5870-b19c-7caa9445c82c",
+  "version": "2.0",
+  "type": "modeling",
+  "importer": {
+    "bake": "load"
+  }
+}

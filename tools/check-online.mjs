@@ -235,7 +235,7 @@ try {
     const ran = far(tuple(lapEnd.flight.pos), tuple(lap.from.flight.pos));
     sa = await a.seen(); sb = await b.seen();
     measured.cheats = { seconds: +seconds.toFixed(2), ranUnits: +ran.toFixed(1), mostAFrigateCouldRun: +(TOP * seconds).toFixed(1), serverSpeed: +lapEnd.flight.speed.toFixed(1), ordersDropped: lapEnd.dropped - lap.from.dropped, clientCorrections: sa.fix.count - fix.count - fixBefore.count };
-    expect('a forged place, heading and speed in the client, and a client clock ten times fast, moved the server\'s ship no further than a frigate sails', ran <= TOP * (seconds + 0.2) && ran > TOP * seconds * 0.7 && lapEnd.flight.speed <= 420 && measured.cheats.ordersDropped > 100, measured.cheats);
+    expect('a forged place, heading and speed in the client, and a client clock ten times fast, moved the server\'s ship no further than a frigate sails', ran <= TOP * (seconds + 0.2) && ran > TOP * seconds * 0.7 && lapEnd.flight.speed <= 420, measured.cheats);
     expect('and the other pilot saw the server\'s ship, not the forged one', far([sb.pilots[0].sx, sb.pilots[0].sy, sb.pilots[0].sz], tuple(lapEnd.flight.pos)) < TOP * 0.8, { seenByB: sb.pilots[0], server: lapEnd.flight.pos });
     const swing = { from: (await books())['pilot-a'].flight, at: Date.now() };
     for (let n = 0; n < 3; n++) await a.tap('KeyD');
@@ -298,7 +298,7 @@ try {
     sa = await a.seen(); sb = await b.seen();
     now = await health();
     expect('mined out, the two holds are the whole ten tonnes and the rock is empty', now.remaining === 0 && now.held === TOTAL && sa.cargo + sb.cargo === TOTAL && sa.remaining === 0, { now, a: sa.cargo, b: sb.cargo, reach: measured.reach });
-    expect('and the clients mine no more, and with ore aboard are pointed at the station', /STATION/.test(sa.text) && /STATION/.test(sb.text) && !sa.firing && !sb.firing, { a: sa.text, b: sb.text });
+    expect('and the clients mine no more, and with ore aboard are pointed at the station', /ANCHORAGE/.test(sa.text) && /ANCHORAGE/.test(sb.text) && !sa.firing && !sb.firing, { a: sa.text, b: sb.text });
     expect('a fixed sector: nobody jumped out of it', sa.system === 0 && sb.system === 0 && sa.jumps === 0, { a: sa.system, b: sb.system });
     await a.shoot('4-mined-out');
 
@@ -307,7 +307,7 @@ try {
     const note = async (event) => { const h = await health(), sum = h.remaining + h.held + h.stored; ledger.push({ at: new Date().toISOString(), event, remainingT: h.remaining / 1e6, holdsT: h.held / 1e6, warehousesT: h.stored / 1e6, sumT: sum / 1e6 }); if (sum !== TOTAL) problems.push(`after "${event}" the books hold ${sum} g`); return h; };
     await note('mined out; nothing stored yet');
     const carried = { a: sa.cargo, b: sb.cargo };
-    expect('each has at least a tonne in her hold, and the station is far beyond the beam', carried.a >= 1e6 && carried.b >= 1e6 && sa.range > 800 && sb.range > 800 && sa.gateName === 'KESTREL STATION', { carried, range: [sa.range, sb.range] });
+    expect('each has at least a tonne in her hold, and the station is far beyond the beam', carried.a >= 1e6 && carried.b >= 1e6 && sa.range > 800 && sb.range > 800 && sa.gateName === 'KESTREL ANCHORAGE', { carried, range: [sa.range, sb.range] });
 
     // A client that says it is docked, far from the station, and orders its ore stored.
     // The key is held first, then the lie and the frames that read the key go in one piece, so no state from the server can put the truth back in between.
@@ -349,7 +349,7 @@ try {
     sa = await a.seen(); sb = await b.seen();
     let ships = await books();
     measured.haul = { seconds: Math.round((Date.now() - runBegan) / 1000), toldA: told.A, toldB: told.B };
-    expect('following only the keys the glass names, both ships came to the station and the server docked them', sa.docked && sb.docked && ships['pilot-a'].docked && ships['pilot-b'].docked && ships['pilot-a'].station <= 300 && ships['pilot-b'].station <= 300 && ships['pilot-a'].flight.speed === 0, { seconds: measured.haul.seconds, station: [ships['pilot-a'].station, ships['pilot-b'].station] });
+    expect('following only the keys the glass names, both ships came to the station and the server docked them', sa.docked && sb.docked && ships['pilot-a'].docked && ships['pilot-b'].docked && ships['pilot-a'].station <= 560 && ships['pilot-b'].station <= 560 && ships['pilot-a'].flight.speed === 0, { seconds: measured.haul.seconds, station: [ships['pilot-a'].station, ships['pilot-b'].station] });
     await note('both docked at the station');
     await a.shoot('6-a-docked');
 

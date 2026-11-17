@@ -14,7 +14,8 @@ export const SECTOR = {
     saveMs: 1000,
     berths: [[-160, 0, 0], [160, 0, 0]] as Vec3[],
     // The station stands further from the rock than a beam reaches: ore is carried to it, never mined from it.
-    station: { id: 'kestrel-station', name: 'KESTREL STATION', at: [0, 0, -1700] as Vec3, dockRange: 300, dockSpeed: 80 },
+    // The station spans 832 units, eight frigate lengths; a ship docks from just off its wing tips, 416 out, and no nearer need she come.
+    station: { id: 'kestrel-station', name: 'KESTREL ANCHORAGE', at: [0, 0, -1900] as Vec3, dockRange: 560, dockSpeed: 80 },
 } as const;
 
 export const tonnes = (grams: number): number => grams / GRAMS;
@@ -50,12 +51,16 @@ export type Refusal = '' | 'NOT MINING' | 'OUT OF RANGE' | 'ROCK EXHAUSTED' | 'H
 export type DockRefusal = '' | 'TOO FAR' | 'TOO FAST';
 
 /** Why ore did not move between a hold and a warehouse. '' is that it did. */
-export type TransferRefusal = '' | 'NOT DOCKED' | 'BAD AMOUNT' | 'NOT ENOUGH IN THE HOLD' | 'NOT ENOUGH IN THE WAREHOUSE' | 'HOLD FULL' | 'BAD ORDER';
+/**
+ * EXPIRED: its number was answered long ago and the answer is no longer kept; it was not done again. OUT OF ORDER: its number is
+ * ahead of the next. NOT SAVED: it was valid and could not be written, so it was not done; asked again it will be tried again.
+ */
+export type TransferRefusal = '' | 'NOT DOCKED' | 'BAD AMOUNT' | 'NOT ENOUGH IN THE HOLD' | 'NOT ENOUGH IN THE WAREHOUSE' | 'HOLD FULL' | 'BAD ORDER' | 'EXPIRED' | 'OUT OF ORDER' | 'NOT SAVED';
 
 export interface PilotView { account: string; name: string; p: Vec3; q: Quat4; v: Vec3; th: number; mining: boolean; docked: boolean; cargo: number }
 
 /** What came of an order to move ore, kept under the order's own name so that asking again is told the same and nothing moves twice. */
-export interface Transfer { op: string; ok: boolean; why: TransferRefusal; withdraw: boolean; grams: number; cargo: number; stored: number }
+export interface Transfer { seq: number; op: string; ok: boolean; why: TransferRefusal; withdraw: boolean; grams: number; cargo: number; stored: number }
 
 /** A ship that is not within reach of the station, or is still making way, may not dock. */
 export function mayDock(distance: number, speed: number): DockRefusal {

@@ -35,7 +35,9 @@ export const online = {
     /** The last answer to asking to dock, and when: '' is that she may. */
     dock: { asking: false, why: '' as DockRefusal, at: 0 },
     /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
-    move: { op: '', withdraw: false, grams: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
+    move: { seq: 0, op: '', withdraw: false, grams: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
+    /** The number the server will take for this pilot's next order to move ore. */
+    nextMove: 1,
     mining: false,
     refusal: 'NOT MINING' as Refusal,
     others: [] as PilotView[],
@@ -84,7 +86,7 @@ export function flyOnline(dt: number, orders: Orders): { shown: Flight; jets: { 
     predictor.advance(dt, orders, linked, online.docked);
     const now = Date.now();
     // An order to move ore that has had no answer is asked again, under the same name, until it has one: the server does it once.
-    if (linked && online.move.state === 'pending' && !moving && now - movedAt > 700) sendMove();
+    if (linked && online.move.state === 'pending' && !moving && now - movedAt > (online.move.why === 'NOT SAVED' ? 1500 : 700)) sendMove();
     if (linked && api && predictor.unsent() > 0 && now - sentAt >= SEND_MS) {
         sentAt = now;
         api.steer({ orders: predictor.drain().map((one) => ({ seq: one.seq, ...one.orders })) }, { retries: 0, timeoutMs: 3000 }).catch(() => undefined);
@@ -104,6 +106,7 @@ async function enter(): Promise<void> {
     online.cargo = reply.cargo;
     online.stored = reply.stored;
     online.docked = reply.docked;
+    online.nextMove = reply.nextMove;
     if (reply.station) online.station = { name: reply.station.name, at: fromVec(reply.station.at), dockRange: reply.station.dockRange, dockSpeed: reply.station.dockSpeed };
     online.capacity = reply.capacity;
     online.range = reply.range;
@@ -134,6 +137,7 @@ export function connectOnline(): void {
         online.cargo = state.cargo;
         online.stored = state.stored;
         online.docked = state.docked;
+        online.nextMove = state.nextMove;
         online.mining = state.mining;
         online.refusal = fromRefusal(state.why);
         online.others = state.others.map((o) => ({ account: o.account, name: o.name, p: fromVec(o.p), q: fromQuat(o.q), v: fromVec(o.v), th: o.throttle, mining: o.mining, docked: o.docked, cargo: o.cargo }));
@@ -172,23 +176,31 @@ export function askToDock(want: boolean): void {
 
 function sendMove(): void {
     if (!api || online.move.state !== 'pending') return;
-    const { op, withdraw, grams } = online.move;
+    const { seq, op, withdraw, grams } = online.move;
     moving = true;
     movedAt = Date.now();
     online.move.tries++;
-    api.transfer({ op, withdraw, grams }, { retries: 0, timeoutMs: 4000 }).then((reply) => {
+    api.transfer({ seq, op, withdraw, grams }, { retries: 0, timeoutMs: 4000 }).then((reply) => {
         moving = false;
-        if (online.move.op !== reply.op) return;
-        online.move = { ...online.move, state: reply.ok ? 'done' : 'refused', why: fromTransferRefusal(reply.why), cargo: reply.cargo, stored: reply.stored, at: Date.now(), repeat: reply.repeat };
+        if (online.move.op !== reply.op || online.move.state !== 'pending') return;
+        const why = fromTransferRefusal(reply.why);
+        // The station could not write it down, so it did not happen: the same order is sent again until it can, or the pilot leaves.
+        if (!reply.ok && why === 'NOT SAVED') { online.move = { ...online.move, why }; return; }
+        // The server never took this number, so the order has not been seen under it: it goes again under the number it gives.
+        if (!reply.ok && why === 'OUT OF ORDER' && reply.next > 0) { online.move = { ...online.move, seq: reply.next, why: '' }; return; }
+        online.move = { ...online.move, state: reply.ok ? 'done' : 'refused', why, cargo: reply.cargo, stored: reply.stored, at: Date.now(), repeat: reply.repeat };
         if (reply.ok) { online.cargo = reply.cargo; online.stored = reply.stored; }
     }, () => { moving = false; });
 }
 
-/** Order ore out of the hold into this pilot's warehouse, or back. One order at a time; it is named here so that asking again is the same order. */
+/**
+ * Order ore out of the hold into this pilot's warehouse, or back. One order at a time. It takes the pilot's next number and a
+ * name of its own here, once, so that sending it again is the same order and the server does it once.
+ */
 export function moveOre(withdraw: boolean, grams: number): boolean {
     if (online.link !== 'online' || online.move.state === 'pending' || !api) return false;
     const op = `${online.account}-${Date.now().toString(36)}-${(++named).toString(36)}-${Math.random().toString(36).slice(2, 10)}`.slice(0, 64);
-    online.move = { op, withdraw, grams, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
+    online.move = { seq: online.nextMove, op, withdraw, grams, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
     sendMove();
     return true;
 }

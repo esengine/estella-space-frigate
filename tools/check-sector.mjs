@@ -2,7 +2,7 @@ import { build } from 'esbuild';
 import assert from 'node:assert/strict';
 import { fork, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -112,7 +112,7 @@ try {
     pass('with no save and no --new the server does not start, and creates nothing');
     await start(['--new']);
     assert.equal(existsSync(data), true, 'the new sector is written at once');
-    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: TOTAL, held: 0, stored: 0, total: TOTAL });
+    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: TOTAL, held: 0, stored: 0, total: TOTAL, saving: 'ok' });
     pass('founded with --new, a sector holds one rock of ten tonnes and no cargo, and is on disk before anyone arrives');
 
     // ---- Who may come in ----------------------------------------------------------
@@ -284,7 +284,7 @@ try {
     assert.equal(saved.pilots['pilot-a'].cargo, before.a);
     assert.equal(saved.pilots['pilot-b'].cargo, before.b);
     await start();
-    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: before.left, held: before.a + before.b, stored: 0, total: TOTAL });
+    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: before.left, held: before.a + before.b, stored: 0, total: TOTAL, saving: 'ok' });
     const ships = await books();
     for (const id of ['pilot-a', 'pilot-b']) assert.ok(Math.hypot(ships[id].flight.pos.x - before.ships[id].flight.pos.x, ships[id].flight.pos.y - before.ships[id].flight.pos.y, ships[id].flight.pos.z - before.ships[id].flight.pos.z) < 0.5, `${id} is where she was`);
     await until('both to be back by themselves', () => a.session.state === 'ready' && b.session.state === 'ready', 15000);
@@ -325,7 +325,7 @@ try {
     await a.api.mine({ on: true });
     await wait(600);
     assert.deepEqual({ a: a.state.cargo, b: b.state.cargo }, last);
-    assert.deepEqual(await health(), { ok: true, pilots: 2, remaining: 0, held: TOTAL, stored: 0, total: TOTAL });
+    assert.deepEqual(await health(), { ok: true, pilots: 2, remaining: 0, held: TOTAL, stored: 0, total: TOTAL, saving: 'ok' });
     pass(`mined out, the two holds are ${(last.a / GRAMS).toFixed(2)} t and ${(last.b / GRAMS).toFixed(2)} t: ten tonnes, and an empty rock gives no more`);
 
     assert.ok(sums.seen > 200);
@@ -333,7 +333,7 @@ try {
     pass(`every one of the ${sums.seen} states sent while both pilots were in added up to exactly ten tonnes`);
 
     // ==== The station: carry it, dock, and put it in a warehouse of one's own ================================
-    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5;
+    const NONE = 1, TOO_FAR = 2, TOO_FAST = 3, NOT_DOCKED = 2, BAD_AMOUNT = 3, NOT_IN_HOLD = 4, NOT_IN_WAREHOUSE = 5, EXPIRED = 8, OUT_OF_ORDER = 9, NOT_SAVED = 10;
     const ledger = [];
     /** A line in the books: where every gram is, by the server's own account, and that they are ten tonnes. */
     const note = async (event) => {
@@ -345,6 +345,9 @@ try {
     let ops = 0;
     const op = (who) => `check-${who}-${Date.now().toString(36)}-${++ops}`;
     const mine = async (id) => (await books())[id];
+    /** An order as the game gives it: under the pilot's next number, which the server says, and a name of its own. */
+    const move = async (me, id, withdraw, grams, o = {}) => me.api.transfer({ seq: o.seq ?? (await mine(id)).nextMove, op: o.op ?? op(id.slice(-1)), withdraw, grams }, o.options);
+    const like = (got, want, what = '') => { for (const [key, value] of Object.entries(want)) assert.deepEqual(got[key], value, `${what} ${key}: ${JSON.stringify(got)}`); };
     const ready = async (...who) => { await until('them to be back', () => who.every((p) => p.session.state === 'ready'), 20000); for (const p of who) { await p.api.enter({}); p.seq = 0; } await wait(300); };
     const restart = async (how, env = {}) => { if (how === 'kill') await kill(); else if (server) await stopGently(); await start([], env); };
     await note('mined out, nothing stored');
@@ -353,13 +356,11 @@ try {
     const farOff = (await mine('pilot-a')).station;
     assert.ok(farOff > SECTOR.station.dockRange + 500, `A is ${farOff} from the station`);
     assert.deepEqual(await a.api.dock({ dock: true }), { docked: false, why: TOO_FAR });
-    for (const forged of [{ dock: true, docked: true, distance: 0, speed: 0, station: 'kestrel-station', p: { x: 0, y: 0, z: -1700 } }]) await a.session.request('dock', forged, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    await a.session.request('dock', { dock: true, docked: true, distance: 0, speed: 0, station: 'kestrel-station', p: { x: 0, y: 0, z: -1900 } }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
     assert.equal((await mine('pilot-a')).docked, false);
-    const remote = await a.api.transfer({ op: op('a'), withdraw: false, grams: 1 * GRAMS });
-    assert.equal(remote.ok, false);
-    assert.equal(remote.why, NOT_DOCKED);
-    assert.equal((await a.api.transfer({ op: op('a'), withdraw: true, grams: 1 })).why, NOT_DOCKED);
-    await a.session.request('transfer', { op: op('a'), withdraw: false, grams: 1 * GRAMS, docked: true, account: 'pilot-a', at: 'kestrel-station' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    like(await move(a, 'pilot-a', false, 1 * GRAMS), { ok: false, why: NOT_DOCKED });
+    like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED });
+    await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: false, grams: 1 * GRAMS, docked: true, account: 'pilot-a', at: 'kestrel-station' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
     await note('A asks to dock and to store from where she mined: refused');
     assert.equal((await mine('pilot-a')).stored, 0);
     pass('from where she mined a ship cannot dock or reach her warehouse: asking, and saying she is docked, do nothing');
@@ -368,17 +369,17 @@ try {
     const haul = async (me, id, comeInFast) => {
         const station = SECTOR.station.at, began = Date.now();
         let refusedFast = 0, lastDock = 0;
-        for (let sent = 0; Date.now() - began < 180000;) {
+        for (let sent = 0; Date.now() - began < 240000;) {
             const now = await mine(id), f = now.flight;
             const ahead = turnBack(f.level, { x: station[0] - f.pos.x, y: station[1] - f.pos.y, z: station[2] - f.pos.z });
             const inside = now.station <= SECTOR.station.dockRange - 30;
             if (inside && Date.now() - lastDock > 400) {
                 lastDock = Date.now();
                 const got = await me.api.dock({ dock: true });
-                if (got.docked) return { seconds: (Date.now() - began) / 1000, refusedFast, from: null };
+                if (got.docked) return { seconds: (Date.now() - began) / 1000, refusedFast };
                 if (got.why === TOO_FAST) refusedFast++;
             }
-            const order = inside ? 0 : now.station > 900 || comeInFast ? 1 : 0.25;
+            const order = inside ? 0 : now.station > SECTOR.station.dockRange + 600 || comeInFast ? 1 : 0.25;
             const rudder = -Math.max(-TURN_RATE, Math.min(TURN_RATE, Math.atan2(ahead.x, ahead.z) * 1.4)) / TURN_RATE;
             const elevation = Math.max(-PITCH_RATE, Math.min(PITCH_RATE, Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z) || 1e-6) * 1.4)) / PITCH_RATE;
             const due = Math.max(1, Math.floor((Date.now() - began) / TICK_MS) - sent);
@@ -406,30 +407,32 @@ try {
     // Into the warehouse, and back.
     const had = { a: berthA.cargo, b: berthB.cargo };
     assert.ok(had.a >= 1 * GRAMS && had.b >= 1 * GRAMS, `each brought at least a tonne: ${had.a} g and ${had.b} g`);
-    const firstOp = op('a');
-    const put = await a.api.transfer({ op: firstOp, withdraw: false, grams: 1_500_000 });
-    assert.deepEqual(put, { op: firstOp, ok: true, why: NONE, withdraw: false, grams: 1_500_000, cargo: had.a - 1_500_000, stored: 1_500_000, repeat: false });
+    const first = { seq: berthA.nextMove, op: op('a') };
+    const put = await move(a, 'pilot-a', false, 1_500_000, first);
+    like(put, { seq: first.seq, op: first.op, ok: true, why: NONE, withdraw: false, grams: 1_500_000, cargo: had.a - 1_500_000, stored: 1_500_000, repeat: false, next: first.seq + 1 });
     await note('A stores 1.50 t');
-    await until('A to see it', () => a.state.stored === 1_500_000 && a.state.cargo === had.a - 1_500_000 && a.state.docked);
-    const allB = await b.api.transfer({ op: op('b'), withdraw: false, grams: had.b });
-    assert.equal(allB.ok && allB.cargo === 0 && allB.stored === had.b, true);
+    await until('A to see it', () => a.state.stored === 1_500_000 && a.state.cargo === had.a - 1_500_000 && a.state.docked && a.state.nextMove === first.seq + 1);
+    like(await move(b, 'pilot-b', false, had.b), { ok: true, cargo: 0, stored: had.b });
     await note('B stores all she carried');
     pass(`each put ore in her own warehouse: A 1.50 t of ${(had.a / GRAMS).toFixed(2)} t, B all ${(had.b / GRAMS).toFixed(2)} t`);
 
     // Once: the same order again, one after another and all at once, and under the session's own retry key.
-    for (let n = 0; n < 15; n++) assert.deepEqual(await a.api.transfer({ op: firstOp, withdraw: false, grams: 1_500_000 }), { ...put, repeat: true });
-    const burst = await Promise.all(Array.from({ length: 15 }, () => a.api.transfer({ op: firstOp, withdraw: false, grams: 1_500_000 })));
+    for (let n = 0; n < 15; n++) like(await move(a, 'pilot-a', false, 1_500_000, first), { ok: true, repeat: true, stored: 1_500_000, cargo: had.a - 1_500_000 });
+    const burst = await Promise.all(Array.from({ length: 15 }, () => move(a, 'pilot-a', false, 1_500_000, first)));
     assert.ok(burst.every((r) => r.ok && r.repeat && r.stored === 1_500_000));
-    assert.equal((await a.api.transfer({ op: firstOp, withdraw: true, grams: 7 })).withdraw, false, 'the same name with other words is the order that was answered');
-    const sameKey = await Promise.all(Array.from({ length: 6 }, () => a.api.transfer({ op: 'check-one-key-one-order', withdraw: false, grams: 100_000 }, { idempotencyKey: 'one-click' })));
-    // The session layer answers a request sent again under one key with the reply it already gave, so the order ran once and all six read alike.
+    like(await move(a, 'pilot-a', true, 7, first), { withdraw: false, grams: 1_500_000, repeat: true }, 'the same number and name with other words is the order that was answered');
+    const one = { seq: (await mine('pilot-a')).nextMove, op: 'check-one-key-one-order' };
+    const sameKey = await Promise.all(Array.from({ length: 6 }, () => move(a, 'pilot-a', false, 100_000, { ...one, options: { idempotencyKey: 'one-click' } })));
     assert.ok(sameKey.every((r) => r.ok && r.stored === 1_600_000), JSON.stringify(sameKey));
     assert.equal((await mine('pilot-a')).stored, 1_600_000);
     await note('A repeats one order 36 times and clicks another six times: each done once');
-    // Ten different orders at once for more than is there: the warehouse cannot be overdrawn.
-    const grab = await Promise.all(Array.from({ length: 10 }, () => a.api.transfer({ op: op('a'), withdraw: true, grams: 1_000_000 })));
-    assert.equal(grab.filter((r) => r.ok).length, 1);
-    assert.ok(grab.filter((r) => !r.ok).every((r) => r.why === NOT_IN_WAREHOUSE));
+    // Ten different orders at once, each for a tonne of the 1.60 t there: they all carry the pilot's next number, and one has it.
+    const number = (await mine('pilot-a')).nextMove;
+    const grab = await Promise.all(Array.from({ length: 10 }, () => move(a, 'pilot-a', true, 1_000_000, { seq: number })));
+    assert.equal(grab.filter((r) => r.ok).length, 1, JSON.stringify(grab.map((r) => [r.ok, r.why])));
+    assert.ok(grab.filter((r) => !r.ok).every((r) => r.why === EXPIRED));
+    like(await move(a, 'pilot-a', true, 1_000_000), { ok: false, why: NOT_IN_WAREHOUSE }, 'and a second tonne, asked for properly, is not there');
+    like(await move(a, 'pilot-a', true, 1, { seq: (await mine('pilot-a')).nextMove + 5 }), { ok: false, why: OUT_OF_ORDER }, 'a number ahead of the next');
     assert.equal((await mine('pilot-a')).stored, 600_000);
     await note('A asks ten times at once for a tonne of the 1.60 t stored: one is given');
     pass('an order is done once however often it is asked, and ten at once cannot take what is not there');
@@ -437,42 +440,43 @@ try {
     // Amounts that are not ore she has.
     const beforeBad = await mine('pilot-a');
     for (const grams of [0, -1, -5 * GRAMS, 2 ** 40]) {
-        for (const withdraw of [false, true]) { const r = await a.api.transfer({ op: op('a'), withdraw, grams }); assert.equal(r.ok, false); assert.equal(r.why, BAD_AMOUNT, `grams ${grams}`); }
+        for (const withdraw of [false, true]) like(await move(a, 'pilot-a', withdraw, grams), { ok: false, why: BAD_AMOUNT }, `grams ${grams}`);
     }
     for (const grams of [0.5, 1.5 * GRAMS + 0.25, 'all', null]) {
-        const r = await a.session.request('transfer', { op: op('a'), withdraw: false, grams }, { retries: 0, timeoutMs: 1500 }).then((v) => v, () => ({ ok: false }));
+        const r = await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: false, grams }, { retries: 0, timeoutMs: 1500 }).then((v) => v, () => ({ ok: false }));
         assert.equal(r.ok, false, `grams ${grams}`);
     }
-    assert.equal((await a.api.transfer({ op: op('a'), withdraw: false, grams: beforeBad.cargo + 1 })).why, NOT_IN_HOLD);
-    assert.equal((await a.api.transfer({ op: op('a'), withdraw: true, grams: beforeBad.stored + 1 })).why, NOT_IN_WAREHOUSE);
+    like(await move(a, 'pilot-a', false, beforeBad.cargo + 1), { ok: false, why: NOT_IN_HOLD });
+    like(await move(a, 'pilot-a', true, beforeBad.stored + 1), { ok: false, why: NOT_IN_WAREHOUSE });
     const afterBad = await mine('pilot-a');
     assert.deepEqual([afterBad.cargo, afterBad.stored], [beforeBad.cargo, beforeBad.stored]);
     await note('A sends nothing, less than nothing, part of a gram and more than she has: all refused');
     pass('nothing, less than nothing, a part of a gram, and more than is in the hold or the warehouse are each refused');
 
     // Hers alone.
-    const theirs = await mine('pilot-b');
-    assert.equal(theirs.stored, had.b);
-    const reachFor = await a.api.transfer({ op: op('a'), withdraw: true, grams: 2_000_000 });
-    assert.equal(reachFor.ok, false, 'A has 0.60 t; the two tonnes she asks for are B\'s');
-    await a.session.request('transfer', { op: op('a'), withdraw: true, grams: 1_000_000, account: 'pilot-b', from: 'pilot-b', pilot: 'pilot-b', playerId: 'pilot-b' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
     assert.equal((await mine('pilot-b')).stored, had.b);
-    assert.equal((await mine('pilot-a')).stored <= 600_000, true);
+    like(await move(a, 'pilot-a', true, 2_000_000), { ok: false }, 'A has 0.60 t; the two tonnes she asks for are B\'s');
+    await a.session.request('transfer', { seq: (await mine('pilot-a')).nextMove, op: op('a'), withdraw: true, grams: 1_000_000, account: 'pilot-b', from: 'pilot-b', pilot: 'pilot-b', playerId: 'pilot-b' }, { retries: 0, timeoutMs: 1500 }).catch(() => undefined);
+    // A's number and name, sent by B, are B's own order and touch only B.
+    const bBefore = await mine('pilot-b');
+    like(await move(b, 'pilot-b', true, 100_000, first), { ok: false }, 'B sending A\'s first order');
+    assert.equal((await mine('pilot-b')).stored, bBefore.stored);
+    assert.equal((await mine('pilot-a')).stored, 600_000);
     await note('A asks for more than her own warehouse holds, naming B: B\'s is untouched');
     pass('a pilot\'s orders reach her own warehouse and no other: naming the other pilot in one changes nothing');
 
     // A success is on the disk: said, then killed at once.
-    const kept = op('a');
-    const said = await a.api.transfer({ op: kept, withdraw: false, grams: 250_000 });
+    const kept = { seq: (await mine('pilot-a')).nextMove, op: op('a') };
+    const said = await move(a, 'pilot-a', false, 250_000, kept);
     assert.equal(said.ok, true);
     const atSuccess = await mine('pilot-a');
     await restart('kill');
     const afterKill = await mine('pilot-a');
-    assert.deepEqual([afterKill.cargo, afterKill.stored, afterKill.docked], [said.cargo, said.stored, true]);
+    assert.deepEqual([afterKill.cargo, afterKill.stored, afterKill.docked, afterKill.nextMove], [said.cargo, said.stored, true, kept.seq + 1]);
     assert.deepEqual(afterKill.flight.pos, atSuccess.flight.pos);
     await note('A stores 0.25 t, is told so, and the server is killed at once: it is there when the server comes back');
     await ready(a, b);
-    assert.deepEqual(await a.api.transfer({ op: kept, withdraw: false, grams: 250_000 }), { ...said, repeat: true });
+    like(await move(a, 'pilot-a', false, 250_000, kept), { ok: true, repeat: true, cargo: said.cargo, stored: said.stored });
     pass('a move the pilot was told had succeeded is still there after the server is killed the instant it said so');
 
     // Stopped dead in the middle of a move, at each place it could be.
@@ -480,9 +484,9 @@ try {
     for (const point of ['before-write', 'mid-write', 'after-write']) {
         await restart('gently', { SECTOR_CRASH: point });
         await ready(a, b);
-        const was = await mine('pilot-a'), name = op('a');
+        const was = await mine('pilot-a'), name = { seq: was.nextMove, op: op('a') };
         const child = server;
-        const answer = await a.api.transfer({ op: name, withdraw: true, grams: 100_000 }, { retries: 0, timeoutMs: 3000 }).then(() => 'answered', () => 'no answer');
+        const answer = await move(a, 'pilot-a', true, 100_000, { ...name, options: { retries: 0, timeoutMs: 3000 } }).then(() => 'answered', () => 'no answer');
         assert.equal(await child.gone, 86, child.said);
         server = null;
         assert.equal(answer, 'no answer', 'the pilot was told nothing');
@@ -494,22 +498,99 @@ try {
         await note(`the server is stopped dead ${point.replace('-', ' ')} of a 0.10 t move: ${landed ? 'the whole move is there' : 'none of it is'}`);
         await ready(a, b);
         // She asks again, as a client does that had no answer. It is done now if it was not, and not again if it was.
-        const retry = await a.api.transfer({ op: name, withdraw: true, grams: 100_000 });
+        const retry = await move(a, 'pilot-a', true, 100_000, name);
         assert.deepEqual([retry.ok, retry.repeat, retry.stored, retry.cargo], [true, landed, was.stored - 100_000, was.cargo + 100_000]);
-        assert.equal((await a.api.transfer({ op: name, withdraw: true, grams: 100_000 })).repeat, true);
+        like(await move(a, 'pilot-a', true, 100_000, name), { ok: true, repeat: true });
         const end = await mine('pilot-a');
         assert.deepEqual([end.cargo, end.stored], [was.cargo + 100_000, was.stored - 100_000]);
-        await note(`she asks again under the same name: ${landed ? 'answered, not done again' : 'done, once'}`);
+        await note(`she asks again under the same number and name: ${landed ? 'answered, not done again' : 'done, once'}`);
         crashes.push({ stoppedAt: point, onDiskAfter: landed ? 'the whole move' : 'none of it', retry: landed ? 'answered as done, moved nothing' : 'done once' });
     }
     pass('stopped dead before, during and after writing a move, the server comes back with all of it or none, never a hold debited and a warehouse not credited; asked again, the order is done exactly once');
+
+    // ---- Found in review, 1: a disk that will not take the write --------------------------------------------------------
+    // The save before the last is kept beside the save; with a directory standing where it goes, no write can finish.
+    const onDisk = async () => { const saved = JSON.parse(await readFile(data, 'utf8')).pilots['pilot-a']; return [saved.cargo, saved.stored, saved.moves]; };
+    await rm(`${data}.bak`, { force: true, recursive: true });
+    await mkdir(`${data}.bak`);
+    const stuck = await mine('pilot-a'), refusedOrder = { seq: stuck.nextMove, op: op('a') };
+    const refusals = [];
+    for (let n = 0; n < 4; n++) refusals.push(await move(a, 'pilot-a', false, 300_000, refusedOrder));
+    // Every one of them is refused, the first and the repeats alike: before the fix the repeats were told it had been done.
+    assert.ok(refusals.every((r) => r.ok === false && r.why === NOT_SAVED && r.repeat === false && r.cargo === stuck.cargo && r.stored === stuck.stored), JSON.stringify(refusals.map((r) => [r.ok, r.why, r.repeat, r.cargo, r.stored])));
+    const during = await mine('pilot-a');
+    assert.deepEqual([during.cargo, during.stored, during.nextMove], [stuck.cargo, stuck.stored, stuck.nextMove], 'the server holds no balance the disk does not');
+    assert.deepEqual(await onDisk(), [stuck.cargo, stuck.stored, stuck.nextMove - 1]);
+    await until('her own state to agree', () => a.state.cargo === stuck.cargo && a.state.stored === stuck.stored);
+    // Its own periodic writes fail too while this lasts; it says so, and it does not fall over.
+    await b.api.dock({ dock: false });
+    await b.api.dock({ dock: true });
+    await wait(2500);
+    assert.equal((await health()).saving, 'failing');
+    assert.equal(await sumNow(), TOTAL);
+    await note('the disk refuses writes: A\'s order to store 0.30 t is refused four times, nothing moves, the server stays up');
+    // Killed in that state: what comes back is what was on the disk, which is what the pilot was told.
+    await restart('kill');
+    const afterStuck = await mine('pilot-a');
+    assert.deepEqual([afterStuck.cargo, afterStuck.stored, afterStuck.nextMove], [stuck.cargo, stuck.stored, stuck.nextMove]);
+    await ready(a, b);
+    like(await move(a, 'pilot-a', false, 300_000, refusedOrder), { ok: false, why: NOT_SAVED }, 'still refused after the restart, with the disk still stuck');
+    // The disk takes writes again. The same order, under the same number and name, is now done: once.
+    await rm(`${data}.bak`, { recursive: true });
+    const mended = await move(a, 'pilot-a', false, 300_000, refusedOrder);
+    like(mended, { ok: true, repeat: false, cargo: stuck.cargo - 300_000, stored: stuck.stored + 300_000, next: refusedOrder.seq + 1 });
+    for (let n = 0; n < 3; n++) like(await move(a, 'pilot-a', false, 300_000, refusedOrder), { ok: true, repeat: true, stored: stuck.stored + 300_000 });
+    assert.deepEqual(await onDisk(), [stuck.cargo - 300_000, stuck.stored + 300_000, refusedOrder.seq]);
+    await until('saving to be well again', async () => (await health()).saving === 'ok', 5000);
+    // Told it was done, and killed that instant.
+    await restart('kill');
+    const afterMend = await mine('pilot-a');
+    assert.deepEqual([afterMend.cargo, afterMend.stored, afterMend.nextMove], [stuck.cargo - 300_000, stuck.stored + 300_000, refusedOrder.seq + 1]);
+    await note('the disk mends: the same order is done once, and is there after the server is killed the instant it said so');
+    await ready(a, b);
+    pass('a move the disk refused is refused however often it is asked, is in no balance, survives a kill as not done, and once the disk mends is done exactly once and survives a kill as done');
+
+    // ---- Found in review, 2: an oldOrder order, sent again after many others ------------------------------------------------
+    const oldOrder = { seq: (await mine('pilot-a')).nextMove, op: op('a') };
+    like(await move(a, 'pilot-a', true, 200_000, oldOrder), { ok: true, repeat: false });
+    const settled = await mine('pilot-a');
+    // Sixty-four different orders that are each refused, as in the review: far more than the server remembers answers for.
+    for (let n = 0; n < 64; n++) like(await move(a, 'pilot-a', n % 2 === 0, [0, -1, 9 * GRAMS, 2 ** 40][n % 4]), { ok: false });
+    const pushed = await mine('pilot-a');
+    assert.equal(pushed.nextMove, oldOrder.seq + 65);
+    assert.deepEqual([pushed.cargo, pushed.stored], [settled.cargo, settled.stored]);
+    const replay = async (when) => {
+        const got = await move(a, 'pilot-a', true, 200_000, oldOrder);
+        like(got, { ok: false, why: EXPIRED, cargo: settled.cargo, stored: settled.stored }, when);
+        const now = await mine('pilot-a');
+        assert.deepEqual([now.cargo, now.stored, now.nextMove], [settled.cargo, settled.stored, pushed.nextMove], when);
+    };
+    await replay('at once');
+    await restart('gently');
+    await ready(a, b);
+    await replay('after a stop and start');
+    a.sockets[a.sockets.length - 1].close();
+    await until('her to redial', async () => a.session.state === 'ready' && (await mine('pilot-a')).here, 15000);
+    await ready(a);
+    await replay('after her link dropped');
+    await restart('kill');
+    await ready(a, b);
+    await replay('after a kill');
+    // Each of the sixty-four, and any number at or below the last, is the same.
+    for (const seq of [oldOrder.seq, oldOrder.seq + 1, oldOrder.seq + 30, oldOrder.seq + 64]) like(await move(a, 'pilot-a', true, 200_000, { seq }), { ok: false, why: EXPIRED });
+    const afterReplay = await mine('pilot-a');
+    assert.deepEqual([afterReplay.cargo, afterReplay.stored], [settled.cargo, settled.stored]);
+    // And a new order still goes through.
+    like(await move(a, 'pilot-a', false, 50_000), { ok: true, repeat: false, stored: settled.stored + 50_000 });
+    await note('A\'s order to take 0.20 t, sent again after 64 others, a stop and start, a dropped link and a kill: refused as expired each time');
+    pass('an order is not done a second time after sixty-four others, a restart, a dropped link and a kill: it is refused as expired, and the balances stand');
 
     // Signing in again: the same ship in the same place, the same hold, the same warehouse.
     const leaving = await mine('pilot-a');
     a.session.close();
     await wait(400);
     a = await pilot(CREDS.a);
-    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked], [leaving.cargo, leaving.stored, true]);
+    assert.deepEqual([a.welcome.cargo, a.welcome.stored, a.welcome.docked, a.welcome.nextMove], [leaving.cargo, leaving.stored, true, leaving.nextMove]);
     assert.deepEqual(a.welcome.flight.p, leaving.flight.pos);
     assert.equal(a.welcome.station.name, SECTOR.station.name);
     await until('her state', () => a.state?.stored === leaving.stored && a.state.docked);
@@ -517,7 +598,7 @@ try {
 
     // Cast off, the warehouse is out of reach again, and she can sail.
     assert.deepEqual(await a.api.dock({ dock: false }), { docked: false, why: NONE });
-    assert.equal((await a.api.transfer({ op: op('a'), withdraw: true, grams: 1 })).why, NOT_DOCKED);
+    like(await move(a, 'pilot-a', true, 1), { ok: false, why: NOT_DOCKED });
     await a.sail(3, { order: 1 });
     assert.ok((await mine('pilot-a')).flight.speed > 100);
     await a.sail(1, { order: 0 });
@@ -530,7 +611,7 @@ try {
     a.session.close();
     b.session.close();
 
-    // ---- A save that is lost ------------------------------------------------------------
+    // ---- A save that is refusedOrder ------------------------------------------------------------
     await stopGently();
     await rename(data, `${data}.gone`);
     for (const extra of [[], ['--new']]) {
@@ -541,7 +622,7 @@ try {
     assert.equal(existsSync(data), false);
     await rename(`${data}.gone`, data);
     await start();
-    assert.deepEqual(await health(), { ok: true, pilots: 0, remaining: 0, held: closing.held, stored: closing.stored, total: TOTAL });
+    like(await health(), { ok: true, pilots: 0, remaining: 0, held: closing.held, stored: closing.stored, total: TOTAL, saving: 'ok' });
     pass('with its save gone the server will not start, with --new or without, and makes no new world; put back, the save is carried on');
 } finally {
     if (server) await stopGently().catch(() => undefined);

@@ -605,6 +605,188 @@ def gate_source():
     return src
 
 
+# Kestrel Anchorage, after the multi-view design: a command tower of octagonal tiers over a hub, four dock wings in a cross
+# (two frigate berths each, one wing ending in an open repair dock), and the refinery, tanks and radiators hung below.
+# It is three models so that each has a map of its own: the core, a dock wing drawn three times, and the wing with the dock.
+# L, a frigate's length, is 104; the station spans 8 L and a berth is cut to a frigate with room to spare.
+STATION = dict(span=416.0, hub=96.0, berth=dict(inner=40.0, outer=112.0, fore=170.0, aft=318.0), bay=dict(start=330.0, end=480.0, half=58.0))
+STATION_TONES = dict(PLATE=[0.4, 0.385, 0.36], PALE=[0.5, 0.48, 0.44], DARK=[0.095, 0.1, 0.11], STEEL=[0.26, 0.27, 0.29], WINE=[0.3, 0.065, 0.07],
+                     WARM=[1.0, 0.72, 0.32], CYAN=[0.3, 0.85, 1.0], COPPER=[0.34, 0.2, 0.11], YELLOW=[0.8, 0.52, 0.06], DECK=[0.15, 0.152, 0.16])
+
+
+def station_finish(S, step, plates, metal, glows, size, big=18.0, small=6.5, seed=5):
+    """What every part of the station is finished with: plating in two sizes, its wear, and the dark of its recesses."""
+    src = {'version': 1, 'smoothAngle': 30, 'material': {'roughness': 0.5, 'metallic': 0, 'coat': 0.15, 'coatRoughness': 0.3, 'emissive': [14, 14, 14]}, 'steps': S}
+    step(op='paint', faces={'tag': metal}, color=[0.3, 0.31, 0.34], roughness=0.32, metallic=0.9)
+    for tag, glow in glows.items():
+        step(op='paint', faces=tag, glow=glow, roughness=0.1)
+    step(op='panels', faces={'tag': plates}, size=big, uneven=0.8, gap=0.7, height=[0.25, 1.0], bevel=0.3, tones=0.2, seed=seed, tag='plate')
+    step(op='panels', faces='plate', size=small, uneven=0.75, gap=0.24, height=[0.04, 0.12], bevel=0.05, tones=0.07, seed=seed + 26, tag='plate')
+    S[-1]['id'] = 'dense'
+    T = dict(op='stain', texel=True)
+    A = {'tag': ['plate', 'plateSide']}
+    lit = list(glows)
+    step(**T, faces=A, pattern='bumps', scale=22, octaves=5, threshold=0.5, softness=0.4, roughness=0.64, amount=0.75, seed=seed + 16)
+    step(**T, faces=A, pattern='bumps', scale=60, octaves=5, threshold=0.56, softness=0.22, color=[0.1, 0.097, 0.092], roughness=0.7, amount=0.5, seed=seed + 4)
+    step(**T, faces=A, pattern='bumps', scale=8, octaves=5, stretch=[1, 9, 1], threshold=0.62, softness=0.14, color=[0.07, 0.065, 0.06], roughness=0.82, amount=0.4, seed=seed + 36)
+    step(**T, faces=A, where='edges', reach=1.6, pattern='bumps', scale=3, octaves=5, fray=0.8, threshold=0.5, softness=0.14, color=[0.62, 0.62, 0.6], roughness=0.62, amount=0.6, seed=seed + 2)
+    step(**T, faces={'tag': ['plate', 'plateSide', *metal]}, where='edges', reach=0.6, pattern='bumps', scale=1.1, octaves=4, fray=1, threshold=0.8, softness=0.04, color=[0.3, 0.3, 0.31], roughness=0.3, metallic=0.9, seed=seed + 3)
+    step(**T, faces='plate', pattern='scratches', scale=11, width=0.012, threshold=0.5, softness=0.3, color=[0.6, 0.6, 0.6], roughness=0.3, amount=0.5, seed=seed + 1)
+    step(**T, faces={'not': {'tag': lit}}, where='cavity', reach=1.2, threshold=0.3, softness=0.12, color=[0.016, 0.014, 0.012], roughness=0.95, metallic=0, amount=0.9)
+    step(op='decimate', **{'from': 'blockout'}, ratio=1)
+    src['normalBake'] = {'from': 'dense', 'size': size, 'distance': 2.5, 'color': True, 'surface': True, 'occlusion': {'samples': 25, 'size': 512, 'reach': 10.0}}
+    return src
+
+
+def station_source():
+    S = []
+    def step(**k): S.append(k); return k
+    PLATE, PALE, DARK, STEEL, WINE, WARM, CYAN, COPPER = (STATION_TONES[k] for k in ('PLATE', 'PALE', 'DARK', 'STEEL', 'WINE', 'WARM', 'CYAN', 'COPPER'))
+    rnd = random.Random(41)
+    FLAT = math.cos(math.radians(22.5))
+    # The hub the wings meet at, and the tower over it: four octagonal tiers, each smaller, with a collar between.
+    step(op='lathe', axis='y', profile=[[0, -24], [98, -24], [104, -16], [104, 16], [98, 24], [0, 24]], sides=8, tag='hub', color=WINE)
+    tiers = [(24, 58, 124, 116), (58, 92, 94, 86), (92, 122, 66, 58), (122, 146, 45, 40)]
+    for y0, y1, r0, r1 in tiers:
+        step(op='lathe', axis='y', profile=[[0, y0], [r0 - 4, y0], [r0, y0 + 4], [r1, y1 - 3], [r1 - 4, y1], [0, y1]], sides=8, tag='tier', color=PLATE)
+    step(op='lathe', axis='y', profile=[[0, 146], [28, 146], [26, 158], [0, 158]], sides=8, tag='cap', color=STEEL)
+    for y, r in ((57, 121), (91, 91), (121, 63)):
+        step(op='lathe', axis='y', profile=[[r - 6, y - 2.5], [r + 1.5, y - 2.5], [r + 1.5, y + 2.5], [r - 6, y + 2.5]], closed=True, sides=8, tag='collar', color=WINE)
+    # The command deck's glass, all the way round.
+    step(op='lathe', axis='y', profile=[[43.6, 131], [44.5, 131], [42.1, 139], [41.2, 139]], closed=True, sides=8, tag='glass', color=CYAN)
+    step(op='transform', faces={'tag': ['hub', 'tier', 'cap', 'collar', 'glass']}, rotate=[0, 22.5, 0], pivot=[0, 0, 0])
+    # Lit ports on the +z face of each tier, then the same on the other seven.
+    for y0, y1, r0, r1 in tiers[:3]:
+        for row, y in enumerate((y0 + 11, y0 + 19, y0 + 27)):
+            if y > y1 - 6: continue
+            r = r0 + (r1 - r0) * (y - y0 - 4) / (y1 - y0 - 7)
+            half = r * math.sin(math.radians(22.5)) - 7
+            x = -half
+            while x <= half:
+                if rnd.random() < 0.72: step(op='box', size=[3.0, 1.7, 1.2], at=[x, y, r * FLAT + 0.25], tag='port', color=WARM)
+                x += 5.2
+    step(op='array', faces='port', count=8, rotate=[0, 45, 0], pivot=[0, 0, 0])
+    # Where each wing is made fast.
+    step(op='box', size=[86, 42, 14], at=[0, 0, 98], tag='socket', color=STEEL)
+    step(op='box', size=[60, 30, 6], at=[0, 0, 107], tag='socketDark', color=DARK)
+    step(op='array', faces={'tag': ['socket', 'socketDark']}, count=4, rotate=[0, 90, 0], pivot=[0, 0, 0])
+    # Masts and aerials.
+    step(op='box', size=[10, 12, 10], at=[0, 164, 0], tag='cap', color=STEEL)
+    step(op='loft', path=[[0, 158, 0], [0, 232, 0]], section={'radius': 1.6}, sides=8, tag='mast', color=DARK)
+    step(op='box', size=[9, 2, 5], at=[0, 214, 0], tag='mast', color=DARK)
+    for x, z, h in ((15, 6, 42), (-12, 11, 30), (8, -15, 50), (-17, -8, 26), (20, -4, 18)):
+        step(op='loft', path=[[x, 156, z], [x, 156 + h, z]], section={'radius': 0.7}, sides=6, tag='mast', color=DARK)
+    step(op='box', size=[2.2, 2.2, 2.2], at=[0, 233.5, 0], tag='lamp', color=WARM)
+    # Below: the refinery's trunk, its decks, four tanks, the pod at the foot and the radiators.
+    step(op='cylinder', radius=24, height=132, sides=16, at=[0, -88, 0], tag='trunk', color=DARK)
+    for y in (-50, -98, -138):
+        step(op='lathe', axis='y', profile=[[22, y - 2], [56, y - 2], [56, y + 2], [22, y + 2]], closed=True, sides=16, tag='deck', color=STEEL)
+    for x, z, r, h in ((60, 0, 31, 88), (-60, 0, 31, 88), (0, 58, 22, 70), (0, -58, 22, 70)):
+        step(op='cylinder', radius=r, height=h, sides=12, at=[x, -92, z], tag='tank', color=PALE)
+        for y in (-92 + h / 2 - 9, -92, -92 - h / 2 + 9):
+            step(op='cylinder', radius=r + 1.4, height=6, sides=12, at=[x, y, z], tag='band', color=WINE)
+        step(op='cylinder', radius=r * 0.55, height=6, sides=12, at=[x, -92 + h / 2 + 3, z], tag='deck', color=STEEL)
+        step(op='loft', path=[[x * 0.35, -36, z * 0.35], [x, -36, z], [x, -92 + h / 2 + 6, z]], section={'radius': 3.2}, sides=8, tag='pipe', color=DARK)
+        step(op='loft', path=[[x * 0.4, -146, z * 0.4], [x * 0.92, -146, z * 0.92], [x * 0.92, -92 - h / 2, z * 0.92]], section={'radius': 2.4}, sides=8, tag='pipe', color=DARK)
+    for a in range(8):
+        t = math.radians(a * 45 + 22.5)
+        step(op='loft', path=[[math.cos(t) * 30, -30, math.sin(t) * 30], [math.cos(t) * 30, -148, math.sin(t) * 30]], section={'radius': 1.8}, sides=6, tag='pipe', color=DARK)
+    step(op='lathe', axis='y', profile=[[0, -150], [42, -150], [48, -160], [48, -182], [38, -197], [18, -206], [0, -206]], sides=8, tag='pod', color=PLATE)
+    step(op='lathe', axis='y', profile=[[47.4, -168], [49.6, -168], [49.6, -174], [47.4, -174]], closed=True, sides=8, tag='collar', color=WINE)
+    step(op='lathe', axis='y', profile=[[41.6, -190.5], [43.0, -190.5], [45.4, -187], [44.0, -187]], closed=True, sides=8, tag='glass', color=CYAN)
+    step(op='loft', path=[[0, -206, 0], [0, -244, 0]], section={'radius': 1.3}, sides=6, tag='mast', color=DARK)
+    step(op='box', size=[2, 2, 2], at=[0, -245, 0], tag='lamp', color=[1.0, 0.1, 0.05])
+    step(op='loft', path=[[34, -176, 16], [70, -182, 40], [70, -226, 40]], section={'radius': 2.4}, sides=8, tag='pipe', color=DARK)
+    for i in range(3):
+        step(op='box', size=[84, 1.6, 26], at=[112, -182 - i * 20, 46], tag='radiator', color=COPPER)
+        step(op='box', size=[86, 2.4, 2.4], at=[112, -182 - i * 20, 32], tag='pipe', color=DARK)
+    S[-1]['id'] = 'blockout'
+    src = station_finish(S, step, ['tier', 'hub', 'tank', 'pod', 'socket'], ['mast', 'pipe', 'trunk', 'deck', 'cap', 'socketDark'], {'port': 0.14, 'glass': 0.3, 'lamp': 1.0}, 4096)
+    return src
+
+
+def station_wing_source(bay):
+    S = []
+    def step(**k): S.append(k); return k
+    def oct(w, h, c): return [[-w + c, -h], [w - c, -h], [w, -h + c], [w, h - c], [w - c, h], [-w + c, h], [-w, h - c], [-w, -h + c]]
+    PLATE, PALE, DARK, STEEL, WINE, WARM, YELLOW, DECK = (STATION_TONES[k] for k in ('PLATE', 'PALE', 'DARK', 'STEEL', 'WINE', 'WARM', 'YELLOW', 'DECK'))
+    rnd = random.Random(73 if bay else 59)
+    B, D = STATION['berth'], STATION['bay']
+    # The spar, from the hub out: along +z, the way every wing is built before it is turned to its place.
+    rows = [(92, 40, 18, 7), (124, 37, 17, 7), (D['start'] + 6, 36, 16, 6)] if bay else [(92, 40, 18, 7), (124, 37, 17, 7), (300, 35, 16, 6), (392, 32, 14, 6), (STATION['span'], 24, 10, 5)]
+    step(op='loft', sections=[{'at': [0, 0, z], 'points': oct(w, h, c)} for (z, w, h, c) in rows], curve=1, tag='spar', color=PLATE)
+    end = rows[-1][0]
+    for z in (150, 246) + (() if bay else (346,)):
+        step(op='box', size=[80, 40, 12], at=[0, 0, z], tag='collar', color=WINE)
+    # The housing along its back, the cargo on it, and a crane to work it.
+    top = min(end - 20, 300)
+    step(op='box', size=[42, 10, top - 128], at=[0, 20, (top + 128) / 2], tag='house', color=PALE)
+    for _ in range(26):
+        w, h, l = rnd.uniform(5, 9), rnd.uniform(4, 6.5), rnd.uniform(7, 13)
+        tone = rnd.choice([[0.62, 0.28, 0.06], [0.2, 0.21, 0.23], [0.3, 0.31, 0.33], [0.13, 0.2, 0.28], [0.34, 0.07, 0.07]])
+        step(op='box', size=[w, h, l], at=[rnd.uniform(-15, 15), 25 + h / 2, rnd.uniform(136, top - 8)], tag='cargo', color=tone)
+    cz = top - 34
+    for x in (16, -16):
+        step(op='box', size=[2.6, 18, 2.6], at=[x, 34, cz], tag='crane', color=YELLOW)
+    step(op='box', size=[36, 2.6, 2.6], at=[0, 43, cz], tag='crane', color=YELLOW)
+    step(op='box', size=[5, 5, 5], at=[6, 39.5, cz], tag='gear', color=DARK)
+    step(op='cylinder', radius=7, height=4, sides=12, at=[0, 27, 112], tag='gear', color=DARK)
+    step(op='box', size=[9, 5, 12], at=[0, 31.5, 112], tag='house', color=PALE)
+    step(op='loft', path=[[0, 31.5, 118], [0, 31.5, 132]], section={'radius': 0.9}, sides=6, tag='gear', color=DARK)
+    # Lit ports down both sides.
+    for side in (1, -1):
+        for y in (5.5, -5.5):
+            z = 100.0
+            while z < end - 10:
+                w = 37 - (z - 124) * 2 / 176 if z > 124 else 40 - (z - 92) * 3 / 32
+                if z > 300: w = 35 - (z - 300) * 3 / 92
+                clear = all(abs(z - c) > 9 for c in (150, 246, 346))
+                if clear and rnd.random() < 0.7 and z < 386: step(op='box', size=[1.0, 1.8, 3.4], at=[side * (w + 0.3), y, z], tag='port', color=WARM)
+                z += 6.4
+        step(op='loft', path=[[side * 13, -18.5, 100], [side * 13, -18.5, end - 14]], section={'radius': 2.2}, sides=8, tag='gear', color=DARK)
+        # A berth: two arms and a beam, a frigate's length and beam inside with room to spare, and lamps along it.
+        for z in (B['fore'], B['aft']):
+            step(op='box', size=[B['outer'] - B['inner'] + 8, 8, 8], at=[side * (B['inner'] + B['outer']) / 2, 0, z], tag='arm', color=PLATE)
+            step(op='box', size=[9.5, 9.5, 9.5], at=[side * B['outer'], 0, z], tag='collar', color=WINE)
+        step(op='box', size=[8, 8, B['aft'] - B['fore']], at=[side * B['outer'], 0, (B['fore'] + B['aft']) / 2], tag='arm', color=PLATE)
+        for z in (B['fore'] + 34, B['aft'] - 34):
+            step(op='box', size=[16, 5, 12], at=[side * (B['inner'] + 8), 0, z], tag='gear', color=DARK)
+            step(op='box', size=[12, 5, 10], at=[side * (B['outer'] - 9), 0, z], tag='gear', color=DARK)
+        z = B['fore'] + 12
+        while z < B['aft'] - 6:
+            step(op='box', size=[1.6, 1.6, 1.6], at=[side * (B['outer'] + 4.6), 0, z], tag='lamp', color=WARM)
+            z += 22
+        step(op='loft', path=[[side * (B['outer'] - 2), 4, B['fore']], [side * (B['outer'] - 2), 26, B['fore']]], section={'radius': 0.8}, sides=6, tag='gear', color=DARK)
+        step(op='box', size=[1.8, 1.8, 1.8], at=[side * (B['outer'] - 2), 27, B['fore']], tag='lamp', color=[1.0, 0.1, 0.05] if side > 0 else [0.05, 1.0, 0.2])
+    if bay:
+        # The open repair dock: a floor, two walls and a back, wide enough for a frigate with her nacelles, and two gantries over it.
+        mid, long = (D['start'] + D['end']) / 2, D['end'] - D['start']
+        step(op='box', size=[D['half'] * 2 + 12, 6, long], at=[0, -15, mid], tag='floor', color=DECK)
+        step(op='box', size=[D['half'] * 2 + 12, 40, 10], at=[0, 2, D['start'] + 1], tag='wall', color=PLATE)
+        for side in (1, -1):
+            step(op='box', size=[12, 34, long], at=[side * D['half'], 2, mid], tag='wall', color=PLATE)
+            step(op='box', size=[13, 5, long - 8], at=[side * D['half'], 21.5, mid], tag='collar', color=WINE)
+            step(op='box', size=[15, 46, 15], at=[side * D['half'], 6, D['end'] - 4], tag='wall', color=PALE)
+            step(op='loft', path=[[side * D['half'], 29, D['end'] - 4], [side * D['half'], 48, D['end'] - 4]], section={'radius': 0.8}, sides=6, tag='gear', color=DARK)
+            step(op='box', size=[1.8, 1.8, 1.8], at=[side * D['half'], 49, D['end'] - 4], tag='lamp', color=WARM)
+            for z in (D['start'] + 20, D['start'] + 56, D['start'] + 92, D['start'] + 128):
+                step(op='box', size=[0.8, 3.0, 14], at=[side * (D['half'] - 6.3), 4, z], tag='port', color=WARM)
+            step(op='box', size=[0.9, 0.5, long - 24], at=[side * 20, -11.8, mid], tag='mark', color=WARM)
+        step(op='box', size=[0.9, 0.5, long - 24], at=[0, -11.8, mid], tag='mark', color=WARM)
+        for z in (D['start'] + 44, D['start'] + 108):
+            for side in (1, -1):
+                step(op='box', size=[3.2, 30, 3.2], at=[side * (D['half'] - 12), 3, z], tag='crane', color=YELLOW)
+            step(op='box', size=[D['half'] * 2 - 20, 3.2, 3.2], at=[0, 19.5, z], tag='crane', color=YELLOW)
+            step(op='box', size=[7, 7, 7], at=[rnd.uniform(-20, 20), 15, z], tag='gear', color=DARK)
+    else:
+        step(op='loft', path=[[0, 9, STATION['span'] - 6], [0, 46, STATION['span'] - 6]], section={'radius': 0.9}, sides=6, tag='gear', color=DARK)
+        step(op='box', size=[2, 2, 2], at=[0, 47, STATION['span'] - 6], tag='lamp', color=WARM)
+        step(op='box', size=[20, 14, 3], at=[0, 0, STATION['span'] + 1], tag='collar', color=WINE)
+    S[-1]['id'] = 'blockout'
+    glows = {'port': 0.14, 'lamp': 1.0, **({'mark': 0.1} if bay else {})}
+    return station_finish(S, step, ['spar', 'house', 'arm', 'wall'], ['gear'], glows, 2048, big=16.0, small=6.0, seed=73 if bay else 59)
+
+
 SMALL = {
     'flare': {'version': 1, 'smoothAngle': 80, 'steps': [{'op': 'sphere', 'radius': 1, 'rings': 8, 'sides': 12, 'tag': 'flare', 'color': [1, 1, 1]}]},
     'jet': {'version': 1, 'smoothAngle': 80,
@@ -639,7 +821,8 @@ SMALL = {
 
 
 def make_models():
-    sources = {'frigate': ship_source(), 'turret': turret_source(), 'guns': guns_source(), 'raider': raider_source(), 'gate': gate_source(), **SMALL}
+    sources = {'frigate': ship_source(), 'turret': turret_source(), 'guns': guns_source(), 'raider': raider_source(), 'gate': gate_source(),
+               'station': station_source(), 'station-wing': station_wing_source(False), 'station-bay': station_wing_source(True), **SMALL}
     for name, source in sources.items():
         if MODELS_ONLY and name not in MODELS_ONLY:
             continue
@@ -874,6 +1057,12 @@ def make_scene():
         gate = add(name, [transform(at), mesh('gate', 'assets/models/gate.esmaterial', 'assets/models/gate_color.png', True, True, True, False)])
         add(name + 'Strobe', [transform((0, GATE_RADIUS + 96.5, 0), None, (2.6,) * 3), mesh('flare', 'assets/materials/flare-white.esmaterial', None, False, False, True, False)], gate)
         add(name + 'Field', [transform((0, 0, 0), None, (GATE_RADIUS - 13,) * 3), mesh('gate-field', 'assets/materials/gatefield.esmaterial', None, False, False, False, False)], gate)
+    # The anchorage is out of the way of a voyage alone; in a sector the game puts it where the server says the station is.
+    yaw = lambda degrees: {'x': 0, 'y': math.sin(math.radians(degrees) / 2), 'z': 0, 'w': math.cos(math.radians(degrees) / 2)}
+    station = add('Station', [transform((0, -120000, 0))])
+    add('StationCore', [transform(), mesh('station', 'assets/models/station.esmaterial', 'assets/models/station_color.png', True, True, True, False)], station)
+    for i, (turn, kind) in enumerate([(0, 'station-wing'), (90, 'station-wing'), (-90, 'station-wing'), (180, 'station-bay')]):
+        add(f'StationWing{i}', [transform((0, 0, 0), yaw(turn) if turn else None), mesh(kind, f'assets/models/{kind}.esmaterial', f'assets/models/{kind}_color.png', True, True, True, False)], station)
     add('Planet', [transform(HOME['at'], None, (HOME['radius'],) * 3), mesh('planet', 'assets/materials/world-planet.esmaterial', None, False, True, True, False)])
     add('Atmosphere', [transform(HOME['at'], None, (HOME['radius'] * HOME['air'],) * 3), mesh('shell', 'assets/materials/world-air.esmaterial', None, False, False, True, False, LAYERS['far'])])
     add('Ring', [transform(HOME['at'], look((0, 0, 0), HOME['ring']['normal']), (HOME['radius'] * HOME['ring']['outer'],) * 3),

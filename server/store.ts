@@ -15,13 +15,27 @@ export class NoSave extends Error {
     }
 }
 
-/** A save written before there was a station: every pilot's warehouse is empty, nobody is docked, and no order to move ore was ever given. */
+/**
+ * A save from an earlier server, brought up to this one. Before there was a station (1): every warehouse is empty, nobody is
+ * docked and no order to move ore was ever given. Before orders were numbered (2): the orders it remembers are numbered in the
+ * order they were answered, and the pilot's count starts from them.
+ */
 function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<string, unknown>> }): void {
-    if (saved?.version !== 1 || typeof saved.pilots !== 'object' || saved.pilots === null) return;
-    for (const pilot of Object.values(saved.pilots)) { pilot.stored ??= 0; pilot.docked ??= false; pilot.ops ??= []; }
-    saved.version = 2;
+    if (typeof saved?.pilots !== 'object' || saved.pilots === null) return;
+    if (saved.version === 1) {
+        for (const pilot of Object.values(saved.pilots)) { pilot.stored ??= 0; pilot.docked ??= false; pilot.ops ??= []; }
+        saved.version = 2;
+    }
+    if (saved.version === 2) {
+        for (const pilot of Object.values(saved.pilots)) {
+            const ops = Array.isArray(pilot.ops) ? pilot.ops as Record<string, unknown>[] : [];
+            ops.forEach((op, i) => { op.seq = i + 1; });
+            pilot.moves = ops.length;
+            pilot.ops = ops.slice(-8);
+        }
+        saved.version = 3;
+    }
 }
-
 /**
  * The sector as it was saved. With `found`, a missing save is the first start and a new sector is written at once,
  * so that from then on its absence is a loss and not a beginning; and `found` over a sector that is there, or over

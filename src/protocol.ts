@@ -51,6 +51,9 @@ const TRANSFERS: Record<TransferRefusal, pb.TransferRefusal> = {
     'NOT ENOUGH IN THE WAREHOUSE': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE,
     'HOLD FULL': pb.TransferRefusal.TRANSFER_REFUSAL_HOLD_FULL,
     'BAD ORDER': pb.TransferRefusal.TRANSFER_REFUSAL_BAD_ORDER,
+    'EXPIRED': pb.TransferRefusal.TRANSFER_REFUSAL_EXPIRED,
+    'OUT OF ORDER': pb.TransferRefusal.TRANSFER_REFUSAL_OUT_OF_ORDER,
+    'NOT SAVED': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_SAVED,
 };
 export const toTransferRefusal = (why: TransferRefusal): pb.TransferRefusal => TRANSFERS[why];
 export const fromTransferRefusal = (why: pb.TransferRefusal): TransferRefusal => (Object.keys(TRANSFERS) as TransferRefusal[]).find((text) => TRANSFERS[text] === why) ?? 'BAD ORDER';

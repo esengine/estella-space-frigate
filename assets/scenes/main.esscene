@@ -12512,6 +12512,239 @@
      }
     }
    ]
+  },
+  {
+   "id": 224,
+   "name": "Station",
+   "parent": null,
+   "children": [
+    225,
+    226,
+    227,
+    228,
+    229
+   ],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": -120000,
+       "z": 0
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": 225,
+   "name": "StationCore",
+   "parent": 224,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station.esmaterial",
+      "texture": "assets/models/station_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 226,
+   "name": "StationWing0",
+   "parent": 224,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 227,
+   "name": "StationWing1",
+   "parent": 224,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": 0.7071067811865476,
+       "z": 0,
+       "w": 0.7071067811865476
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 228,
+   "name": "StationWing2",
+   "parent": 224,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": -0.7071067811865476,
+       "z": 0,
+       "w": 0.7071067811865476
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-wing.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-wing.esmaterial",
+      "texture": "assets/models/station-wing_color.png"
+     }
+    }
+   ]
+  },
+  {
+   "id": 229,
+   "name": "StationWing3",
+   "parent": 224,
+   "children": [],
+   "visible": true,
+   "components": [
+    {
+     "type": "Transform",
+     "data": {
+      "position": {
+       "x": 0,
+       "y": 0,
+       "z": 0
+      },
+      "rotation": {
+       "x": 0,
+       "y": 1.0,
+       "z": 0,
+       "w": 6.123233995736766e-17
+      }
+     }
+    },
+    {
+     "type": "MeshRenderer",
+     "data": {
+      "mesh": "assets/models/station-bay.esmesh",
+      "color": {
+       "r": 1,
+       "g": 1,
+       "b": 1,
+       "a": 1
+      },
+      "enabled": true,
+      "lit": true,
+      "opaque": true,
+      "cullBackfaces": true,
+      "castShadows": false,
+      "material": "assets/models/station-bay.esmaterial",
+      "texture": "assets/models/station-bay_color.png"
+     }
+    }
+   ]
   }
  ]
 }

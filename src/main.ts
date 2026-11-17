@@ -399,7 +399,8 @@ addPlugin({
                 gateFacing = mulQuat({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, { x: -Math.sin(pitch / 2), y: 0, z: 0, w: Math.cos(pitch / 2) });
             }
             world.update(get(world, GATES[ahead]!), Transform, (t) => {
-                t.position = { x: helm.gate.x, y: helm.gate.y, z: helm.gate.z };
+                // In a sector the waypoint is the station, which has a model of its own: the gate's ring is put out of sight.
+                t.position = online.enabled ? { x: 0, y: -60000, z: 0 } : { x: helm.gate.x, y: helm.gate.y, z: helm.gate.z };
                 t.rotation = gateFacing;
             });
             const behind = get(world, GATES[1 - ahead]!);

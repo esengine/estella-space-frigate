@@ -91,9 +91,10 @@ export function buildStation(kit: Kit, log: Log): StationDesk {
         }
         if (inside(click, left, top, PANEL.w, PANEL.h)) frame.click = null;
         // The status line never runs ahead of the server: an order out is "waiting", and only its answer is a result.
-        if (pending) { said.text = `${move.withdraw ? 'TAKING' : 'STORING'} ${tonnage(move.grams)} T   WAITING FOR THE STATION`; said.good = false; }
+        if (pending && move.why === 'NOT SAVED') { said.text = 'THE STATION COULD NOT RECORD IT   NOTHING MOVED   TRYING AGAIN'; said.good = false; }
+        else if (pending) { said.text = `${move.withdraw ? 'TAKING' : 'STORING'} ${tonnage(move.grams)} T   WAITING FOR THE STATION`; said.good = false; }
         else if (move.state === 'done' && fresh) { said.text = `${move.withdraw ? 'TAKEN' : 'STORED'} ${tonnage(move.grams)} T   WAREHOUSE NOW ${tonnage(move.stored)} T   HOLD ${tonnage(move.cargo)} T`; said.good = true; }
-        else if (move.state === 'refused' && fresh) { said.text = `REFUSED   ${move.why}`; said.good = false; }
+        else if (move.state === 'refused' && fresh) { said.text = move.why === 'EXPIRED' ? 'THAT ORDER IS TOO OLD TO ANSWER   IT WAS NOT DONE AGAIN' : `REFUSED   ${move.why}`; said.good = false; }
         else { said.text = online.cargo > 0 ? 'PRESS J TO STORE WHAT IS IN YOUR HOLD' : 'YOUR HOLD IS EMPTY   PRESS H TO CAST OFF'; said.good = false; }
         say(status, said.text);
         ink(status, pending ? rgb(AMBER, 0.6 + 0.4 * Math.sin(frame.time * 8)) : said.good ? rgb(ICE) : move.state === 'refused' && fresh ? rgb(AMBER) : rgb(HAZE));

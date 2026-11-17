@@ -24,6 +24,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         world.update(rock.entity, MeshRenderer, (m) => { m.enabled = false; });
     });
     const shared = rocks[SHARED_ROCK]!;
+    const anchorage = world.findEntityByName('Station');
     const seen = new Map<string, Seen>();
     connectOnline();
 
@@ -51,6 +52,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         const station = online.station;
         helm.gate = { x: station.at[0] - me[0], y: station.at[1] - me[1], z: station.at[2] - me[2] };
         helm.gateName = station.name;
+        if (anchorage !== null) world.update(anchorage, Transform, (t) => { t.position = { ...helm.gate }; });
         const there = { x: rock[0] - me[0], y: rock[1] - me[1], z: rock[2] - me[2] };
         world.update(shared.entity, Transform, (t) => { t.position = there; });
         shared.at.x = there.x; shared.at.y = there.y; shared.at.z = there.z;
