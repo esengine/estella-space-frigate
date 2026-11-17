@@ -17,8 +17,9 @@ import { MINING, installMining, mining } from './hudMining';
 import { buildHelm } from './hudHelm';
 import { buildRefit } from './hudRefit';
 import { installSector, pilotsSeen } from './hudSector';
+import { buildStation } from './hudStation';
 import { flyOnline, online } from './online';
-import { tonnage } from './shared/sector';
+import { GRAMS, approach, tonnage } from './shared/sector';
 import { refit } from './refit';
 import { buildSettings } from './hudSettings';
 import { buildScope } from './hudScope';
@@ -37,7 +38,7 @@ const BOOT_SECONDS = 2.6;
 
 type Loaded = { textures: Textures; fonts: { regular: number; strong: number } };
 
-const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
+const state = { ready: false, loadMs: 0, error: '', waypointClamped: true, selected: -1, current: -1, locked: false, booted: false, mining: mining, tuning: MINING, contract: contract, online: online, pilots: pilotsSeen, refit: refit, refitSpots: {} as Record<string, { x: number; y: number }>, stationSpots: {} as Record<string, { x: number; y: number }>, helm: helm, guns: guns, foes: foes, ship: ship, fall: fall, kindAt: (index: number): number => systemAt(index).surface.kind, picks: [] as { index: number; x: number; y: number }[], spots: {} as Record<string, { x: number; y: number }> };
 
 export function installHud(app: App): void {
     let loading: Promise<Loaded> | null = null;
@@ -230,6 +231,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
     const battery = buildGunnery(kit, log, targets.probe);
     const yard = buildRefit(kit, log);
     const sector = installSector(kit, rocks);
+    const dock = buildStation(kit, log);
     const transit = centred(node(root, 'Transit', { left: 0, top: 0, width: 560, height: 64 }), 560, 64);
     const transitNote = label(transit, 'TransitNote', { left: 0, top: 0, width: 560, height: 16 }, { size: 11, color: rgb(AMBER), spacing: 6, align: TextAlign.Center });
     const transitName = label(transit, 'TransitName', { left: 0, top: 22, width: 560, height: 36 }, { size: 30, color: rgb(ICE), spacing: 8, align: TextAlign.Center });
@@ -311,7 +313,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         if (fall.note) { log.say(fall.note, AMBER); fall.note = ''; }
         const bearing = ((Math.round((-helm.yaw * 180) / Math.PI) % 360) + 360) % 360, climb = Math.round((helm.pitch * 180) / Math.PI);
         const lean = Math.round((helm.lean * 180) / Math.PI);
-        say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? 'ALIGNING TO GATE' : helm.mode === 'level' ? 'COMING LEVEL' : helm.mode === 'planet' ? 'PLANET APPROACH' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
+        say(helmLine, `${helm.mode === 'manual' ? 'HELM MANUAL' : helm.mode === 'align' ? (online.enabled ? 'STEERING FOR STATION' : 'ALIGNING TO GATE') : helm.mode === 'level' ? 'COMING LEVEL' : helm.mode === 'planet' ? 'PLANET APPROACH' : 'CLOSING ON TARGET'}   HDG ${pad(bearing, 3)}   ELV ${climb < 0 ? '-' : '+'}${pad(Math.abs(climb), 2)}   ROLL ${lean < 0 ? '-' : '+'}${pad(Math.abs(lean), 3)}`);
         ink(helmLine, helm.mode === 'manual' ? rgb(HAZE, 0.9) : rgb(AMBER));
         if (helm.arrived) {
             log.say(mining.hold > 0 ? `DELIVERED ${mining.hold.toFixed(1)} T   NAV ${pad(helm.leg, 2)} ${helm.gateName}` : `GATE REACHED   NAV ${pad(helm.leg, 2)} ${helm.gateName}`, AMBER);
@@ -423,6 +425,7 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
 
         settings(frame);
         yard.update(frame);
+        dock.update(frame);
         desk.update(frame);
         battery(frame);
         sector(frame);
@@ -447,25 +450,31 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
             mode: helm.mode, stopped: helm.order <= 0, away: ship.away, gate: helm.gateName, refit: refit.result,
         });
         if (online.enabled) {
-            const other = online.others[0];
             if (online.link !== 'online') { advice.cue = ''; advice.urgent = true; advice.text = online.link === 'refused' ? `SECTOR REFUSED YOU   ${online.why}` : online.link === 'lost' ? 'LINK LOST   CALLING THE SECTOR AGAIN' : 'CALLING THE SECTOR'; }
-            else if (online.rock.remaining <= 0) { advice.cue = ''; advice.urgent = false; advice.text = 'THE ROCK IS MINED OUT'; }
+            else if (online.docked) { advice.stage = 'mine'; advice.cue = ''; advice.urgent = dock.said.good; advice.text = dock.said.text || `DOCKED AT ${online.station.name}`; }
             else if (mining.firing) advice.text = `MINING THE SHARED ROCK   ${tonnage(online.rock.remaining)} T LEFT`;
+            else if (online.cargo >= GRAMS || (online.cargo > 0 && online.rock.remaining <= 0)) {
+                // Ore worth a run is aboard: the helm is talked to the station. Whether she docks is the station's to say.
+                const way = approach({ distance: Math.hypot(helm.gate.x, helm.gate.y, helm.gate.z), speed: ship.speed, order: helm.order, aligned: helm.mode === 'align' });
+                const refused = online.dock.why !== '' && Date.now() - online.dock.at < 4000;
+                advice.stage = 'return'; advice.cue = way.cue; advice.urgent = way.cue !== ''; advice.text = refused ? `STATION REFUSED DOCKING   ${online.dock.why}` : way.text;
+            }
+            else if (online.rock.remaining <= 0) { advice.cue = ''; advice.urgent = false; advice.text = online.stored > 0 ? 'THE ROCK IS MINED OUT   YOUR ORE IS IN THE WAREHOUSE' : 'THE ROCK IS MINED OUT'; }
             say(jobTitle, `SECTOR   ${online.sector}`);
             say(jobGoal, `SHARED ROCK 01     ${tonnage(online.rock.remaining)} / ${tonnage(online.rock.total)} T LEFT`);
             say(jobState, online.link === 'online' ? `${online.name}   ONLINE` : online.link === 'refused' ? 'REFUSED' : online.link === 'lost' ? 'LINK LOST' : 'CONNECTING');
             ink(jobState, online.link === 'online' ? rgb(ICE) : rgb(AMBER));
             say(jobHold, `YOUR HOLD   ${tonnage(online.cargo)} T`);
             ink(jobHold, mining.firing ? rgb(AMBER) : rgb(ICE));
-            say(jobDelivered, other ? `${other.name}   ${tonnage(other.cargo)} T` : 'NO OTHER PILOT HERE');
-            ink(jobDelivered, other?.mining ? rgb(AMBER) : rgb(HAZE));
+            say(jobDelivered, `YOUR WAREHOUSE   ${tonnage(online.stored)} T`);
+            ink(jobDelivered, online.docked ? rgb(AMBER) : online.stored > 0 ? rgb(ICE) : rgb(HAZE));
             fill(jobAboard, 0);
             fill(jobDone, Math.round(clamp(online.rock.total > 0 ? online.rock.remaining / online.rock.total : 0, 0, 1) * 200) / 200);
         }
         contract.stage = advice.stage; contract.cue = advice.cue; contract.text = advice.text;
         if (state.booted && briefed < 0 && !online.enabled) { briefed = ship.time; log.say(`CONTRACT ACCEPTED   MINE ${CONTRACT.goal} T OF ORE FOR THE GATE`, AMBER); }
         if (advice.stage !== stage) {
-            if (advice.stage === 'return') log.say(`CONTRACT ORE ABOARD   RETURN TO ${helm.gateName}`, AMBER);
+            if (advice.stage === 'return') log.say(online.enabled ? `ORE ABOARD   CARRY IT TO ${helm.gateName}` : `CONTRACT ORE ABOARD   RETURN TO ${helm.gateName}`, AMBER);
             stage = advice.stage;
         }
         const blink = 0.72 + 0.28 * Math.sin(ship.time * 6);
@@ -504,6 +513,8 @@ function build(app: App, world: World, { textures, fonts }: Loaded, contacts: Ro
         state.current = targets.probe.current;
         state.locked = targets.probe.locked;
         state.picks = targets.probe.picks.map((pick) => ({ index: pick.index, x: pick.left * scale, y: pick.top * scale }));
+        for (const name in state.stationSpots) if (!dock.spots[name]) delete state.stationSpots[name];
+        for (const name in dock.spots) state.stationSpots[name] = { x: dock.spots[name]!.left * scale, y: dock.spots[name]!.top * scale };
         for (const name in state.refitSpots) if (!yard.spots[name]) delete state.refitSpots[name];
         for (const name in yard.spots) state.refitSpots[name] = { x: yard.spots[name]!.left * scale, y: yard.spots[name]!.top * scale };
         for (const name in desk.spots) state.spots[name] = { x: desk.spots[name]!.left * scale, y: desk.spots[name]!.top * scale };

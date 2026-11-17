@@ -1,7 +1,7 @@
 // The wire form of everything a frigate and the sector server say to each other.
-// Ore is counted in whole grams, so what two holds and a rock carry always adds up exactly.
+// Ore is counted in whole grams, so what the rock, every hold and every warehouse carry always adds up exactly.
 // A client never says where it is: it sends the helm's orders, numbered, and the server flies the ship.
-// The rules (how a frigate flies, who may mine, how fast, how far) live in src/shared and server/world.ts; this file is only the shape.
+// The rules (how a frigate flies, who may mine or dock, how ore moves) live in src/shared and server/world.ts; this file is only the shape.
 syntax = "proto3";
 
 package sector;
@@ -13,6 +13,24 @@ enum Refusal {
   REFUSAL_OUT_OF_RANGE = 3;
   REFUSAL_ROCK_EXHAUSTED = 4;
   REFUSAL_HOLD_FULL = 5;
+}
+
+enum DockRefusal {
+  DOCK_REFUSAL_UNSPECIFIED = 0;
+  DOCK_REFUSAL_NONE = 1;
+  DOCK_REFUSAL_TOO_FAR = 2;
+  DOCK_REFUSAL_TOO_FAST = 3;
+}
+
+enum TransferRefusal {
+  TRANSFER_REFUSAL_UNSPECIFIED = 0;
+  TRANSFER_REFUSAL_NONE = 1;
+  TRANSFER_REFUSAL_NOT_DOCKED = 2;
+  TRANSFER_REFUSAL_BAD_AMOUNT = 3;
+  TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD = 4;
+  TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE = 5;
+  TRANSFER_REFUSAL_HOLD_FULL = 6;
+  TRANSFER_REFUSAL_BAD_ORDER = 7;
 }
 
 message Vec3 { double x = 1; double y = 2; double z = 3; }
@@ -36,9 +54,16 @@ message Empty {}
 message Orders { uint32 seq = 1; double order = 2; double rudder = 3; double elevation = 4; double roll = 5; }
 message SteerRequest { repeated Orders orders = 1; }
 message MineRequest { bool on = 1; }
+// To make fast to the station (true) or cast off (false). The server decides, from where it has flown the ship.
+message DockRequest { bool dock = 1; }
+// Ore between the sender's own hold and the sender's own warehouse; no field names anyone else's.
+// `op` names this order: an order asked again under the same name is answered as it was, and done once.
+// `grams` is signed so that a client asking for less than nothing is refused by the rules and not by the wire.
+message TransferRequest { string op = 1; bool withdraw = 2; sint64 grams = 3; }
 
 // ── replies ──
 message Rock { string id = 1; Vec3 at = 2; uint32 total = 3; uint32 remaining = 4; }
+message Station { string id = 1; string name = 2; Vec3 at = 3; double dock_range = 4; double dock_speed = 5; }
 message EnterReply {
   string account = 1;
   string name = 2;
@@ -50,9 +75,25 @@ message EnterReply {
   double range = 9;
   uint32 rate = 10;
   uint32 capacity = 11;
+  Station station = 12;
+  uint32 stored = 13;
+  bool docked = 14;
 }
 message SteerReply { uint32 taken = 1; }
 message MineReply { bool asking = 1; }
+message DockReply { bool docked = 1; DockRefusal why = 2; }
+// A reply that says `ok` is a promise: the move is on the server's disk before it is sent.
+message TransferReply {
+  string op = 1;
+  bool ok = 2;
+  TransferRefusal why = 3;
+  bool withdraw = 4;
+  uint32 grams = 5;
+  uint32 cargo = 6;
+  uint32 stored = 7;
+  // True when this order had been answered before: this is that answer again, and nothing moved this time.
+  bool repeat = 8;
+}
 
 // ── events ──
 message Pilot {
@@ -64,6 +105,7 @@ message Pilot {
   bool mining = 6;
   uint32 cargo = 7;
   Vec3 v = 8;
+  bool docked = 9;
 }
 message StateEvent {
   uint32 tick = 1;
@@ -76,4 +118,6 @@ message StateEvent {
   repeated Pilot others = 7;
   uint32 ack = 8;
   uint32 waiting = 9;
+  uint32 stored = 10;
+  bool docked = 11;
 }

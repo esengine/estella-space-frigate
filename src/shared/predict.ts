@@ -47,9 +47,12 @@ export function createPredictor() {
 
     /**
      * A frame. With `linked`, each whole step's orders are numbered, flown here and queued to send; without, the engine is
-     * stopped and the helm put amidships, which is what the server does with a ship whose pilot is gone.
+     * stopped and the helm put amidships, which is what the server does with a ship whose pilot is gone. held is a ship
+     * made fast to the station.
      */
-    const advance = (dt: number, orders: Orders, linked: boolean): void => {
+    const advance = (dt: number, orders: Orders, linked: boolean, held = false): void => {
+        // Docked, she is held by the station: nothing is flown here and no orders go out, and she is where the server last said.
+        if (held) { pending = []; outbox = []; owed = 0; last = NO_ORDERS; return; }
         const flown = linked ? orders : NO_ORDERS;
         owed += Math.max(0, dt) * (linked ? pace : 1);
         if (owed > FLIGHT_TICK * STALL_TICKS) owed = FLIGHT_TICK * STALL_TICKS;

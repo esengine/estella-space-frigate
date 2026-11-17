@@ -1,8 +1,8 @@
 import { createSocket } from 'esengine';
 import { ClientSession } from 'esengine/session';
-import { contract, fromFlight, fromQuat, fromRefusal, fromVec, type Credentials } from './protocol';
+import { contract, fromDockRefusal, fromFlight, fromQuat, fromRefusal, fromTransferRefusal, fromVec, type Credentials } from './protocol';
 import { DRIFTING_ROCKS } from './shipState';
-import { SECTOR, type PilotView, type Refusal, type Vec3 } from './shared/sector';
+import { SECTOR, type DockRefusal, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
 import { createPredictor, type Predictor } from './shared/predict';
 import { copyFlight, turnShip, type Flight, type Orders, type Vec } from './shared/steer';
 
@@ -28,6 +28,14 @@ export const online = {
     capacity: SECTOR.capacity as number,
     range: SECTOR.range as number,
     rock: { at: [...SECTOR.rock.at] as Vec3, total: SECTOR.rock.total as number, remaining: SECTOR.rock.total as number },
+    station: { name: SECTOR.station.name as string, at: [...SECTOR.station.at] as Vec3, dockRange: SECTOR.station.dockRange as number, dockSpeed: SECTOR.station.dockSpeed as number },
+    /** Ore in this pilot's own warehouse at the station, and whether the server has her docked there. Both are the server's word. */
+    stored: 0,
+    docked: false,
+    /** The last answer to asking to dock, and when: '' is that she may. */
+    dock: { asking: false, why: '' as DockRefusal, at: 0 },
+    /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
+    move: { op: '', withdraw: false, grams: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
     mining: false,
     refusal: 'NOT MINING' as Refusal,
     others: [] as PilotView[],
@@ -47,6 +55,7 @@ let session: ClientSession | null = null, api: ReturnType<typeof contract.client
 const predictor = createPredictor();
 online.fix = predictor.fix;
 let sentAt = 0, drawn: Vec = { x: 0, y: 0, z: 0 };
+let moving = false, movedAt = 0, named = 0;
 
 export function configureOnline(search: string): void {
     const query = new URLSearchParams(search);
@@ -72,8 +81,10 @@ function take(truth: Flight): void {
 /** A frame of this ship's flight: the helm's orders go to the predictor, and what it has numbered goes to the server. */
 export function flyOnline(dt: number, orders: Orders): { shown: Flight; jets: { yaw: number; pitch: number; roll: number }; went: Vec } {
     const linked = online.link === 'online';
-    predictor.advance(dt, orders, linked);
+    predictor.advance(dt, orders, linked, online.docked);
     const now = Date.now();
+    // An order to move ore that has had no answer is asked again, under the same name, until it has one: the server does it once.
+    if (linked && online.move.state === 'pending' && !moving && now - movedAt > 700) sendMove();
     if (linked && api && predictor.unsent() > 0 && now - sentAt >= SEND_MS) {
         sentAt = now;
         api.steer({ orders: predictor.drain().map((one) => ({ seq: one.seq, ...one.orders })) }, { retries: 0, timeoutMs: 3000 }).catch(() => undefined);
@@ -91,6 +102,9 @@ async function enter(): Promise<void> {
     online.name = reply.name;
     online.sector = reply.sectorName;
     online.cargo = reply.cargo;
+    online.stored = reply.stored;
+    online.docked = reply.docked;
+    if (reply.station) online.station = { name: reply.station.name, at: fromVec(reply.station.at), dockRange: reply.station.dockRange, dockSpeed: reply.station.dockSpeed };
     online.capacity = reply.capacity;
     online.range = reply.range;
     online.rock = { at: fromVec(reply.rock?.at), total: reply.rock?.total ?? 0, remaining: reply.rock?.remaining ?? 0 };
@@ -118,9 +132,11 @@ export function connectOnline(): void {
         online.tick = state.tick;
         online.rock.remaining = state.remaining;
         online.cargo = state.cargo;
+        online.stored = state.stored;
+        online.docked = state.docked;
         online.mining = state.mining;
         online.refusal = fromRefusal(state.why);
-        online.others = state.others.map((o) => ({ account: o.account, name: o.name, p: fromVec(o.p), q: fromQuat(o.q), v: fromVec(o.v), th: o.throttle, mining: o.mining, cargo: o.cargo }));
+        online.others = state.others.map((o) => ({ account: o.account, name: o.name, p: fromVec(o.p), q: fromQuat(o.q), v: fromVec(o.v), th: o.throttle, mining: o.mining, docked: o.docked, cargo: o.cargo }));
         online.othersAt = Date.now();
         online.waiting = state.waiting;
         predictor.settle(fromFlight(state.flight), state.ack, state.waiting);
@@ -143,3 +159,36 @@ export function askToMine(on: boolean): void {
 
 export const parkedRock = (index: number): boolean => online.enabled && index !== SHARED_ROCK && index < DRIFTING_ROCKS;
 export const pinnedRock = (index: number): boolean => online.enabled && index === SHARED_ROCK;
+
+/** Ask to make fast to the station, or to cast off. The answer is the server's, from where it has flown her. */
+export function askToDock(want: boolean): void {
+    if (online.link !== 'online' || online.dock.asking || !api) return;
+    online.dock.asking = true;
+    api.dock({ dock: want }, { retries: 1, timeoutMs: 4000 }).then((reply) => {
+        online.dock = { asking: false, why: reply.docked || !want ? '' : fromDockRefusal(reply.why), at: Date.now() };
+        online.docked = reply.docked;
+    }, () => { online.dock.asking = false; });
+}
+
+function sendMove(): void {
+    if (!api || online.move.state !== 'pending') return;
+    const { op, withdraw, grams } = online.move;
+    moving = true;
+    movedAt = Date.now();
+    online.move.tries++;
+    api.transfer({ op, withdraw, grams }, { retries: 0, timeoutMs: 4000 }).then((reply) => {
+        moving = false;
+        if (online.move.op !== reply.op) return;
+        online.move = { ...online.move, state: reply.ok ? 'done' : 'refused', why: fromTransferRefusal(reply.why), cargo: reply.cargo, stored: reply.stored, at: Date.now(), repeat: reply.repeat };
+        if (reply.ok) { online.cargo = reply.cargo; online.stored = reply.stored; }
+    }, () => { moving = false; });
+}
+
+/** Order ore out of the hold into this pilot's warehouse, or back. One order at a time; it is named here so that asking again is the same order. */
+export function moveOre(withdraw: boolean, grams: number): boolean {
+    if (online.link !== 'online' || online.move.state === 'pending' || !api) return false;
+    const op = `${online.account}-${Date.now().toString(36)}-${(++named).toString(36)}-${Math.random().toString(36).slice(2, 10)}`.slice(0, 64);
+    online.move = { op, withdraw, grams, state: 'pending', why: '', cargo: online.cargo, stored: online.stored, at: Date.now(), tries: 0, repeat: false };
+    sendMove();
+    return true;
+}

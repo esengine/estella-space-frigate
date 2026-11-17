@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { closeSync, copyFileSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, writeSync } from 'node:fs';
 import path from 'node:path';
 import { auditSave, freshSave, type Saved } from './world';
 
@@ -15,17 +15,26 @@ export class NoSave extends Error {
     }
 }
 
+/** A save written before there was a station: every pilot's warehouse is empty, nobody is docked, and no order to move ore was ever given. */
+function upgrade(saved: { version?: unknown; pilots?: Record<string, Record<string, unknown>> }): void {
+    if (saved?.version !== 1 || typeof saved.pilots !== 'object' || saved.pilots === null) return;
+    for (const pilot of Object.values(saved.pilots)) { pilot.stored ??= 0; pilot.docked ??= false; pilot.ops ??= []; }
+    saved.version = 2;
+}
+
 /**
  * The sector as it was saved. With `found`, a missing save is the first start and a new sector is written at once,
  * so that from then on its absence is a loss and not a beginning; and `found` over a sector that is there, or over
  * what is left of one, is refused, so a slip of the hand cannot found a new world on top of an old one.
  */
 export function loadSave(file: string, options: { found?: boolean } = {}): Saved {
+    // A draft beside a save that is there is a write that was cut short: the save is the whole one, and the draft is nothing.
     const traces = [backupOf(file), draftOf(file)].filter((trace) => existsSync(trace));
     if (existsSync(file)) {
         if (options.found) throw new Error(`a sector is already saved at ${file}: start without --new to carry it on, or move the save away to found another`);
         let saved: Saved;
         try { saved = JSON.parse(readFileSync(file, 'utf8')) as Saved; } catch (err) { throw new Error(`${file} cannot be read as a save (${err instanceof Error ? err.message : String(err)}); the save before it is ${backupOf(file)}`); }
+        upgrade(saved as never);
         const fault = auditSave(saved);
         if (fault) throw new Error(`${file}: ${fault}`);
         return saved;
@@ -36,12 +45,19 @@ export function loadSave(file: string, options: { found?: boolean } = {}): Saved
     return founded;
 }
 
-/** Written whole or not at all: to a draft, the save there kept as the .bak, then the draft put in its place. */
-export function writeSave(file: string, saved: Saved): void {
+/**
+ * Written whole or not at all, and on the disk when this returns: to a draft that is flushed, the save there kept as the
+ * .bak, then the draft put in its place in one move. Whatever stops the server part way leaves the save as it was or as
+ * it is now, never half of each. `between` runs after the draft is written and before it takes the save's place: a check
+ * stops the server there to see that.
+ */
+export function writeSave(file: string, saved: Saved, between?: () => void): void {
     const fault = auditSave(saved);
     if (fault) throw new Error(`refusing to write a save whose ${fault}`);
     mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(draftOf(file), JSON.stringify(saved, null, 1));
+    const draft = openSync(draftOf(file), 'w');
+    try { writeSync(draft, JSON.stringify(saved, null, 1)); fsyncSync(draft); } finally { closeSync(draft); }
+    between?.();
     if (existsSync(file)) copyFileSync(file, backupOf(file));
     renameSync(draftOf(file), file);
 }

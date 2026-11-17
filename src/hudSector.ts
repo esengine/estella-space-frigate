@@ -44,10 +44,13 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         if (online.leap) {
             const by = { x: online.leap[0], y: online.leap[1], z: online.leap[2] };
             for (const major of majors) world.update(major.entity, Transform, (t) => { t.position = { x: t.position.x - by.x, y: t.position.y - by.y, z: t.position.z - by.z }; });
-            helm.gate = { x: helm.gate.x - by.x, y: helm.gate.y - by.y, z: helm.gate.z - by.z };
             online.leap = null;
         }
         const me = online.pos, rock = online.rock.at;
+        // In a sector the helm's waypoint is the station: its marker, its range and the autopilot that steers for it all lead there.
+        const station = online.station;
+        helm.gate = { x: station.at[0] - me[0], y: station.at[1] - me[1], z: station.at[2] - me[2] };
+        helm.gateName = station.name;
         const there = { x: rock[0] - me[0], y: rock[1] - me[1], z: rock[2] - me[2] };
         world.update(shared.entity, Transform, (t) => { t.position = there; });
         shared.at.x = there.x; shared.at.y = there.y; shared.at.z = there.z;
@@ -72,7 +75,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
             if (hullMesh && !world.get(one.entity, MeshRenderer).enabled) world.update(one.entity, MeshRenderer, (m) => { m.enabled = true; });
             fade(one.tag, ship.away ? 0 : 1);
             say(one.name, other.name);
-            say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
+            say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.docked ? 'DOCKED   ' : other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
             ink(one.note, other.mining ? rgb(AMBER) : rgb(HAZE));
             ink(one.name, rgb(other.mining ? AMBER : ICE));
             pilotsSeen.push({ account: other.account, x: at.x, y: at.y, z: at.z, mining: other.mining, sx: one.p[0], sy: one.p[1], sz: one.p[2] });

@@ -1,6 +1,6 @@
 import { defineContract, proto } from 'esengine/session';
 import * as pb from './proto/sector';
-import type { Quat4, Refusal, Vec3 } from './shared/sector';
+import type { DockRefusal, Quat4, Refusal, TransferRefusal, Vec3 } from './shared/sector';
 import { unitQuat, type Flight } from './shared/steer';
 
 export const contract = defineContract({
@@ -9,6 +9,9 @@ export const contract = defineContract({
         // The helm's orders and nothing else: there is no request by which a client says where its ship is.
         steer: { req: proto(pb.SteerRequest, (steer) => { if (steer.orders.length > 32) throw new Error('too many orders in one request'); }), res: proto(pb.SteerReply) },
         mine: { req: proto(pb.MineRequest), res: proto(pb.MineReply) },
+        dock: { req: proto(pb.DockRequest), res: proto(pb.DockReply) },
+        // Between the sender's own hold and the sender's own warehouse. What is wrong with an amount is the rules' to say, as a refusal: nothing is checked here.
+        transfer: { req: proto(pb.TransferRequest), res: proto(pb.TransferReply) },
     },
     events: { state: proto(pb.StateEvent) },
 });
@@ -35,3 +38,19 @@ const REFUSALS: Record<Refusal, pb.Refusal> = {
 };
 export const toRefusal = (why: Refusal): pb.Refusal => REFUSALS[why];
 export const fromRefusal = (why: pb.Refusal): Refusal => (Object.keys(REFUSALS) as Refusal[]).find((text) => REFUSALS[text] === why) ?? 'NOT MINING';
+
+const DOCKS: Record<DockRefusal, pb.DockRefusal> = { '': pb.DockRefusal.DOCK_REFUSAL_NONE, 'TOO FAR': pb.DockRefusal.DOCK_REFUSAL_TOO_FAR, 'TOO FAST': pb.DockRefusal.DOCK_REFUSAL_TOO_FAST };
+export const toDockRefusal = (why: DockRefusal): pb.DockRefusal => DOCKS[why];
+export const fromDockRefusal = (why: pb.DockRefusal): DockRefusal => (Object.keys(DOCKS) as DockRefusal[]).find((text) => DOCKS[text] === why) ?? 'TOO FAR';
+
+const TRANSFERS: Record<TransferRefusal, pb.TransferRefusal> = {
+    '': pb.TransferRefusal.TRANSFER_REFUSAL_NONE,
+    'NOT DOCKED': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_DOCKED,
+    'BAD AMOUNT': pb.TransferRefusal.TRANSFER_REFUSAL_BAD_AMOUNT,
+    'NOT ENOUGH IN THE HOLD': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_ENOUGH_IN_HOLD,
+    'NOT ENOUGH IN THE WAREHOUSE': pb.TransferRefusal.TRANSFER_REFUSAL_NOT_ENOUGH_IN_WAREHOUSE,
+    'HOLD FULL': pb.TransferRefusal.TRANSFER_REFUSAL_HOLD_FULL,
+    'BAD ORDER': pb.TransferRefusal.TRANSFER_REFUSAL_BAD_ORDER,
+};
+export const toTransferRefusal = (why: TransferRefusal): pb.TransferRefusal => TRANSFERS[why];
+export const fromTransferRefusal = (why: pb.TransferRefusal): TransferRefusal => (Object.keys(TRANSFERS) as TransferRefusal[]).find((text) => TRANSFERS[text] === why) ?? 'BAD ORDER';
