@@ -6,11 +6,12 @@ const root = path.resolve('output/space-frigate');
 const angle = process.platform === 'win32' ? 'd3d11' : process.platform === 'darwin' ? 'metal' : 'swiftshader';
 const server = await serveHost(path.join(root, 'web'));
 const browser = await chromium.launch({ headless: true, args: [`--use-angle=${angle}`, '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'] });
+const context = await browser.newContext({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
 const problems = [];
 const findings = [];
 const expect = (what, ok, detail) => { findings.push({ what, ok, detail }); if (!ok) problems.push(`${what}: ${JSON.stringify(detail)}`); };
 try {
-    const page = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    const page = await context.newPage();
     page.on('pageerror', (e) => problems.push(String(e)));
     page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await page.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
@@ -152,7 +153,7 @@ try {
     expect('and C again frees it, and a rock is still only followed, not shot at', free.gunAuto === true && free.gunSource === 'target' && free.gunShots === tracking.gunShots, guns(free));
     await page.close();
 
-    const voyage = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    const voyage = await context.newPage();
     voyage.on('pageerror', (e) => problems.push(String(e)));
     voyage.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await voyage.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
@@ -181,7 +182,7 @@ try {
     expect('and leaves her in the next system of the voyage, a world made for it, with its planet and the view as it was', now.index === 1 && now.seed === home.seed && now.planets[0] === '1' && now.fov >= 34 && now.fov <= 38 + 1e-6 && now.jumps === 1, { home, now });
     await voyage.close();
 
-    const ram = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    const ram = await context.newPage();
     ram.on('pageerror', (e) => problems.push(String(e)));
     ram.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await ram.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
@@ -221,7 +222,7 @@ try {
     }
     await ram.close();
 
-    const fight = await browser.newPage({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 });
+    const fight = await context.newPage();
     fight.on('pageerror', (e) => problems.push(String(e)));
     fight.on('console', (m) => { if (m.type() === 'error') problems.push(m.text().slice(0, 400)); });
     await fight.goto(`http://127.0.0.1:${server.address().port}/?headless`, { waitUntil: 'load', timeout: 120000 });
