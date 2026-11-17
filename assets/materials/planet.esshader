@@ -62,28 +62,38 @@ float noise(vec3 p) {
         f.z);
 }
 
+float footprint(vec3 p) {
+    return max(length(dFdx(p)), length(dFdy(p)));
+}
+
+float keep(float span) {
+    return 1.0 - smoothstep(0.5, 1.0, span);
+}
+
 float cloud(vec3 p, int octaves, float gain) {
-    float sum = 0.0, weight = 1.0, total = 0.0;
+    float sum = 0.0, weight = 1.0, total = 0.0, span = footprint(p);
     p += u_seed;
     for (int i = 0; i < 8; i++) {
         if (i >= octaves) break;
-        sum += weight * noise(p);
+        sum += weight * mix(0.5, noise(p), keep(span));
         total += weight;
         weight *= gain;
         p = p * 2.03 + 11.3;
+        span *= 2.03;
     }
     return sum / total;
 }
 
 float ridge(vec3 p, int octaves) {
-    float sum = 0.0, weight = 1.0, total = 0.0;
+    float sum = 0.0, weight = 1.0, total = 0.0, span = footprint(p);
     p += u_seed;
     for (int i = 0; i < 8; i++) {
         if (i >= octaves) break;
-        sum += weight * (1.0 - abs(noise(p) * 2.0 - 1.0));
+        sum += weight * mix(0.62, 1.0 - abs(noise(p) * 2.0 - 1.0), keep(span));
         total += weight;
         weight *= 0.55;
         p = p * 2.03 + 11.3;
+        span *= 2.03;
     }
     return sum / total;
 }
@@ -95,6 +105,16 @@ vec3 warp(vec3 p, float amount, float freq) {
 
 float fall(float far, float near, float x) {
     return 1.0 - smoothstep(near, far, x);
+}
+
+float ramp(float lo, float hi, float x) {
+    float w = max(hi - lo, fwidth(x)) * 0.5, m = (lo + hi) * 0.5;
+    return smoothstep(m - w, m + w, x);
+}
+
+float line(float x, float width, float power) {
+    float w = max(max(width, fwidth(x)), 1e-6);
+    return fall(w, 0.0, abs(x)) * pow(width / w, 1.0 / power);
 }
 
 vec3 pick(float sel, float soft) {
@@ -166,7 +186,7 @@ vec3 ice(vec3 D) {
 
 vec2 craters(vec3 D, float freq) {
     vec3 p = D * freq + u_seed, cell = floor(p);
-    float bowl = 0.0, rim = 0.0;
+    float span = footprint(p), bowl = 0.0, rim = 0.0;
     for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
         vec3 at = cell + vec3(float(x), float(y), float(z));
         vec3 seed = hash3(at + 19.7);
@@ -174,11 +194,13 @@ vec2 craters(vec3 D, float freq) {
         if (chance > 0.35) continue;
         float size = 0.12 + 0.3 * seed.x * seed.x;
         float d = length(p - (at + 0.25 + 0.5 * seed)) / size;
-        bowl = max(bowl, fall(1.0, 0.2, d));
-        float edge = (d - 1.0) / 0.14;
-        rim = max(rim, exp(-edge * edge));
+        float soft = max(0.14, 0.6 * span / size);
+        bowl = max(bowl, fall(1.0 + soft * 0.5, max(0.0, 0.2 - soft * 0.5), d));
+        float edge = (d - 1.0) / soft;
+        rim = max(rim, exp(-edge * edge) * 0.14 / soft);
     }
-    return vec2(bowl, rim);
+    float fade = 1.0 - smoothstep(0.6, 1.4, span);
+    return vec2(bowl, rim) * fade;
 }
 
 #ifdef PLANET_DESERT
@@ -194,7 +216,7 @@ vec3 desert(vec3 D) {
     vec3 col = mix(lowland, upland, high);
     float peaks = smoothstep(0.74, 0.9, crest) * high;
     col = mix(col, u_c3.rgb, 0.45 * peaks);
-    float rift = fall(0.08, 0.0, abs(cloud(warp(D * 1.1, 1.2, 0.9) * 2.2, 5, 0.5) - 0.5)) * smoothstep(0.3, 0.6, land);
+    float rift = line(cloud(warp(D * 1.1, 1.2, 0.9) * 2.2, 5, 0.5) - 0.5, 0.08, 1.0) * smoothstep(0.3, 0.6, land);
     col = mix(col, u_c5.rgb, 0.8 * rift);
     vec2 pits = max(craters(D, u_shape.y), craters(D + 5.3, u_shape.y * 2.5) * 0.7);
     col *= (1.0 - 0.3 * pits.x) * (1.0 + 0.35 * pits.y);
@@ -217,8 +239,8 @@ vec3 lava(vec3 D, out vec3 glow) {
     vec3 col = mix(u_c0.rgb, u_c1.rgb, smoothstep(0.35, 0.7, land)) * (0.6 + 0.8 * rough);
     col = mix(col, u_c2.rgb, 0.6 * smoothstep(0.7, 0.88, crest));
     col = mix(col, u_c4.rgb, 0.5 * smoothstep(0.6, 0.85, cloud(D * vec3(3.0, 9.0, 3.0) + 31.0, 5, 0.55)));
-    float crack = fall(u_shape.y, 0.0, abs(cloud(warp(D * 1.3, 1.4, 1.1) * 2.6, 6, 0.5) - 0.5));
-    float fine = fall(u_shape.y * 0.6, 0.0, abs(cloud(warp(D * 3.0, 0.9, 1.7) * 5.0, 5, 0.5) - 0.5)) * 0.6;
+    float crack = line(cloud(warp(D * 1.3, 1.4, 1.1) * 2.6, 6, 0.5) - 0.5, u_shape.y, 3.0);
+    float fine = line(cloud(warp(D * 3.0, 0.9, 1.7) * 5.0, 5, 0.5) - 0.5, u_shape.y * 0.6, 3.0) * 0.6;
     float sea = 1.0 - smoothstep(u_shape.z - 0.06, u_shape.z + 0.06, land);
     float heat = max(max(crack, fine * 0.7) * (0.5 + 0.5 * smoothstep(0.3, 0.6, land)), sea * (0.35 + 0.4 * rough));
     heat *= 0.6 + 0.6 * cloud(D * 6.0 + 50.0, 4, 0.5);
@@ -237,7 +259,7 @@ vec3 ocean(vec3 D) {
     float land = cloud(w1 * 1.5, 7, 0.55);
     float rough = cloud(w1 * 7.5, 6, 0.6);
     float crest = ridge(warp(D * 2.2, 0.7, 1.4) * 3.4, 6);
-    float coast = smoothstep(u_shape.w - 0.01, u_shape.w + 0.01, land + 0.04 * (rough - 0.5));
+    float coast = ramp(u_shape.w - 0.01, u_shape.w + 0.01, land + 0.04 * (rough - 0.5));
     float depth = smoothstep(u_shape.w - 0.12, u_shape.w, land);
     vec3 sea = mix(u_c0.rgb, u_c1.rgb, depth) * (0.9 + 0.2 * rough);
     float dry = smoothstep(0.35, 0.65, cloud(D * vec3(1.5, 6.0, 1.5) + 17.0, 4, 0.5)) * (1.0 - smoothstep(0.35, 0.7, abs(lat)));
@@ -263,8 +285,8 @@ vec3 frozen(vec3 D, out vec3 glow) {
     vec3 col = mix(u_c1.rgb, u_c2.rgb, smoothstep(0.35, 0.7, sheet)) * (0.86 + 0.28 * rough);
     float old = smoothstep(0.56, 0.7, cloud(warp(D * 1.1, 1.0, 1.0) * 1.6 + 23.0, 6, 0.55));
     col = mix(col, u_c0.rgb * (0.8 + 0.4 * rough), old * 0.75);
-    float lines = smoothstep(0.93, 0.985, ridge(warp(D * 2.0, 0.5, 1.2) * u_shape.y, 5));
-    float fine = smoothstep(0.95, 0.99, ridge(warp(D * 3.5 + 7.0, 0.4, 1.6) * u_shape.y * 1.7, 4)) * 0.6;
+    float lines = ramp(0.93, 0.985, ridge(warp(D * 2.0, 0.5, 1.2) * u_shape.y, 5));
+    float fine = ramp(0.95, 0.99, ridge(warp(D * 3.5 + 7.0, 0.4, 1.6) * u_shape.y * 1.7, 4)) * 0.6;
     col = mix(col, u_c3.rgb, max(lines, fine) * u_shape.z);
     vec2 pits = craters(D, 11.0);
     col *= (1.0 - 0.12 * pits.x) * (1.0 + 0.2 * pits.y);
@@ -289,7 +311,7 @@ vec3 terran(vec3 D, out vec3 glow) {
     float land = cloud(w1 * 1.5, 7, 0.55);
     float rough = cloud(w1 * 7.5, 6, 0.6);
     float crest = ridge(warp(D * 2.2, 0.7, 1.4) * 3.4, 6);
-    float coast = smoothstep(u_shape.w - 0.008, u_shape.w + 0.008, land + 0.04 * (rough - 0.5));
+    float coast = ramp(u_shape.w - 0.008, u_shape.w + 0.008, land + 0.04 * (rough - 0.5));
     float depth = smoothstep(u_shape.w - 0.1, u_shape.w, land);
     vec3 sea = mix(u_c0.rgb, u_c1.rgb, depth * depth) * (0.92 + 0.16 * rough);
     float belt = 1.0 - smoothstep(0.15, 0.45, abs(abs(lat) - 0.38));

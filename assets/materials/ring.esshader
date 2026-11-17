@@ -28,6 +28,15 @@ float lane(float x) {
     return mix(a, b, f * f * (3.0 - 2.0 * f));
 }
 
+float keep(float span) {
+    return 1.0 - smoothstep(0.5, 1.0, span);
+}
+
+float gap(float k, float at, float width, float spacing) {
+    float w = max(width, spacing);
+    return width / w * smoothstep(w, 0.0, abs(k - at));
+}
+
 void main() {
     vec2 p = v_texCoord * 2.0 - 1.0;
 #ifdef MESH_LOCAL_POSITION
@@ -35,16 +44,18 @@ void main() {
 #endif
     float r = length(p);
     float k = (r - u_inner) / (1.0 - u_inner);
-    float broad = lane(k * 7.0 + 3.0);
-    float mid = lane(k * 31.0 + 11.0);
-    float fine = lane(k * 140.0 + 5.0);
+    float spacing = length(vec2(dFdx(k), dFdy(k)));
+    float broad = mix(0.5, lane(k * 7.0 + 3.0), keep(spacing * 7.0));
+    float mid = mix(0.5, lane(k * 31.0 + 11.0), keep(spacing * 31.0));
+    float fine = mix(0.5, lane(k * 140.0 + 5.0), keep(spacing * 140.0));
     float density = 0.25 + 0.75 * smoothstep(0.2, 0.75, broad * 0.55 + mid * 0.3 + fine * 0.15);
-    density *= 1.0 - 0.92 * smoothstep(0.035, 0.0, abs(k - 0.62));
-    density *= 1.0 - 0.7 * smoothstep(0.012, 0.0, abs(k - 0.83));
+    density *= 1.0 - 0.92 * gap(k, 0.62, 0.035, spacing);
+    density *= 1.0 - 0.7 * gap(k, 0.83, 0.012, spacing);
     density *= 0.35 + 0.65 * smoothstep(0.0, 0.3, k);
-    density *= smoothstep(0.0, 0.015, k) * smoothstep(1.0, 0.97, k);
-    float apart = u_split.x > 0.0 ? 1.0 - smoothstep(u_split.y * 0.75, u_split.y, abs(k - u_split.x)) : 0.0;
-    float beyond = u_split.x > 0.0 ? smoothstep(u_split.x, u_split.x + u_split.y, k) : 0.0;
+    density *= smoothstep(0.0, max(0.015, spacing), k) * smoothstep(1.0, 1.0 - max(0.03, spacing), k);
+    float cut = max(max(u_split.y, spacing), 1e-5);
+    float apart = u_split.x > 0.0 ? u_split.y / cut * (1.0 - smoothstep(cut * 0.75, cut, abs(k - u_split.x))) : 0.0;
+    float beyond = u_split.x > 0.0 ? smoothstep(u_split.x, u_split.x + cut, k) : 0.0;
     density *= (1.0 - 0.98 * apart) * (1.0 - 0.3 * beyond);
     vec3 sun = normalize(u_sun);
     vec3 at = vec3(p, 0.0);

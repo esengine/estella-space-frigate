@@ -112,4 +112,18 @@ describe('the worlds a voyage passes', () => {
         for (const uniform of ['u_c0', 'u_c5', 'u_accent', 'u_pole', 'u_glow', 'u_seed', 'u_shape', 'u_spot']) expect(shader).toContain(`#pragma param ${uniform} `);
         expect(shader).not.toMatch(/smoothstep\(\s*([^,]+)\+\s*[\d.]+\s*,\s*\1-/);
     });
+
+    it('fade detail finer than a pixel, so a far planet and its ring do not shimmer', () => {
+        const shader = readFileSync(new URL('../assets/materials/planet.esshader', import.meta.url), 'utf8');
+        const ring = readFileSync(new URL('../assets/materials/ring.esshader', import.meta.url), 'utf8');
+        expect(shader.match(/span = footprint\(p\)/g)?.length).toBe(3);
+        expect(shader.match(/keep\(span\)\);\n        total \+= weight;\n        weight \*= [\w.]+;\n        p = p \* 2\.03 \+ 11\.3;\n        span \*= 2\.03;/g)?.length).toBe(2);
+        expect(shader).toMatch(/max\(0\.14, 0\.6 \* span \/ size\)/);
+        expect(shader.match(/coast = ramp\(/g)?.length).toBe(2);
+        expect(shader.match(/= line\(cloud\(/g)?.length).toBe(3);
+        expect(shader.match(/= ramp\(0\.9\d+, 0\.9\d+, ridge\(/g)?.length).toBe(2);
+        expect(ring).toMatch(/float spacing = length\(vec2\(dFdx\(k\), dFdy\(k\)\)\);/);
+        for (const lanes of ['7.0', '31.0', '140.0']) expect(ring).toContain(`keep(spacing * ${lanes})`);
+        expect(ring.match(/gap\(k, 0\.\d+, 0\.\d+, spacing\)/g)?.length).toBe(2);
+    });
 });
