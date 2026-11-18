@@ -3,6 +3,9 @@ export type Quat4 = [number, number, number, number];
 
 export const GRAMS = 1_000_000;
 
+/** The path the sector server answers on, and the one a deployed page dials on its own host (project.esproject's server.path). */
+export const SECTOR_PATH = '/sector';
+
 export const SECTOR = {
     id: 'kestrel-belt',
     name: 'KESTREL BELT',

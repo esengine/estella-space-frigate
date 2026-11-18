@@ -3,9 +3,10 @@ import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { SessionHost, SessionRejected, acceptWebSocket, type SessionContext } from 'esengine/session';
 import { contract, toDockRefusal, toFlight, toMooring, toQuat, toRefusal, toTransferRefusal, toVec, type Credentials } from '../src/protocol';
-import { SECTOR, tonnage } from '../src/shared/sector';
+import { SECTOR, SECTOR_PATH, tonnage } from '../src/shared/sector';
 import { NoSave, loadSave, writeSave } from './store';
-import { createSector } from './world';
+import { addPilot, readPilots } from './pilots';
+import { TEST_ACCOUNTS, createSector, type Account } from './world';
 
 function arg(name: string, fallback: string): string {
     const i = process.argv.indexOf(`--${name}`);
@@ -17,6 +18,30 @@ const wire = arg('wire', 'pb') as 'json' | 'pb' | 'pb-only';
 const file = path.resolve(arg('data', 'server-data/sector.json'));
 const found = process.argv.includes('--new');
 
+// Pilots come from --accounts, a list kept beside the save; without one the server flies the two test pilots the checks use.
+const accountsFile = arg('accounts', '');
+if (process.argv.includes('--add-pilot')) {
+    const id = arg('add-pilot', '');
+    if (!accountsFile || !id) { console.error('usage: --accounts <file> --add-pilot <id> [--name <shown name>]'); process.exit(2); }
+    try {
+        const token = addPilot(path.resolve(accountsFile), id, arg('name', ''));
+        console.log(`[sector] ${id} may fly now. Her link: https://<your domain>/?account=${encodeURIComponent(id)}&token=${token}`);
+        process.exit(0);
+    } catch (err) {
+        console.error(`[sector] ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(2);
+    }
+}
+let book: ReturnType<typeof readPilots> | null = null;
+try {
+    book = accountsFile ? readPilots(path.resolve(accountsFile)) : null;
+} catch (err) {
+    console.error(`[sector] not started: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(5);
+}
+const accounts: readonly Account[] = book ? book.accounts.map((a) => ({ id: a.id, name: a.name, token: a.token })) : TEST_ACCOUNTS;
+if (!book) console.log('[sector] flying the test pilots (pilot-a, pilot-b); a sector others reach takes --accounts');
+
 let saved;
 try {
     saved = loadSave(file, { found });
@@ -25,7 +50,15 @@ try {
     console.error(`[sector] not started: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(err instanceof NoSave ? 3 : 4);
 }
-const sector = createSector(saved, undefined, { keeper: true });
+let sector: ReturnType<typeof createSector>;
+try {
+    sector = createSector(saved, accounts, { keeper: true });
+} catch (err) {
+    console.error(`[sector] not started: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(4);
+}
+// Founding a deployed sector is one step of its own: write it, check it opens with these pilots, and stop.
+if (process.argv.includes('--found-only')) { console.log(`[sector] ${found ? 'founded' : 'found'} at ${file}`); process.exit(0); }
 // A check stops the server at a named point to see what a crash there leaves: SECTOR_CRASH=before-write | mid-write | after-write.
 const CRASH = process.env.SECTOR_CRASH ?? '';
 const crash = (point: string): void => { if (CRASH === point) { console.log(`[sector] stopped dead at ${point}`); process.exit(86); } };
@@ -56,7 +89,9 @@ const host = new SessionHost<Seat>({
     authenticate(raw, connection) {
         const creds = raw as Partial<Credentials> | null;
         if (!creds || creds.contract !== contract.fingerprint) throw new SessionRejected('CLIENT AND SERVER DIFFER');
-        const account = sector.login(creds.account, creds.token);
+        // The list's own check reads every character whatever the guess; the sector then seats the pilot it names.
+        const listed = book ? book.check(creds.account, creds.token) : null;
+        const account = book ? (listed && sector.login(listed.id, listed.token)) : sector.login(creds.account, creds.token);
         if (!account) throw new SessionRejected('UNKNOWN PILOT OR TOKEN');
         const seat = ++seats;
         seated.set(account.id, seat);
@@ -139,7 +174,7 @@ const http = createServer((req, res) => {
     // The server's own account of each ship, for a check to read beside what the clients believe.
     if (req.url === '/pilots') {
         const out: Record<string, unknown> = {};
-        for (const id of ['pilot-a', 'pilot-b']) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, credits: s.you.credits, docked: s.you.docked, berth: s.you.berth, mooring: s.you.mooring, hold: s.you.hold, arrived: s.you.arrived, taken: sector.taken(id), nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
+        for (const { id } of accounts) { const s = sector.stateFor(id); out[id] = { here: sector.here(id), flight: s.flight, ack: s.ack, waiting: s.waiting, starved: s.starved, dropped: s.dropped, cargo: s.you.cargo, stored: s.you.stored, credits: s.you.credits, docked: s.you.docked, berth: s.you.berth, mooring: s.you.mooring, hold: s.you.hold, arrived: s.you.arrived, taken: sector.taken(id), nextMove: s.you.next, station: s.you.station, mining: s.you.mining }; }
         out.berths = sector.berths();
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(out));
@@ -148,7 +183,7 @@ const http = createServer((req, res) => {
     res.writeHead(404);
     res.end();
 });
-const wss = new WebSocketServer({ server: http, path: '/sector', maxPayload: 16 * 1024, perMessageDeflate: false });
+const wss = new WebSocketServer({ server: http, path: SECTOR_PATH, maxPayload: 16 * 1024, perMessageDeflate: false });
 wss.on('connection', (socket) => acceptWebSocket(host, socket));
 await new Promise<void>((resolve, reject) => { http.once('error', reject); http.listen(port, bind, () => resolve()); });
 

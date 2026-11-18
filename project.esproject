@@ -10,6 +10,7 @@
   "scripts": { "main": "src/main.ts" },
   "assetExclude": ["tools", "proto", "server", "server-data", "tests"],
   "tools": { "protobuf": { "enabled": true } },
+  "server": { "entry": "server/main.ts", "path": "/sector", "port": 8090, "args": ["--port", "{port}", "--host", "{host}", "--data", "{data}/sector.json", "--accounts", "{data}/pilots.json"], "health": "/healthz" },
   "packaging": { "platforms": { "web": { "connect": ["ws:", "wss:"] } } },
   "features": { "runtime": { "assetLoadTimeout": 180000 }, "rendering": { "colorSpace": "linear", "outputTransform": "aces", "quality": { "mode": "auto", "asyncShaderCompile": true, "profiles": { "low": { "textureStreaming": false, "depthPrepass": true }, "medium": { "textureStreaming": false } }, "deviceRules": [{"level": "low", "gpuIncludes": "Adreno"}, {"level": "low", "gpuIncludes": "Mali"}, {"level": "low", "gpuIncludes": "PowerVR"}, {"level": "low", "gpuIncludes": "Xclipse"}, {"level": "low", "gpuIncludes": "Immortalis"}, {"level": "low", "gpuIncludes": "Maleoon"}, {"level": "low", "gpuIncludes": "Apple GPU"}, {"level": "high", "gpuIncludes": "NVIDIA"}, {"level": "high", "gpuIncludes": "Radeon"}] } } }
 }

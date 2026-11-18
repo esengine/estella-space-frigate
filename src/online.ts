@@ -1,8 +1,8 @@
 import { createSocket } from 'esengine';
-import { ClientSession } from 'esengine/session';
+import { ClientSession, serverAddress } from 'esengine/session';
 import { contract, fromDockRefusal, fromFlight, fromMooring, fromQuat, fromRefusal, fromTransferRefusal, fromVec, type Credentials } from './protocol';
 import { DRIFTING_ROCKS } from './shipState';
-import { SECTOR, inHand, type DockRefusal, type Mooring, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
+import { SECTOR, SECTOR_PATH, inHand, type DockRefusal, type Mooring, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
 import { createPredictor, type Predictor } from './shared/predict';
 import { copyFlight, turnShip, type Flight, type Orders, type Vec } from './shared/steer';
 
@@ -75,7 +75,8 @@ let moving = false, movedAt = 0, named = 0;
 
 export function configureOnline(search: string): void {
     const query = new URLSearchParams(search);
-    const url = query.get('server') ?? '';
+    // A link with a pilot's account flies online: at ?server= if it names one, else at the sector beside the page it came from.
+    const url = query.get('server') || (query.get('account') ? serverAddress({ path: SECTOR_PATH, search }) ?? '' : '');
     if (!/^wss?:\/\//.test(url)) return;
     online.enabled = true;
     online.url = url;

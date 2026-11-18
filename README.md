@@ -72,6 +72,21 @@ http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-a&token
 http://127.0.0.1:<port>/?server=ws://127.0.0.1:8090/sector&account=pilot-b&token=test-token-b
 ```
 
+Without `--accounts` the server flies those two test pilots, and says so. A sector other people reach has its own list of pilots, a token each, kept beside the save:
+
+```bash
+node pipeline/bin/estella.mjs export examples/space-frigate --platform server
+```
+
+writes `examples/space-frigate/dist-server/`: the server in one file, the web export, and the files that deploy both behind one address (`project.esproject`'s `server` block says how it is started). On the machine, once, from that folder (with Docker, prefix each `node server.mjs` with `docker compose run --rm server`, and the files go in `/data`):
+
+```bash
+node server.mjs --accounts /var/lib/space-frigate/pilots.json --add-pilot ana
+node server.mjs --data /var/lib/space-frigate/sector.json --accounts /var/lib/space-frigate/pilots.json --new --found-only
+```
+
+The first prints her link, `https://<your domain>/?account=ana&token=...`, and is run again for each pilot (the server reads the list when it starts, so restart it after adding one). The second founds the sector and stops. Then `SITE_ADDRESS=<your domain> docker compose up -d --build`, or the systemd unit and Caddyfile in `deploy/`, as the folder's README says. A link with an account and no `?server=` dials `/sector` on the host the page came from.
+
 She flies as she does offline; `T` locks the shared rock and `F` mines it. With a tonne aboard the panel asks for `H`, which asks the station for a berth; then it talks the helm to that berth's approach point (`B` steers for it, slow to a quarter, stop the engine there) and the station does the rest. `H` again gives up a berth that is only kept, or casts off from one she lies in. Docked, `J` stores what is in the hold, `K` takes a tonne back and `N` sells a tonne to the station for 100 credits. `Ctrl+C` (or `stop` on its input) stops the server and saves; it also saves every second while anything changes. `&wire=json` asks for text frames, to read a session in a debugger. `GET /healthz` gives the ore books (rock, holds, warehouses, the station's stock) and the credits paid out, and `GET /pilots` each ship, hold, warehouse and berth as the server has them, with who has each berth. After a change to `proto/sector.proto`, `node pipeline/bin/estella.mjs proto gen examples/space-frigate` writes `src/proto` again.
 
 Checks: `tests/flight.test.ts`, `tests/sector.test.ts`, `tests/station.test.ts`, `tests/warehouse.test.ts`, `tests/market.test.ts` and `tests/director.test.ts` hold the rules, a simulated slow link among them. `node examples/space-frigate/tools/check-sector.mjs` drives the server as its own process over real sockets (forged places, floods of orders, a second sign-in taking the helm, a dropped link, a stop and start, a kill, a lost save, mining to the last gram, then the berths: eighty requests for a berth at once, both ships brought in together with every step each was sent compared, the way out, a berth kept through a dropped link and a kill and given up after thirty seconds; and the warehouse: orders repeated and sent ten at once, amounts that are not ore, the server stopped dead at three points of a move with `SECTOR_CRASH`, a disk that refuses the write, and an old order sent again after sixty-four others, a restart, a dropped link and a kill) and writes its books to `output/space-frigate/sector/ledger-<wire>.json` and who had which berth to `berths-<wire>.json`. `tools/check-director.mjs` watches the harbour's camera in two clients, one to each berth, at 1280x720 and 1920x1080: the shots and their order, how the ship sits in each, the wait while the disk refuses a berthing, a drag, a reload, and the helm at the moment she is let go, with each window filmed to `output/space-frigate/director/video`. `tools/check-online.mjs` flies two copies of the game in a browser through a relay that holds every byte back (`SECTOR_DELAY_MS`, 100 each way by default) films both windows from asking for a berth to sailing away (`output/space-frigate/online/video/berths-A.webm` and `berths-B.webm`), and writes what it measured to `output/space-frigate/online/report.json`.
