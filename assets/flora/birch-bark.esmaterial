@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "type": "material",
+  "shader": "builtin:foliage",
+  "blendMode": 0,
+  "depthTest": true,
+  "depthWrite": true,
+  "cull": 0,
+  "properties": {
+    "u_albedo": "assets/flora/birch.png",
+    "u_useTexture": 1,
+    "u_alphaCutoff": 0.15,
+    "u_baseColor": {
+      "r": 0.7,
+      "g": 0.7,
+      "b": 0.7,
+      "a": 1
+    },
+    "u_tipColor": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+    },
+    "u_windStrength": 0.3,
+    "u_windSpeed": 0.8,
+    "u_windDirection": 30,
+    "u_gustScale": 0.004,
+    "u_flutter": 0.04,
+    "u_translucency": 0,
+    "u_roughness": 0.95
+  }
+}

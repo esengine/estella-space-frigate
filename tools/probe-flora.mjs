@@ -172,9 +172,9 @@ try {
         await lower(300);
         await page.evaluate(() => window.__estellaCooked.setPaused(false));
         const began = Date.now(), seen = [];
-        for (let n = 0; n < 40; n++) { await page.waitForTimeout(500); if (n % 6 === 0) await lower(300); seen.push(`${((Date.now() - began) / 1000).toFixed(1)}s:${(await fall()).flora}`); }
+        for (let n = 0; n < 40; n++) { await page.waitForTimeout(500); if (n % 6 === 0) await lower(300); seen.push(`${((Date.now() - began) / 1000).toFixed(1)}s:${(await fall()).flora}/${await page.evaluate(() => /planet ([\d.]+)/.exec(window.__spaceMeter?.building ?? '')?.[1] ?? 'whole')}`); }
         await page.evaluate(() => window.__estellaCooked.setPaused(true));
-        problems.push(`pieces by the clock ${seen.filter((_, i) => i % 2 === 1).join(' ')}`);
+        problems.push(`pieces / how much of the ground is there, by the clock ${seen.filter((_, i) => i % 2 === 1).join(' ')}`);
     }
     await tap('KeyZ');
     await step(120);

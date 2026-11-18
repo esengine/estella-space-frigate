@@ -26,6 +26,11 @@ export interface PlanetSpec {
     /** What its leaves and its stone are multiplied by: its growth in its own colour and not every world's in one green. */
     leaf: Color;
     rock: Color;
+    /** The colour its grass is (its plains', lifted: grass stands in the light) and the colour its flowers are. */
+    grass: Color;
+    bloom: Color;
+    /** How much of its open ground is in flower, 0 to 1. */
+    flowers: number;
 }
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
@@ -79,6 +84,9 @@ export function specFor(system: StarSystem, ground: Ground | null): PlanetSpec |
         const [h, s, l] = toHsl(ground.colors[0]);
         const leaf = fromHsl((h + (rand() - 0.5) * 0.16 + 1) % 1, clamp(s * 1.25 + 0.15, 0.25, 0.9), clamp(l * 0.62, 0.1, 0.34));
         const stone = ground.colors[3];
+        const plain = ground.colors[0];
+        // Its flowers are a colour of their own, well away from its leaves' round the wheel, and bright.
+        const bloom = fromHsl((h + 0.33 + rand() * 0.34) % 1, 0.55 + 0.35 * rand(), 0.55 + 0.15 * rand());
         spec = {
             sea: climate.sea && ground.sea !== null,
             lush: within(climate.lush), wet: within(climate.wet), size: within(climate.size), treeLine: within(climate.treeLine),
@@ -86,6 +94,9 @@ export function specFor(system: StarSystem, ground: Ground | null): PlanetSpec |
             rocky: within(climate.rocky), stone: within(climate.stone),
             leaf: rgb(clamp(leaf.r / LEAF_GROWN.r, 0.15, 5), clamp(leaf.g / LEAF_GROWN.g, 0.15, 5), clamp(leaf.b / LEAF_GROWN.b, 0.15, 5)),
             rock: rgb(clamp(stone.r * 2.4, 0.2, 2.5), clamp(stone.g * 2.4, 0.2, 2.5), clamp(stone.b * 2.4, 0.2, 2.5)),
+            grass: rgb(clamp(plain.r * 1.5 + 0.02, 0, 1.6), clamp(plain.g * 1.5 + 0.02, 0, 1.6), clamp(plain.b * 1.5 + 0.02, 0, 1.6)),
+            bloom: rgb(bloom.r * 1.3, bloom.g * 1.3, bloom.b * 1.3),
+            flowers: climate.lush[1] > 0 ? 0.3 + 0.7 * rand() : 0,
         };
     }
     made.set(system, spec);

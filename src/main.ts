@@ -1,4 +1,4 @@
-import { addPlugin, Assets, defineSystem, Particle, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
+import { addPlugin, Assets, bakesOf, defineSystem, Particle, Device, GetWorld, Res, Time, Input, Transform, MeshRenderer, Light, Material, ParticleEmitter, Playthrough, Camera, PostProcessVolume } from 'esengine';
 import type { Entity, World } from 'esengine';
 import { installAudio } from './audio';
 import { SHOTS, SHOT_SECONDS, clamp, eyeOf, lookRotation, tourOrbit, type Orbit } from './flight';
@@ -14,7 +14,7 @@ import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
 import { PLANETFALL, createPlanetfall, fall } from './planetfall';
-import { FLORA_MATERIALS, STONE_MATERIAL } from './flora';
+import { FLORA_MATERIALS, MEADOW_MATERIAL, STONE_MATERIAL, SWARD_MATERIAL } from './flora';
 import { groundFor } from './grounds';
 import { WORLD_MAP, mapSeaLevel, worldMapMaker, type PlanetSpec } from './planetSpec';
 import { DIRECTOR, director, handOver, stepDirector, type Rig } from './director';
@@ -127,17 +127,22 @@ let welcomed = 0;
         };
         // What grows is drawn by a few materials every world shares; a world puts them in its own colours as she comes down on it.
         // They are loaded once and kept: the engine's own use of them is by the same handles.
-        let flora: Promise<{ leaves: number[]; stone: number }> | null = null;
+        let flora: Promise<{ leaves: number[]; stone: number; sward: number; meadow: number }> | null = null;
         const tintFlora = (spec: PlanetSpec): void => {
             const assets = app.getResource(Assets);
-            flora ??= Promise.all([...FLORA_MATERIALS, STONE_MATERIAL].map((path) => assets.loadMaterial(path).then((m) => m.handle)))
-                .then((handles) => ({ leaves: handles.slice(0, -1), stone: handles[handles.length - 1]! }));
-            void flora.then(({ leaves, stone }) => {
+            flora ??= Promise.all([...FLORA_MATERIALS, STONE_MATERIAL, SWARD_MATERIAL, MEADOW_MATERIAL].map((path) => assets.loadMaterial(path).then((m) => m.handle)))
+                .then((handles) => ({ leaves: handles.slice(0, -3), stone: handles[handles.length - 3]!, sward: handles[handles.length - 2]!, meadow: handles[handles.length - 1]! }));
+            void flora.then(({ leaves, stone, sward, meadow }) => {
                 const by = (c: { r: number; g: number; b: number }, k: number): number[] => [c.r * k, c.g * k, c.b * k, 1];
                 // Darker at the foot than at the top, as a tree standing among others is (tools/flora-meshes.mjs has the same two numbers).
                 for (const m of leaves) { Material.setUniform(m, 'u_baseColor', by(spec.leaf, 0.62)); Material.setUniform(m, 'u_tipColor', by(spec.leaf, 1.12)); }
                 Material.setUniform(stone, 'u_baseColor', by(spec.rock, 0.2));
                 Material.setUniform(stone, 'u_tipColor', by(spec.rock, 0.5));
+                // Long grass is paler than the turf it stands in, and palest at its tips, where it has gone to seed.
+                Material.setUniform(sward, 'u_baseColor', by(spec.grass, 0.95));
+                Material.setUniform(sward, 'u_tipColor', [spec.grass.r * 1.5 + 0.1, spec.grass.g * 1.45 + 0.08, spec.grass.b * 1.2 + 0.02, 1]);
+                Material.setUniform(meadow, 'u_baseColor', by(spec.bloom, 0.85));
+                Material.setUniform(meadow, 'u_tipColor', by(spec.bloom, 1.1));
             }, (err: unknown) => console.error(`space-frigate: the flora's materials did not load: ${String(err)}`));
         };
         // The world as a map (planetSpec.ts): made a few rows a frame after she arrives in a system, then given to the planet's
@@ -491,7 +496,7 @@ let welcomed = 0;
             facts.gpuMs = meter?.renderer_getGpuTimeMs?.() ?? 0;
             facts.gpuDraws = meter?.renderer_getGpuDrawCalls?.() ?? 0;
             facts.gpuBytes = meter?.renderer_getEstimatedGpuBytes?.() ?? 0;
-            (globalThis as { __spaceMeter?: unknown }).__spaceMeter = { gpuMs: facts.gpuMs, draws: facts.gpuDraws, bytes: facts.gpuBytes, pending: meter ? pendingShaders(app) : 0, frame: clock };
+            (globalThis as { __spaceMeter?: unknown }).__spaceMeter = { gpuMs: facts.gpuMs, draws: facts.gpuDraws, bytes: facts.gpuBytes, pending: meter ? pendingShaders(app) : 0, frame: clock, building: bakesOf(app).active.map((b) => `${b.label} ${b.progress.toFixed(2)}`).join('; ') };
             facts.shake = fall.shake;
             facts.heat = fall.heat;
             if (open) {
