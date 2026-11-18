@@ -6,7 +6,10 @@
       "height": 21,
       "shape": "cone",
       "seed": 7,
-      "detail": 1,
+      "detail": 2,
+      "crown": 1.15,
+      "spread": 0.9,
+      "limbs": 9,
       "bark": [
         0.2,
         0.13,
@@ -21,8 +24,8 @@
     {
       "op": "decimate",
       "faces": "bark",
-      "ratio": 0.3,
-      "error": 0.006
+      "ratio": 0.08,
+      "error": 0.03
     }
   ]
 }

@@ -18,7 +18,7 @@ const kind = (name: string, near: number, reach: number, far: number, shadows = 
     return {
         parts: [part(name, near > 0 ? `${name}-card` : ''), ...(stem ? [part(`${name}-bark`, `${name}-card-bark`, `${name}-bark`)] : [])],
         lodDistance: near, drawDistance: reach,
-        far: far > 0 ? [part(`${name}-card`, ''), ...(stem ? [part(`${name}-card-bark`, '', `${name}-bark`)] : [])] : [], farDistance: far,
+        far: far > 0 ? [part(`${name}-far`, ''), ...(stem ? [part(`${name}-card-bark`, '', `${name}-bark`)] : [])] : [], farDistance: far,
     };
 };
 /** The kinds of plant a world's rules name, at that world's size: a larger growth is seen whole from further off. */

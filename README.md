@@ -110,8 +110,8 @@ A world is made once, from the voyage's seed like the rest of its system, and ev
   its woods and which its high ground, how much stone lies about. A desert has scrub, a rare tree and standing stones; a
   frozen world stone and a few trees low down; a lava world stone. Its leaves take after the colour of its plains, so no two
   worlds are the one green.
-  A wood is drawn as instances: a tree near her is the tree, further off three cards and a stem, and past that the same cards
-  merged a square of ground at a time; leaves and bark are two parts, so a world's colour tints its leaves and leaves its
+  A wood is drawn as instances: a tree near her is the tree, further off a fifth of its tufts of leaves (each made larger) on a
+  plain stem, and past that a twelfth of them merged a square of ground at a time; leaves and bark are two parts, so a world's colour tints its leaves and leaves its
   bark alone. Open ground has long grass and drifts of flowers in patches (`sward`, `meadow`; a card on the ground with a few
   standing in it), the flowers a colour of the world's own, well away from its leaves'.
 - **Its ground's grain** is four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's paint and

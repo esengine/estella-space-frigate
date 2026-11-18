@@ -115,7 +115,7 @@ function cards(m, pointed, which) {
   // far off hangs in the air; and it goes down past the foot because the ground far off is drawn coarser than it is, and lower
   // on a ridge than where the tree was stood.
   if (which === 'bark') {
-    const girth = Math.max(half * 0.09, top * 0.012), under = -top * 0.3;
+    const girth = Math.max(half * 0.09, top * 0.035), under = -top * 0.3;
     for (const [dx, dz] of [[1, 0], [0, 1]]) {
       const a = point(-dx * girth, under, -dz * girth, BARK_PATCH[0], BARK_PATCH[1], 0.2), b = point(dx * girth, under, dz * girth, BARK_PATCH[0], BARK_PATCH[1], 0.2);
       const c = point(dx * girth, foot * 1.25, dz * girth, BARK_PATCH[0], BARK_PATCH[1], 0.45), d = point(-dx * girth, foot * 1.25, -dz * girth, BARK_PATCH[0], BARK_PATCH[1], 0.45);
@@ -139,6 +139,44 @@ function cards(m, pointed, which) {
   return { channels, vertexStride, vertexCount: points.length, vertices, indices: new Uint32Array(indices), aabbMin: [-half, which === 'bark' ? -top * 0.3 : foot, -half], aabbMax: [half, which === 'bark' ? foot * 1.25 : top, half] };
 }
 
+/**
+ * A tree's leaves from further off: one tuft in every `n` of the tree's own, each made `grow` times as large about its middle,
+ * so the crown keeps its outline and its tufts keep their size against the tree. (Three cards the size of the whole crown
+ * showed one tuft's picture as large as the tree: leaves the size of a ship's turret.)
+ */
+function thinned(m, n, grow) {
+  const position = m.channels.find((c) => c.semantic === MeshChannel.Position), stride = m.vertexStride;
+  const view = new DataView(m.vertices.buffer, m.vertices.byteOffset);
+  // A tuft is the triangles that share vertices.
+  const tuft = Array.from({ length: m.vertexCount }, (_, i) => i);
+  const find = (i) => { while (tuft[i] !== i) { tuft[i] = tuft[tuft[i]]; i = tuft[i]; } return i; };
+  for (let t = 0; t < m.indices.length; t += 3) { const a = find(m.indices[t]); tuft[find(m.indices[t + 1])] = a; tuft[find(m.indices[t + 2])] = a; }
+  const used = new Set(m.indices), roots = [...new Set([...used].map(find))].sort((a, b) => a - b);
+  const kept = new Set(roots.filter((_, i) => i % n === 0));
+  const middle = new Map();
+  for (const v of used) {
+    const r = find(v);
+    if (!kept.has(r)) continue;
+    const at = middle.get(r) ?? [0, 0, 0, 0];
+    for (let j = 0; j < 3; j++) at[j] += view.getFloat32(v * stride + position.offset + j * 4, true);
+    at[3]++; middle.set(r, at);
+  }
+  const renumber = new Map(), bytes = [];
+  for (const v of [...used].sort((a, b) => a - b)) {
+    const r = find(v);
+    if (!kept.has(r)) continue;
+    renumber.set(v, renumber.size);
+    const one = m.vertices.slice(v * stride, (v + 1) * stride), out = new DataView(one.buffer), c = middle.get(r);
+    for (let j = 0; j < 3; j++) { const mid = c[j] / c[3]; out.setFloat32(position.offset + j * 4, mid + (view.getFloat32(v * stride + position.offset + j * 4, true) - mid) * grow, true); }
+    bytes.push(one);
+  }
+  const vertices = new Uint8Array(bytes.length * stride);
+  bytes.forEach((b, i) => vertices.set(b, i * stride));
+  const indices = [];
+  for (let t = 0; t < m.indices.length; t += 3) if (kept.has(find(m.indices[t]))) indices.push(renumber.get(m.indices[t]), renumber.get(m.indices[t + 1]), renumber.get(m.indices[t + 2]));
+  return { ...m, vertexCount: bytes.length, vertices, indices: new Uint32Array(indices) };
+}
+
 const toLinear = (v) => (v / 255) ** 2.2, toByte = (x) => Math.round(255 * Math.min(Math.max(x, 0), 1) ** (1 / 2.2));
 const write = (name, mesh) => { const file = path.join(OUT, `${name}.esmesh`); writeFileSync(file, Buffer.from(encodeMesh(mesh))); meta(file, 'mesh'); };
 
@@ -148,7 +186,9 @@ for (const file of readdirSync(SRC).filter((f) => f.endsWith('.esmesh') && !f.en
   const colours = coloursOf(grown);
   const near = prepared(grown, false, 'leaf');
   write(name, near);
-  write(`${name}-card`, cards(grown, POINTED.has(name), 'leaf'));
+  // Past where the tree is drawn whole, a fifth of its tufts; and merged a square of ground at a time out to the horizon, a twelfth.
+  write(`${name}-card`, thinned(near, 5, 1.8));
+  write(`${name}-far`, thinned(near, 12, 2.7));
   if (!LEAVES_ONLY.has(name)) {
     write(`${name}-bark`, prepared(grown, false, 'bark'));
     write(`${name}-card-bark`, cards(grown, POINTED.has(name), 'bark'));
