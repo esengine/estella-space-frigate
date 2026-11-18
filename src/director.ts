@@ -1,5 +1,5 @@
 import { berthOf, type Mooring, type Vec3 } from './shared/sector';
-import { HULL, HULL_BALL, STRUCTURE, crosses } from './shared/stationShape';
+import { HULL, HULL_BALL, STRUCTURE, crosses, insideModel } from './shared/stationShape';
 
 // The camera while the station has the ship in hand: a harbour's way of showing a heavy ship brought to her berth and taken out
 // of it. Which shot is up is read from where the server has her and what it says of her, never from a clock, so it cannot run
@@ -152,13 +152,33 @@ export const director = {
     frame: { left: 0, right: 0, top: 0, bottom: 0, whole: false, width: 0 },
     primed: false,
     lastMooring: 'none' as Mooring,
+    /** Where the ship was when the director last had the camera: what its last look was aimed about. */
+    shipAt: [0, 0, 0] as Vec3,
+    /**
+     * Every frame in which a camera of the director's making was used, counting the hand-back to the pilot's own view: how many
+     * there were, and in how many the camera stood inside the station or the ship. The second is to be nought; a check reads both,
+     * so that the instants between two shots are looked at and not only the settled ones.
+     */
+    frames: 0, fouled: 0,
+    /** The camera is where the pilot put it, though the last of the director's look is still coming round to hers. */
+    hers: false,
 };
+
+/** Counts a camera the director is answerable for, and whether it stands inside a model. */
+function used(rig: Rig, ship: Vec3): Rig {
+    director.frames++;
+    if (insideModel(rig.eye, ship)) director.fouled++;
+    return rig;
+}
 
 export interface DirectorInput {
     dt: number; mooring: Mooring; berth: number; ship: Vec3; aspect: number;
     /** The pilot's own camera now, in sector coordinates: where the director starts from, and what it hands back to. */
     own: Rig;
-    /** The pilot dragged the view, or asked for a view of her own, this frame. */
+    /**
+     * The pilot dragged the view, or asked for a view of her own, this frame. Her own view is then to begin where the
+     * director's camera stands (see `handOver`), so `own` this frame is already that: nothing is travelled through to reach it.
+     */
     took: boolean;
     /** The server's word on her was just received for the first time this sign-in: a ship found docked is not being brought in. */
     arrivedDocked: boolean;
@@ -192,7 +212,20 @@ export function stepDirector(input: DirectorInput): Rig | null {
         d.presence = Math.max(0, d.presence - Math.max(0, input.dt) / DIRECTOR.release);
         if (d.presence <= 0) { d.primed = false; return null; }
         const share = d.presence * d.presence * (3 - 2 * d.presence);
-        return { eye: mix(input.own.eye, d.eye, share), target: mix(input.own.target, d.target, share), fov: input.own.fov + (d.fov - input.own.fov) * share };
+        // What it was looking at is carried with the ship, so a ship still being moved is not looked past.
+        const aim = add(input.ship, sub(d.target, d.shipAt));
+        const look = mix(input.own.target, aim, share), fov = input.own.fov + (d.fov - input.own.fov) * share;
+        // Taken by her pilot: the camera does not travel at all. Her view begins where the director's stood, and only where it
+        // looks and how wide come round to hers. Nothing lies between a place and itself.
+        // From then on the director has no camera of its own: what it remembers is hers, so nothing later can pull the view back
+        // toward where it once stood (she may be let go while the last of the look is still coming round).
+        if (d.dismissed) d.hers = true;
+        if (d.hers) { d.eye = [...input.own.eye] as Vec3; return used({ eye: [...input.own.eye] as Vec3, target: look, fov }, input.ship); }
+        // Let go by the station: the camera travels the short way to the view behind her. If any step of that way is in a model
+        // or has one across her, it is not travelled: the view is hers at once.
+        const eye = mix(input.own.eye, d.eye, share);
+        if (insideModel(eye, input.ship) || blocked(eye, input.ship)) { d.presence = 0; d.primed = false; d.cuts++; return null; }
+        return used({ eye, target: look, fov }, input.ship);
     }
     let want = rigFor(shot, input.ship, input.berth);
     d.fellBack = blocked(want.eye, input.ship);
@@ -205,11 +238,21 @@ export function stepDirector(input: DirectorInput): Rig | null {
         d.eye = [...start.eye] as Vec3; d.target = [...start.target] as Vec3; d.fov = start.fov;
     }
     if (d.shot !== shot) { d.shown.push(shot); if (d.shown.length > 64) d.shown.shift(); }
-    d.on = true; d.shot = shot; d.presence = 1;
+    d.on = true; d.shot = shot; d.presence = 1; d.hers = false;
     d.eye = mix(d.eye, want.eye, k); d.target = mix(d.target, want.target, k); d.fov += (want.fov - d.fov) * k;
     // A camera on its way between two shots is not left inside the station: if the eased place has it in the way, it goes to where it is bound.
     // That is a cut, not a fall-back: the shot itself is the one meant.
     if (blocked(d.eye, input.ship) && !d.fellBack) { d.eye = [...want.eye] as Vec3; d.target = [...want.target] as Vec3; d.fov = want.fov; d.cuts++; }
     d.frame = frameOf({ eye: d.eye, target: d.target, fov: d.fov }, input.ship, input.aspect);
-    return { eye: [...d.eye] as Vec3, target: [...d.target] as Vec3, fov: d.fov };
+    d.shipAt = [...input.ship] as Vec3;
+    return used({ eye: [...d.eye] as Vec3, target: [...d.target] as Vec3, fov: d.fov }, input.ship);
+}
+
+/**
+ * Where the pilot's own view is to begin when she takes it from the director: at the director's camera, as an offset from the
+ * ship in sector coordinates. It is a place the director was allowed to stand, so it is clear of the station and has nothing
+ * across the ship; and every place nearer her along that line of sight, down to the ball that holds her, is clear too.
+ */
+export function handOver(ship: Vec3): Vec3 | null {
+    return director.on ? sub(director.eye, ship) : null;
 }

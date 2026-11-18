@@ -69,7 +69,8 @@ for (const [width, height] of SIZES) {
             const h = window.__spaceHud, o = h.online, d = h.director, f = window.__estellaCooked.facts();
             return {
                 link: o.link, mooring: o.mooring, berth: o.berth, hold: o.hold, pos: o.pos, welcomes: o.welcomes, text: h.contract.text, cue: h.contract.cue, order: h.helm.order, speed: h.ship.speed, mode: h.helm.mode,
-                director: { on: d.on, shot: d.shot, presence: d.presence, dismissed: d.dismissed, fellBack: d.fellBack, fallbacks: d.fallbacks, confirmed: d.confirmed, sinceDocked: d.sinceDocked, shown: [...d.shown], frame: { ...d.frame }, fov: d.fov },
+                cam: [f.camX, f.camY, f.camZ], jets: f.jetsBurning,
+                director: { on: d.on, shot: d.shot, presence: d.presence, dismissed: d.dismissed, fellBack: d.fellBack, fallbacks: d.fallbacks, frames: d.frames, fouled: d.fouled, cuts: d.cuts, confirmed: d.confirmed, sinceDocked: d.sinceDocked, shown: [...d.shown], frame: { ...d.frame }, fov: d.fov },
                 fov: f.fov, cues: f.soundCues, lastCue: f.soundLastCue, spots: { ...h.stationSpots }, dock: { ...o.dock }, numbered: o.numbered,
             };
         });
@@ -97,7 +98,7 @@ for (const [width, height] of SIZES) {
         expect(`${tag}: with a berth only kept, the view is still the pilot's own`, beforeIn.every((s) => !s.director.on && s.director.shown.length === 0), beforeIn.map((s) => s.director));
 
         // What is seen of each ship while the station has her: every shot, how long it stood, and how she sat in it once it had settled.
-        const track = () => ({ shots: [], since: 0, sat: {}, cut: 0, looks: 0, fellBack: 0, away: [], early: 0, fovs: {} });
+        const track = () => ({ shots: [], since: 0, sat: {}, cut: 0, looks: 0, fellBack: 0, away: [], early: 0, fovs: {}, cutAnyTime: 0, moving: 0, burning: 0 });
         const seenOf = { A: track(), B: track() };
         const note = (who, s, ships, id) => {
             const t = seenOf[who], d = s.director;
@@ -108,6 +109,11 @@ for (const [width, height] of SIZES) {
             // Where the director has the camera from is where the server has her: the picture is of the real ship.
             t.away.push(Math.hypot(s.pos[0] - ships[id].flight.pos.x, s.pos[1] - ships[id].flight.pos.y, s.pos[2] - ships[id].flight.pos.z));
             if (s.mooring !== 'docked' && s.spots.store) t.early++;
+            // Every look counts for whether she is whole in the picture, the instants a shot changes among them; only how large she
+            // sits is read once the camera has come round, since on the way between two shots it is by design neither.
+            if (!d.frame.whole) t.cutAnyTime++;
+            // Carried by the station (not lying in her berth), her thrusters are to be seen burning.
+            if (s.mooring !== 'docked' && !(s.mooring === 'docking' && s.hold === 'NOT SAVED')) { t.moving++; if (s.jets > 0) t.burning++; }
             if (Date.now() - t.since < 1600) return;
             if (!d.frame.whole) t.cut++;
             const sat = (t.sat[d.shot] ??= { least: 1, most: 0, left: 1, right: 0, top: 1, bottom: 0, n: 0 });
@@ -164,9 +170,9 @@ for (const [width, height] of SIZES) {
             docked.map((s, i) => [s.director.confirmed, s.cues - cuesBefore[i], s.lastCue, Object.keys(s.spots), s.director.shown]));
         for (const [who, id, s] of [['A', 1, docked[0]], ['B', 2, docked[1]]]) {
             const t = seenOf[who];
-            measured[`${tag} berth ${id} in`] = { shots: t.shots, looks: t.looks, shipWidth: Object.fromEntries(Object.entries(t.sat).map(([k, v]) => [k, [+v.least.toFixed(3), +v.most.toFixed(3)]])), cutWhenSettled: t.cut, fellBack: t.fellBack, cameraOffServerShip: +Math.max(0, ...t.away).toFixed(2), fov: t.fovs };
+            measured[`${tag} berth ${id} in`] = { shots: t.shots, looks: t.looks, shipWidth: Object.fromEntries(Object.entries(t.sat).map(([k, v]) => [k, [+v.least.toFixed(3), +v.most.toFixed(3)]])), cutWhenSettled: t.cut, fellBack: t.fellBack, cameraOffServerShip: { mean: +(t.away.reduce((sum, v) => sum + v, 0) / Math.max(1, t.away.length)).toFixed(2), most: +Math.max(0, ...t.away).toFixed(2) }, framesTheDirectorHadTheCamera: s.director.frames, framesTheCameraWasInsideAModel: s.director.fouled, looksNotWhole: t.cutAnyTime, looksCarried: t.moving, looksWithThrustersBurning: t.burning, fov: t.fovs };
             expect(`${tag} berth ${id}: brought in through the three shots in order, each the size it is meant to be, the whole ship in every one, the camera never in the station`,
-                t.shots.join() === IN.join() && t.cut === 0 && t.fellBack === 0 && s.director.fallbacks === 0 && IN.every((name) => t.sat[name] && t.sat[name].least >= WIDTHS[name][0] && t.sat[name].most <= WIDTHS[name][1]) && Math.abs(t.fovs.takeover - 42) < 1.5 && Math.abs(t.fovs.settle - 36) < 1.5 && t.early === 0 && Math.max(...t.away) < 12,
+                t.shots.join() === IN.join() && t.cut === 0 && t.fellBack === 0 && s.director.fallbacks === 0 && IN.every((name) => t.sat[name] && t.sat[name].least >= WIDTHS[name][0] && t.sat[name].most <= WIDTHS[name][1]) && Math.abs(t.fovs.takeover - 42) < 1.5 && Math.abs(t.fovs.settle - 36) < 1.5 && t.early === 0 && t.away.reduce((sum, v) => sum + v, 0) / t.away.length < 6 && s.director.fouled === 0 && t.cutAnyTime <= t.looks * 0.12 && t.burning >= t.moving * 0.8,
                 measured[`${tag} berth ${id} in`]);
             // Docked: she is in the left of the picture and the warehouse panel is to the right of her, not over her.
             const scale = (s.spots.leave.x - s.spots.store.x) / 392, panelLeft = (s.spots.store.x - 114 * scale) / width;
@@ -174,13 +180,51 @@ for (const [width, height] of SIZES) {
             expect(`${tag} berth ${id}: docked, the whole ship is left of the warehouse panel, clear of the screen's edges`, s.director.frame.whole && s.director.frame.right <= panelLeft + 0.005 && s.director.frame.left > 0.02 && s.director.frame.top > 0.18 && s.director.frame.bottom < 0.92, measured[`${tag} berth ${id} docked`]);
         }
 
-        // B takes the view back by dragging it: it is hers, the station carries on, and the harbour does not take it again while she lies there.
-        await b.page.mouse.move(width * 0.3, height * 0.6); await b.step(1); await b.page.mouse.down(); await b.step(1);
-        await b.page.mouse.move(width * 0.3 + 90, height * 0.6 + 20, { steps: 3 }); await b.step(2); await b.page.mouse.up(); await b.step(2);
-        await both(a, b, 2500);
-        const taken = await b.seen();
+        // Each takes the view back, the two ways the review did it: A asks for view 4 and then drags a little, B drags widely.
+        // The game counts every frame a camera of the director's making is used, and those in which it stood inside the station or
+        // the ship; the camera's own place is followed look by look across the take.
+        const takes = {};
+        for (const [one, id, how] of [[a, 1, 'view 4, then a light drag'], [b, 2, 'a wide drag']]) {
+            const before = await one.seen();
+            const path = [before.cam];
+            const lookAt = async () => { const now = await one.seen(); path.push(now.cam); return now; };
+            if (id === 1) { await one.page.keyboard.down('Digit4'); await one.step(1); await lookAt(); await one.page.keyboard.up('Digit4'); await one.step(1); await lookAt(); }
+            const reach = id === 1 ? [8, 3] : [90, 20];
+            await one.page.mouse.move(width * 0.3, height * 0.6); await one.step(1); await one.page.mouse.down(); await one.step(1); await lookAt();
+            await one.page.mouse.move(width * 0.3 + reach[0], height * 0.6 + reach[1], { steps: 3 }); await one.step(1); await lookAt(); await one.step(1); await lookAt();
+            await one.page.mouse.up();
+            // The second and a half after it, a frame or two at a time: the whole of the hand-over, and where it lands.
+            for (let n = 0; n < 45; n++) { await one.step(2); await lookAt(); }
+            const after = await one.seen();
+            const hops = path.slice(1).map((p, i) => Math.hypot(p[0] - path[i][0], p[1] - path[i][1], p[2] - path[i][2]));
+            // Turning the view about her moves the camera along an arc: this far for the drag made, and no more than that at once.
+            const arc = (reach[0] * 0.005 + reach[1] * 0.004) * Math.hypot(before.cam[0] - before.pos[0], before.cam[1] - before.pos[1], before.cam[2] - before.pos[2]);
+            takes[id] = { how, looks: path.length, biggestHop: +Math.max(...hops).toFixed(2), mostTheDragCouldTurnIt: +arc.toFixed(2), movedInAll: +Math.hypot(after.cam[0] - before.cam[0], after.cam[1] - before.cam[1], after.cam[2] - before.cam[2]).toFixed(2), framesUsed: after.director.frames - before.director.frames, framesInsideAModel: after.director.fouled, cuts: after.director.cuts - before.director.cuts };
+            expect(`${tag} berth ${id}: taking the view (${how}) leaves the camera where the director had it: it turns only as far as the drag turned it, and in no frame of the hand-over is it inside the station or the ship`,
+                !after.director.on && after.director.dismissed && after.director.shot === null && after.director.presence === 0 && after.director.fouled === 0 && after.director.frames > before.director.frames
+                && Math.max(...hops) <= arc + 1.5 && takes[id].movedInAll <= arc + 1.5 && after.mooring === 'docked' && !!after.spots.store && after.director.confirmed === 1,
+                takes[id]);
+        }
+        measured[`${tag} taking the view`] = takes;
+        await a.shoot('berth1-in-6-her-own-view');
         await b.shoot('berth2-in-6-her-own-view');
-        expect(`${tag}: dragging the view takes it back at once and it stays hers while she lies there, still docked with her warehouse open`, !taken.director.on && taken.director.dismissed && taken.director.shot === null && taken.mooring === 'docked' && !!taken.spots.store && taken.director.confirmed === 1, taken.director);
+
+        // The link drops under both and comes back, with no page reloaded: the server is stopped and started. Each has taken her view,
+        // and each still has it afterwards; the server never stopped having them docked.
+        const beforeDrop = [await a.seen(), await b.seen()];
+        server.send('shutdown'); await server.gone; server = null;
+        await both(a, b, 1500);
+        const down = [await a.seen(), await b.seen()];
+        await start();
+        await a.until('A to be back on the link', (s) => s.link === 'online' && s.welcomes > beforeDrop[0].welcomes, 30000);
+        await b.until('B to be back on the link', (s) => s.link === 'online' && s.welcomes > beforeDrop[1].welcomes, 30000);
+        await both(a, b, 3000);
+        const backOn = [await a.seen(), await b.seen()], held = await books();
+        measured[`${tag} dropped link`] = { whileDown: down.map((s) => [s.link, s.director.on, s.director.dismissed]), after: backOn.map((s) => [s.link, s.mooring, s.director.on, s.director.dismissed, s.director.shown.join('>')]), cameraMoved: backOn.map((s, i) => +Math.hypot(s.cam[0] - beforeDrop[i].cam[0], s.cam[1] - beforeDrop[i].cam[1], s.cam[2] - beforeDrop[i].cam[2]).toFixed(2)) };
+        expect(`${tag}: a dropped link does not undo the pilot's choice: down and back with no reload, both are still docked, still in their own views where they left them, and nothing was shown again`,
+            down.every((s) => s.link !== 'online' && !s.director.on && s.director.dismissed) && backOn.every((s, i) => s.mooring === 'docked' && !s.director.on && s.director.dismissed && s.director.fouled === 0 && s.director.confirmed === 1 && s.director.shown.join() === IN.join() && !!s.spots.store && Math.hypot(s.cam[0] - beforeDrop[i].cam[0], s.cam[1] - beforeDrop[i].cam[1], s.cam[2] - beforeDrop[i].cam[2]) < 0.5)
+            && held['pilot-a'].mooring === 'docked' && held['pilot-b'].mooring === 'docked',
+            measured[`${tag} dropped link`]);
 
         // A reloads her window where she lies: straight to the settled shot, with nothing replayed and no chime.
         await a.open();
@@ -192,7 +236,7 @@ for (const [width, height] of SIZES) {
 
         // Both cast off. A new manoeuvre: the harbour has both cameras again, B's too.
         seenOf.A = track(); seenOf.B = track();
-        const numbered = [back.numbered, taken.numbered];
+        const numbered = [back.numbered, (await b.seen()).numbered];
         await a.page.keyboard.down('KeyH'); await b.page.keyboard.down('KeyH'); await a.step(1); await b.step(1); await a.page.keyboard.up('KeyH'); await b.page.keyboard.up('KeyH');
         let released = null;
         for (const end = Date.now() + 120000; Date.now() < end;) {
@@ -219,9 +263,9 @@ for (const [width, height] of SIZES) {
         await b.shoot('berth2-out-5-sailing');
         for (const [who, id, s] of [['A', 1, sailing[0]], ['B', 2, sailing[1]]]) {
             const t = seenOf[who];
-            measured[`${tag} berth ${id} out`] = { shots: t.shots, looks: t.looks, shipWidth: Object.fromEntries(Object.entries(t.sat).map(([k, v]) => [k, [+v.least.toFixed(3), +v.most.toFixed(3)]])), cutWhenSettled: t.cut, fellBack: t.fellBack, fov: t.fovs };
-            expect(`${tag} berth ${id}: taken out through the three shots in order on the berth's own side, the whole ship in each, the camera never in the station`,
-                t.shots.join() === OUT.join() && t.cut === 0 && t.fellBack === 0 && s.director.fallbacks === 0 && ['lift', 'clear'].every((name) => t.sat[name] && t.sat[name].least >= WIDTHS[name][0] && t.sat[name].most <= WIDTHS[name][1]) && Math.abs(t.fovs.lift - 40) < 1.5,
+            measured[`${tag} berth ${id} out`] = { framesTheCameraWasInsideAModel: s.director.fouled, looksNotWhole: t.cutAnyTime, looksCarried: t.moving, looksWithThrustersBurning: t.burning, shots: t.shots, looks: t.looks, shipWidth: Object.fromEntries(Object.entries(t.sat).map(([k, v]) => [k, [+v.least.toFixed(3), +v.most.toFixed(3)]])), cutWhenSettled: t.cut, fellBack: t.fellBack, fov: t.fovs };
+            expect(`${tag} berth ${id}: taken out through the three shots in order on the berth's own side, the whole ship in each, the camera never in the station, her thrusters burning as she is carried`,
+                t.shots.filter((name, i) => !(i === 0 && name === 'berthed')).join() === OUT.join() && t.cut === 0 && t.fellBack === 0 && s.director.fallbacks === 0 && s.director.fouled === 0 && t.burning >= t.moving * 0.8 && ['lift', 'clear'].every((name) => t.sat[name] && t.sat[name].least >= WIDTHS[name][0] && t.sat[name].most <= WIDTHS[name][1]) && Math.abs(t.fovs.lift - 40) < 1.5,
                 measured[`${tag} berth ${id} out`]);
         }
         measured[`${tag} handed back`] = { orderTheFrameSheWasLetGo: atOnce.map((s) => s.order), serverSpeed: [ships['pilot-a'].flight.speed, ships['pilot-b'].flight.speed].map((v) => +v.toFixed(1)), ordersTaken: [ships['pilot-a'].taken - numbered[0], ships['pilot-b'].taken - numbered[1]], fov: sailing.map((s) => +s.fov.toFixed(1)), directorOn: sailing.map((s) => s.director.on) };

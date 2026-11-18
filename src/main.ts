@@ -14,7 +14,8 @@ import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
 import { PLANETFALL, createPlanetfall, fall } from './planetfall';
-import { DIRECTOR, director, stepDirector, type Rig } from './director';
+import { DIRECTOR, director, handOver, stepDirector, type Rig } from './director';
+import { pendingShaders } from './shaders';
 import { graphics } from './hudSettings';
 import { KINDS, galaxy, ringSun, systemAt, voyageSeed } from './worlds';
 import { readyKind, showKind } from './planetKinds';
@@ -46,11 +47,14 @@ const STROBES = [
     { name: 'GateBStrobe', size: 2.6, every: 2.9, flashes: 3 },
 ] as const;
 const STEADY = ['NavPort', 'NavStarboard'] as const;
+// Each thruster: the turn it works at, and the way its gas pushes the hull (a jet on the starboard side blows to starboard and pushes her to port).
 const JETS = [
-    { name: 'JetBowStarboard', turn: 'yaw', sign: 1 }, { name: 'JetSternPort', turn: 'yaw', sign: 1 }, { name: 'JetBowPort', turn: 'yaw', sign: -1 }, { name: 'JetSternStarboard', turn: 'yaw', sign: -1 },
-    { name: 'JetBowDown', turn: 'pitch', sign: 1 }, { name: 'JetSternUp', turn: 'pitch', sign: 1 }, { name: 'JetBowUp', turn: 'pitch', sign: -1 }, { name: 'JetSternDown', turn: 'pitch', sign: -1 },
-    { name: 'JetPortDown', turn: 'roll', sign: 1 }, { name: 'JetStarboardUp', turn: 'roll', sign: 1 }, { name: 'JetPortUp', turn: 'roll', sign: -1 }, { name: 'JetStarboardDown', turn: 'roll', sign: -1 },
+    { name: 'JetBowStarboard', turn: 'yaw', sign: 1, push: 'port' }, { name: 'JetSternPort', turn: 'yaw', sign: 1, push: 'starboard' }, { name: 'JetBowPort', turn: 'yaw', sign: -1, push: 'starboard' }, { name: 'JetSternStarboard', turn: 'yaw', sign: -1, push: 'port' },
+    { name: 'JetBowDown', turn: 'pitch', sign: 1, push: 'up' }, { name: 'JetSternUp', turn: 'pitch', sign: 1, push: 'down' }, { name: 'JetBowUp', turn: 'pitch', sign: -1, push: 'down' }, { name: 'JetSternDown', turn: 'pitch', sign: -1, push: 'up' },
+    { name: 'JetPortDown', turn: 'roll', sign: 1, push: 'up' }, { name: 'JetStarboardUp', turn: 'roll', sign: 1, push: 'down' }, { name: 'JetPortUp', turn: 'roll', sign: -1, push: 'down' }, { name: 'JetStarboardDown', turn: 'roll', sign: -1, push: 'up' },
 ] as const;
+/** How hard the thrusters are seen to burn at the station's full pace. */
+const TUG_BURN = 0.8;
 const WAVE_SECONDS = 0.9;
 const FOV = 34;
 const LOOK = 0.55;
@@ -66,7 +70,7 @@ function strobe(time: number, every: number, flashes: number): number {
 addPlugin({
     name: 'space-frigate',
     build(app) {
-        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0, shake: 0, heat: 0, camSlide: 0, camTilt: 0 };
+        const facts = { ready: false, frame: 0, time: 0, throttle: 0, tour: true, shot: 0, eyeX: 0, eyeY: 0, eyeZ: 0, gate: 0, gatePassed: 0, transits: 0, flash: 0, wave: 0, dust: 0, dustAlive: 0, strobe: 0, gunView: false, gunSource: 'stowed', gunBearing: 0, gunReady: 0, gunShots: 0, gunHits: 0, gunRange: 0, gunTrain: '', jets: '', gunAuto: false, gunSpread: 0, gunLead: 0, gunHeld: 0, system: 0, systemName: '', seed: 0, planetKind: '', planetX: 0, planetY: 0, planetZ: 0, planetRadius: 0, sunX: 0, sunY: 0, sunZ: 0, jump: -1, jumps: 0, fov: FOV, planets: '', shield: 1, hull: 1, impacts: 0, gap: 9999, closest: 9999, speed: 0, foes: 0, kills: 0, foeShots: 0, stung: 0, foeBerth: 9999, foeRange: 9999, fall: 'space', altitude: 9999999, cover: 0, shake: 0, heat: 0, camSlide: 0, camTilt: 0, jetsBurning: 0, camX: 0, camY: 0, camZ: 0, gpuMs: 0, gpuDraws: 0, gpuBytes: 0 };
         galaxy.seed = voyageSeed((globalThis as { location?: { search?: string } }).location?.search ?? '', Math.random);
         configureOnline((globalThis as { location?: { search?: string } }).location?.search ?? '');
         if (online.enabled) { helm.fixed = true; foes.peace = true; }
@@ -249,6 +253,7 @@ let welcomed = 0;
             grabbed = held;
             last = { x: pointer.x, y: pointer.y };
             const wheel = graphics.open ? 0 : input.getScrollDelta().y;
+            const viewBefore = { tour, guns: guns.view, hand: { ...hand } };
             const live = tour ? tourOrbit(clock) : hand;
             if (drag.x !== 0 || drag.y !== 0 || wheel !== 0) {
                 if (tour) hand = { ...live };
@@ -291,7 +296,20 @@ let welcomed = 0;
             if (!tour) {
                 hand.yaw -= drag.x * 0.005;
                 hand.pitch = clamp(hand.pitch + drag.y * 0.004, -1.2, 1.2);
-                hand.distance = clamp(hand.distance * (1 + wheel * 0.001), 22, 260);
+                hand.distance = clamp(hand.distance * (1 + wheel * 0.001), 22, Math.max(260, hand.distance));
+            }
+            // Taking the view from the harbour's director: by a drag, the wheel, or asking for any view of her own. Her view then
+            // begins where the director's camera stands, whatever view she asked for, and this frame's drag turns it from there:
+            // the camera never has to travel through anything to reach a place she chose from inside a berth.
+            const asked = drag.x !== 0 || drag.y !== 0 || wheel !== 0 || tour !== viewBefore.tour || guns.view !== viewBefore.guns
+                || hand.yaw !== viewBefore.hand.yaw || hand.pitch !== viewBefore.hand.pitch || hand.distance !== viewBefore.hand.distance || hand.height !== viewBefore.hand.height || hand.along !== viewBefore.hand.along;
+            const from = online.enabled && asked ? handOver(online.pos) : null;
+            if (from) {
+                const rel = turnBack(helm.frame, { x: from[0], y: from[1], z: from[2] }), about = { height: 4, along: 0 };
+                const v = { x: rel.x, y: rel.y - about.height, z: rel.z - about.along }, far = Math.hypot(v.x, v.y, v.z) || 1;
+                hand = { yaw: Math.atan2(v.x, v.z) - drag.x * 0.005, pitch: clamp(Math.asin(clamp(v.y / far, -1, 1)) + drag.y * 0.004, -1.2, 1.2), distance: far, height: about.height, along: about.along };
+                tour = false;
+                guns.view = false;
             }
             sight += ((guns.view ? 1 : 0) - sight) * Math.min(1, dt * 5);
             const base = tour ? tourOrbit(clock) : hand;
@@ -306,9 +324,9 @@ let welcomed = 0;
                 const here = online.pos, look = turnBy(helm.frame, { x: target[0], y: target[1], z: target[2] });
                 const before = director.action;
                 staged = stepDirector({
-                    dt, mooring: online.link === 'online' ? online.mooring : 'none', berth: online.berth, ship: here, aspect: (globalThis.innerWidth || 16) / (globalThis.innerHeight || 9),
+                    dt, mooring: online.mooring, berth: online.berth, ship: here, aspect: (globalThis.innerWidth || 16) / (globalThis.innerHeight || 9),
                     own: { eye: [here[0] + cam.position.x, here[1] + cam.position.y, here[2] + cam.position.z], target: [here[0] + look.x, here[1] + look.y, here[2] + look.z], fov: wide },
-                    took: drag.x !== 0 || drag.y !== 0 || wheel !== 0 || space,
+                    took: asked,
                     arrivedDocked: online.welcomes !== welcomed,
                 });
                 welcomed = online.welcomes;
@@ -320,6 +338,8 @@ let welcomed = 0;
                     cam.rotation = lookRotation(at, to);
                 }
             }
+            // Where the camera is this frame in the sector's own coordinates, whoever placed it.
+            facts.camX = (online.enabled ? online.pos[0] : 0) + cam.position.x; facts.camY = (online.enabled ? online.pos[1] : 0) + cam.position.y; facts.camZ = (online.enabled ? online.pos[2] : 0) + cam.position.z;
             // Falling through air she is shaken: a few rates at once that never fall into step, so it reads as buffeting and not as a hum.
             const rattle = fall.shake;
             const jolt = rattle <= 0.002 ? { a: 0, b: 0, c: 0 } : {
@@ -412,6 +432,12 @@ let welcomed = 0;
                 Material.setUniform(air, 'u_near', glass.nearPlane);
                 Material.setUniform(air, 'u_far', glass.farPlane);
             }
+            // What the frame cost the GPU, as the engine measured it: for a check, and for anyone asking why it is slow.
+            const meter = (app as unknown as { wasmModule?: { renderer_getGpuTimeMs?: () => number; renderer_getGpuDrawCalls?: () => number; renderer_getEstimatedGpuBytes?: () => number } }).wasmModule;
+            facts.gpuMs = meter?.renderer_getGpuTimeMs?.() ?? 0;
+            facts.gpuDraws = meter?.renderer_getGpuDrawCalls?.() ?? 0;
+            facts.gpuBytes = meter?.renderer_getEstimatedGpuBytes?.() ?? 0;
+            (globalThis as { __spaceMeter?: unknown }).__spaceMeter = { gpuMs: facts.gpuMs, draws: facts.gpuDraws, bytes: facts.gpuBytes, pending: meter ? pendingShaders(app) : 0, frame: clock };
             facts.shake = fall.shake;
             facts.heat = fall.heat;
             if (open) {
@@ -533,8 +559,14 @@ let welcomed = 0;
             for (const name of STEADY) world.update(get(world, `${name}Light`), Light, (l) => { l.intensity = 0.32 + 0.06 * Math.sin(clock * 2.1); });
             facts.strobe = strobe(clock, STROBES[0].every, STROBES[0].flashes);
 
+            // Carried by the station she is moved by her own thrusters, and they are seen at it: the ones whose gas goes the way
+            // she is leaving burn, harder the faster she is carried, and the turning pairs burn as she is brought round.
+            const tug = online.enabled ? online.tug : null;
             JETS.forEach((jet, i) => {
-                const want = clamp(helm.jets[jet.turn] * jet.sign, 0, 1);
+                const carried = !tug ? 0 : TUG_BURN * (
+                    (jet.push === 'port' ? Math.max(0, tug.x) : jet.push === 'starboard' ? Math.max(0, -tug.x) : jet.push === 'up' ? Math.max(0, tug.y) : Math.max(0, -tug.y))
+                    + (jet.turn === 'yaw' ? Math.max(0, tug.yaw * jet.sign) : 0));
+                const want = clamp(helm.jets[jet.turn] * jet.sign + carried, 0, 1);
                 jets[i] = jets[i]! + (want - jets[i]!) * Math.min(1, dt * 14);
                 const burn = jets[i]! * (0.7 + 0.3 * Math.sin(clock * 53 + i * 1.7) * Math.sin(clock * 17 + i));
                 const wide = burn > 0.02 ? 0.5 + 0.3 * burn : 0.001;
@@ -543,6 +575,7 @@ let welcomed = 0;
                 if (world.get(gas, ParticleEmitter).rate !== rate) world.update(gas, ParticleEmitter, (p) => { p.rate = rate; });
             });
             facts.jets = `${helm.jets.yaw.toFixed(2)} ${helm.jets.pitch.toFixed(2)} ${helm.jets.roll.toFixed(2)}`;
+            facts.jetsBurning = jets.filter((burn) => burn > 0.15).length;
 
             facts.ready = true;
             facts.frame++;

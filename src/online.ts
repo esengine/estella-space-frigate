@@ -4,7 +4,7 @@ import { contract, fromDockRefusal, fromFlight, fromMooring, fromQuat, fromRefus
 import { DRIFTING_ROCKS } from './shipState';
 import { SECTOR, SECTOR_PATH, inHand, type DockRefusal, type Mooring, type PilotView, type Refusal, type TransferRefusal, type Vec3 } from './shared/sector';
 import { createPredictor, type Predictor } from './shared/predict';
-import { copyFlight, turnShip, type Flight, type Orders, type Vec } from './shared/steer';
+import { copyFlight, turnBack, turnShip, type Flight, type Orders, type Vec } from './shared/steer';
 
 export const SHARED_ROCK = 0;
 
@@ -48,6 +48,11 @@ export const online = {
     dock: { asking: false, why: '' as DockRefusal, at: 0 },
     /** The number of the last helm order given this sign-in. */
     numbered: 0,
+    /**
+     * How the station is moving her while it has her in hand, for her thrusters to be seen working at it: the way she is going in
+     * her own frame (x to port, y up, z ahead) as a share of the station's pace, and how fast she is being turned, -1 to 1.
+     */
+    tug: { x: 0, y: 0, z: 0, yaw: 0 },
     /** The order to move ore that is out, or the last one answered. 'pending' is not yet a success: only the server's reply makes it one. */
     move: { seq: 0, op: '', withdraw: false, grams: 0, sell: false, price: 0, paid: 0, credits: 0, state: '' as '' | 'pending' | 'done' | 'refused', why: '' as TransferRefusal, cargo: 0, stored: 0, at: 0, tries: 0, repeat: false },
     /** The number the server will take for this pilot's next order to move ore. */
@@ -71,7 +76,7 @@ let session: ClientSession | null = null, api: ReturnType<typeof contract.client
 const predictor = createPredictor();
 online.fix = predictor.fix;
 let sentAt = 0, drawn: Vec = { x: 0, y: 0, z: 0 };
-let moving = false, movedAt = 0, named = 0;
+let moving = false, movedAt = 0, named = 0, headed = 0;
 
 export function configureOnline(search: string): void {
     const query = new URLSearchParams(search);
@@ -105,6 +110,26 @@ export function flyOnline(dt: number, orders: Orders): { shown: Flight; jets: { 
     if (linked && api && predictor.unsent() > 0 && now - sentAt >= SEND_MS) {
         sentAt = now;
         api.steer({ orders: predictor.drain().map((one) => ({ seq: one.seq, ...one.orders })) }, { retries: 0, timeoutMs: 3000 }).catch(() => undefined);
+    }
+    // In the station's hands she is moved by her own thrusters under its orders: which way, and how hard, is read from how she
+    // is in fact moving, so what is seen burning is what is moving her.
+    const held = inHand(online.mooring) && online.mooring !== 'docked';
+    const now2 = predictor.show();
+    if (held && dt > 0) {
+        const pace = SECTOR.station.tug.speed * dt, inHull = turnBack(now2.level, { x: now2.pos.x - drawn.x, y: now2.pos.y - drawn.y, z: now2.pos.z - drawn.z });
+        const heading = Math.atan2(2 * (now2.level.x * now2.level.z + now2.level.w * now2.level.y), 1 - 2 * (now2.level.x * now2.level.x + now2.level.y * now2.level.y));
+        let turned = heading - headed;
+        turned -= Math.round(turned / (Math.PI * 2)) * Math.PI * 2;
+        const share = Math.min(1, dt * 6), unit = (v: number): number => Math.max(-1, Math.min(1, v));
+        online.tug = {
+            x: online.tug.x + (unit(inHull.x / pace) - online.tug.x) * share, y: online.tug.y + (unit(inHull.y / pace) - online.tug.y) * share, z: online.tug.z + (unit(inHull.z / pace) - online.tug.z) * share,
+            yaw: online.tug.yaw + (unit(turned / (SECTOR.station.tug.turn * dt)) - online.tug.yaw) * share,
+        };
+        headed = heading;
+    } else {
+        const share = Math.min(1, dt * 6);
+        online.tug = { x: online.tug.x * (1 - share), y: online.tug.y * (1 - share), z: online.tug.z * (1 - share), yaw: online.tug.yaw * (1 - share) };
+        headed = Math.atan2(2 * (now2.level.x * now2.level.z + now2.level.w * now2.level.y), 1 - 2 * (now2.level.x * now2.level.x + now2.level.y * now2.level.y));
     }
     online.ahead = predictor.ahead();
     online.numbered = predictor.numbered();

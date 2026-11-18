@@ -1,7 +1,7 @@
 import { createSector, freshSave, type Saved, type Sector } from '../server/world';
-import { DIRECTOR, blocked, director, frameOf, rigFor, shotFor, stepDirector, type Rig, type Shot } from '../src/director';
+import { DIRECTOR, blocked, director, frameOf, handOver, rigFor, shotFor, stepDirector, type Rig, type Shot } from '../src/director';
 import { SECTOR, type Mooring, type Vec3 } from '../src/shared/sector';
-import { STRUCTURE } from '../src/shared/stationShape';
+import { STRUCTURE, insideModel } from '../src/shared/stationShape';
 import { FLIGHT_TICK } from '../src/shared/steer';
 
 const A = 'pilot-a', B = 'pilot-b';
@@ -18,7 +18,8 @@ const where = (s: Sector, id: string): Vec3 => { const p = s.stateFor(id).flight
 const inside = (p: Vec3): boolean => STRUCTURE.some((part) => [0, 1, 2].every((axis) => p[axis]! > part.min[axis]! && p[axis]! < part.max[axis]!));
 /** The pilot's own camera: astern and above her, wherever she is. */
 const own = (ship: Vec3): Rig => ({ eye: [ship[0], ship[1] + 40, ship[2] - 150], target: ship, fov: 34 });
-const reset = (): void => { Object.assign(director, { on: false, shot: null, presence: 0, dismissed: false, action: '', fellBack: false, fallbacks: 0, cuts: 0, confirmed: 0, sinceDocked: 0, shown: [], primed: false, lastMooring: 'none' }); };
+let lastShip: Vec3 | null = null;
+const reset = (): void => { lastShip = null; Object.assign(director, { on: false, shot: null, presence: 0, dismissed: false, action: '', fellBack: false, fallbacks: 0, cuts: 0, frames: 0, fouled: 0, hers: false, shipAt: [0, 0, 0], confirmed: 0, sinceDocked: 0, shown: [], primed: false, lastMooring: 'none' }); };
 
 /** A sector stepped a frame at a time with the director watching one pilot, as the game's own loop does it. */
 function watch(s: Sector, id: string, o: { until: (m: Mooring) => boolean; most?: number; each?: (rig: Rig | null, ship: Vec3, m: Mooring) => void; took?: (frame: number) => boolean; arrived?: boolean }): { frames: number; shots: Shot[] } {
@@ -210,5 +211,109 @@ describe('the harbour\'s camera', () => {
         expect(coming.stateFor(A).you.mooring).toBe('docking');
         const joined = watch(coming, A, { until: (m) => m === 'docked', arrived: true });
         expect(joined.shots).toEqual(['settle', 'berthed']);
+    });
+
+    it('hands the view over where its own camera stands: taken at any instant of either manoeuvre at either berth, the camera goes through nothing and lands in nothing', () => {
+        for (const [id, berth] of [[A, STATION.berths[0]!], [B, STATION.berths[1]!]] as const) {
+            const other = id === A ? B : A;
+            const fresh = (): Sector => {
+                reset();
+                const s = createSector(placed({ [id]: { p: [...berth.approach] }, ...(berth.id === 2 ? { [other]: { p: [...STATION.berths[0]!.at], berth: 1, mooring: 'docked' as Mooring } } : {}) }));
+                s.enter(id);
+                s.dock(id, true);
+                return s;
+            };
+            // How long the whole of it runs, to choose the instants from: in, a while docked, and out.
+            const whole = fresh();
+            let length = 0;
+            for (; length < 30 * 200; length++) { whole.step(TICK); const m = whole.stateFor(id).you.mooring; if (m === 'docked' && length % 1 === 0 && whole.stateFor(id).tick > 0 && length > 30 * 60) break; if (m === 'docked') { length += 0; } }
+            const inFrames = (() => { const s = fresh(); let n = 0; while (s.stateFor(id).you.mooring !== 'docked' && n < 30 * 200) { s.step(TICK); n++; } return n; })();
+            // The view she asks for from inside a berth is the worst there is: a camera in the middle of the wing's spar.
+            const spar: Vec3 = [0, 0, berth.at[2]];
+            let tried = 0;
+            // Every seventh frame on the way in (which lands on the instants a shot changes too), the frames just after each change, and a spread on the way out.
+            const instants = new Set<number>();
+            for (let k = 2; k < inFrames; k += 7) instants.add(k);
+            for (const k of [inFrames + 1, inFrames + 5, inFrames + 40]) instants.add(k);
+            for (let k = inFrames + 60; k < inFrames + 60 + 30 * 26; k += 11) instants.add(k);
+            for (const at of [...instants].sort((a, b) => a - b)) {
+                const s = fresh();
+                let offset: Vec3 | null = null, landed: Vec3 | null = null, travelled = 0, cast = false, lastEye: Vec3 | null = null, changes = 0, lastShot: Shot | null = null;
+                // A take is followed for a second and a half, or to the frame before the next manoeuvre begins: casting off after a take
+                // is a new manoeuvre, for which the harbour has the camera again, and that is checked by itself below.
+                const until = at < inFrames + 60 ? Math.min(at + 45, inFrames + 59) : at + 45;
+                for (let frame = 0; frame <= until; frame++) {
+                    if (!cast && frame === inFrames + 60) { s.dock(id, false); cast = true; }
+                    s.step(TICK);
+                    const you = s.stateFor(id).you, ship = where(s, id);
+                    if (you.mooring === 'none' && frame < at) break;
+                    const taking = frame === at;
+                    if (director.shot !== lastShot) { changes++; lastShot = director.shot; }
+                    // As the game does it: taken, her view begins at the director's camera and stays that far from her.
+                    if (taking) offset = handOver(ship);
+                    const mine: Rig = offset ? { eye: [ship[0] + offset[0], ship[1] + offset[1], ship[2] + offset[2]], target: ship, fov: 34 } : { eye: spar, target: ship, fov: 34 };
+                    const rig = stepDirector({ dt: FLIGHT_TICK, mooring: you.mooring, berth: you.berth, ship, aspect: WIDE, own: mine, took: taking, arrivedDocked: false });
+                    if (frame < at) continue;
+                    if (frame === at && offset === null) break;     // the station did not have her at that instant: nothing to take
+                    const cameraAt = rig ? rig.eye : mine.eye;
+                    expect(insideModel(cameraAt, ship), `berth ${berth.id} taken at frame ${at}, frame ${frame}: camera at ${cameraAt.map((v) => v.toFixed(1))}`).toBe(false);
+                    if (lastEye) travelled = Math.max(travelled, Math.hypot(cameraAt[0] - lastEye[0] - (ship[0] - lastShip![0]), cameraAt[1] - lastEye[1] - (ship[1] - lastShip![1]), cameraAt[2] - lastEye[2] - (ship[2] - lastShip![2])));
+                    lastEye = cameraAt; lastShip = ship;
+                    landed = cameraAt;
+                    if (frame === at) { tried++; expect(director.dismissed).toBe(true); expect(director.on).toBe(false); }
+                }
+                if (offset === null) continue;
+                // It did not travel: frame to frame the camera kept its place by the ship, and where it ended is clear of everything.
+                expect(travelled, `berth ${berth.id} taken at frame ${at}`).toBeLessThan(1e-6);
+                expect(landed && blocked(landed, where(s, id)), `berth ${berth.id} taken at frame ${at}: landed at ${landed}`).toBe(false);
+                expect(director.fouled, `berth ${berth.id} taken at frame ${at}`).toBe(0);
+                void changes;
+            }
+            expect(tried).toBeGreaterThan(100);
+            void length;
+        }
+    });
+
+    it('keeps the pilot\'s own view through a dropped link: the server\'s last word stands, and coming back does not give the harbour the camera again', () => {
+        for (const [id, berth] of [[A, STATION.berths[0]!], [B, STATION.berths[1]!]] as const) {
+            reset();
+            const other = id === A ? B : A;
+            const s = createSector(placed({ [id]: { p: [...berth.at], berth: berth.id, mooring: 'docked' }, ...(berth.id === 2 ? { [other]: { p: [...STATION.berths[0]!.at], berth: 1, mooring: 'docked' as Mooring } } : {}) }));
+            s.enter(id);
+            watch(s, id, { until: () => false, most: 30, arrived: true });
+            expect(director.on).toBe(true);
+            // She takes the view.
+            const ship = where(s, id), offset = handOver(ship)!;
+            const mine = (): Rig => ({ eye: [ship[0] + offset[0], ship[1] + offset[1], ship[2] + offset[2]], target: ship, fov: 34 });
+            const frame = (took: boolean, arrived: boolean): Rig | null => stepDirector({ dt: FLIGHT_TICK, mooring: 'docked', berth: berth.id, ship, aspect: WIDE, own: mine(), took, arrivedDocked: arrived });
+            frame(true, false);
+            for (let n = 0; n < 60; n++) frame(false, false);
+            expect(director.dismissed).toBe(true);
+            expect(director.on).toBe(false);
+            // The link drops: for three seconds nothing new is heard, and what was last heard is that she is docked.
+            for (let n = 0; n < 90; n++) expect(frame(false, false)).toBeNull();
+            // It comes back and the server says again that she is docked, as on any sign-in.
+            expect(frame(false, true)).toBeNull();
+            for (let n = 0; n < 120; n++) expect(frame(false, false)).toBeNull();
+            expect(director.dismissed).toBe(true);
+            expect(director.on).toBe(false);
+            expect(director.shown).toEqual(['berthed']);
+            expect(director.confirmed).toBe(0);
+            // And a pilot who had not taken the view keeps the harbour's through the same thing, with nothing shown again.
+            reset();
+            watch(s, id, { until: () => false, most: 30, arrived: true });
+            for (let n = 0; n < 90; n++) frame(false, false);
+            frame(false, true);
+            for (let n = 0; n < 60; n++) frame(false, false);
+            expect(director.on).toBe(true);
+            expect(director.shown).toEqual(['berthed']);
+            expect(director.fouled).toBe(0);
+            // Casting off after all that is a new manoeuvre, and the harbour has the camera for it.
+            director.dismissed = true;
+            s.dock(id, false);
+            const out = watch(s, id, { until: (m) => m === 'none' });
+            expect(out.shots).toEqual(['lift', 'clear', 'handover']);
+            expect(director.fouled).toBe(0);
+        }
     });
 });

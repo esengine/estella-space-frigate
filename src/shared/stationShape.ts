@@ -24,6 +24,13 @@ export const STRUCTURE: readonly Box[] = [
 export const HULL: Box = { min: [-24.5, -11.5, -52.5], max: [24.5, 23.5, 59.5] };
 export const HULL_BALL = 64;
 
+/** Whether a point is inside a box. */
+export const within = (p: Vec3, part: Box, pad = 0): boolean => [0, 1, 2].every((axis) => p[axis]! > part.min[axis]! - pad && p[axis]! < part.max[axis]! + pad);
+
+/** Whether a point is inside the station, or inside a frigate lying to the berths' heading at `ship`. */
+export const insideModel = (p: Vec3, ship: Vec3): boolean =>
+    STRUCTURE.some((part) => within(p, part)) || within([p[0] - ship[0], p[1] - ship[1], p[2] - ship[2]], HULL);
+
 /** Whether the straight line from `a` to `b` passes through a box, or starts or ends in it. */
 export function crosses(a: Vec3, b: Vec3, part: Box, pad = 0): boolean {
     let from = 0, to = 1;
