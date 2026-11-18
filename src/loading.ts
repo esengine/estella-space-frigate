@@ -12,6 +12,11 @@ const STAGED_SHARE = 0.96;
 
 export const loading = { share: 0, done: false, cover: false, error: '' };
 
+/** When each part of loading began and ended, in milliseconds from the first frame of the loading screen: for anyone asking what the wait is spent on. */
+export const loadLog = { began: 0, subjects: [] as { label: string; at: number }[], bakedAt: 0, stagedAt: 0, settledAt: 0 };
+(globalThis as { __spaceLoad?: typeof loadLog }).__spaceLoad = loadLog;
+const since = (): number => Math.round(performance.now() - loadLog.began);
+
 type Phase = 'working' | 'shading' | 'switching' | 'settling' | 'lifting' | 'gone';
 
 export function installLoading(app: App, beforePrograms: () => Promise<void>): void {
@@ -27,15 +32,17 @@ export function installLoading(app: App, beforePrograms: () => Promise<void>): v
         const dt = Math.min(time.delta, 0.05);
         if (!asked) {
             asked = true;
+            loadLog.began = performance.now();
             loading.cover = true;
             applyStoredGraphics(app);
             const assets = app.getResource(Assets);
             void Promise.all([assets.loadFont(FONTS.regular), assets.loadFont(FONTS.strong)]).then(([regular, strong]) => { fonts = { regular: regular.handle, strong: strong.handle }; });
             loadWork().run((progress) => {
                 target = progress.total > 0 ? STAGED_SHARE * progress.done / progress.total : STAGED_SHARE;
+                if (progress.label !== subject) loadLog.subjects.push({ label: progress.label, at: since() });
                 subject = progress.label;
-            }).then(() => { baked = true; }, (error: unknown) => { loading.error = error instanceof Error ? error.message : String(error); });
-            void scenes.prepare('main').then(beforePrograms).then(() => scenes.readyRenderPrograms('main')).then(() => { staged = true; }, () => { staged = true; });
+            }).then(() => { baked = true; loadLog.bakedAt = since(); }, (error: unknown) => { loading.error = error instanceof Error ? error.message : String(error); });
+            void scenes.prepare('main').then(beforePrograms).then(() => scenes.readyRenderPrograms('main')).then(() => { staged = true; loadLog.stagedAt = since(); }, () => { staged = true; loadLog.stagedAt = since(); });
         }
         if (fonts && !screen) {
             const kit = createKit(world, {} as Textures, fonts);
@@ -80,7 +87,7 @@ export function installLoading(app: App, beforePrograms: () => Promise<void>): v
         }
         if (phase === 'settling') {
             quiet = pendingShaders(app) === 0 ? quiet + 1 : 0;
-            if (quiet >= SETTLED_FRAMES) { phase = 'lifting'; clock = 0; target = 1; loading.share = 1; }
+            if (quiet >= SETTLED_FRAMES) { phase = 'lifting'; clock = 0; target = 1; loading.share = 1; loadLog.settledAt = since(); }
         }
         screen.update(dt);
         if (phase === 'lifting') {
