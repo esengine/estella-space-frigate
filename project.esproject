@@ -67,16 +67,14 @@
         "profiles": {
           "low": {
             "textureStreaming": false,
-            "depthPrepass": false
+            "depthPrepass": true
           },
           "medium": {
-            "textureStreaming": false,
-            "depthPrepass": false
+            "textureStreaming": false
           },
           "high": {
             "stillSky": true,
-            "minRenderScale": 0.6,
-            "depthPrepass": false
+            "minRenderScale": 0.6
           }
         },
         "deviceRules": [
