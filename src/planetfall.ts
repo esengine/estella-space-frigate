@@ -40,6 +40,10 @@ export const PLANETFALL = {
     holdAbove: 165,
     buffet: 1,
     widen: 6,
+    // How far out the ground keeps each fineness of mesh (the engine's `Planet.detail`). At 1.6 a range ten kilometres off was drawn in
+    // triangles twenty-odd pixels across and its skyline was a folded paper one. Each step of it is as many more squares of ground to make
+    // as its square, and the engine keeps nine hundred: 2.4 is some seven hundred round her, where 3 would be over a thousand.
+    groundDetail: 2.4,
 };
 
 export type FallStage = 'space' | 'entry' | 'surface' | 'exit';
@@ -202,7 +206,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
         world.insert(e, Transform, { position: { ...fall.centre } });
         world.insert(e, Planet, {
             radius: ground.radius, provider: GROUND_ID, world: ground.world, generatorVersion: GROUND_VERSION, seed: ground.seed,
-            cellSize: 2, detail: 1.6, layerColor0: ground.colors[0], layerColor1: ground.colors[1], layerColor2: ground.colors[2], layerColor3: ground.colors[3],
+            cellSize: 2, detail: PLANETFALL.groundDetail, layerColor0: ground.colors[0], layerColor1: ground.colors[1], layerColor2: ground.colors[2], layerColor3: ground.colors[3],
             macroScale: 520, macroVariation: 0.5, collision: false, gravity: 0,
             sea: ground.sea !== null, seaLevel: 0, seaColor: ground.sea ?? rgb(0, 0, 0), seaOpacity: 0.86,
             // Waves some forty metres from crest to crest, and a bottom that shows through the first thirty metres of water.

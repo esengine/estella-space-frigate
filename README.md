@@ -118,8 +118,7 @@ by `tools/flora-meshes.mjs`, which says what had to change and why. `tools/probe
 takes pictures.
 
 Not yet: a world's climate does not change across it beyond wet and dry and high and low (no poles, no belts), the planet's
-own cloud, ice cap and city lights are still drawn apart from its ground, the sea does not rise and fall, and far mountains are
-coarse.
+own cloud, ice cap and city lights are still drawn apart from its ground, and the sea does not rise and fall.
 
 ## License
 
