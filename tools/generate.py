@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import math
 import random
+import re
 import subprocess
 import sys
 import uuid
@@ -41,7 +42,8 @@ def run(*args):
 def stamp(path, kind=None, importer=None):
     meta_path = Path(str(path) + '.meta')
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {'version': '2.0', 'type': kind, 'importer': importer or {}}
-    meta['uuid'] = str(uuid.uuid5(uuid.NAMESPACE_URL, 'estella/examples/space-frigate/' + Path(path).relative_to(ROOT).as_posix()))
+    # An asset keeps the id it was first given: what refers to it by that id goes on finding it, whatever machine this is run on.
+    meta.setdefault('uuid', str(uuid.uuid5(uuid.NAMESPACE_URL, 'estella/examples/space-frigate/' + Path(path).relative_to(ROOT).as_posix())))
     if importer:
         meta['importer'] = {**meta.get('importer', {}), **importer}
     meta_path.write_text(json.dumps(meta, indent=2) + '\n')
@@ -370,8 +372,19 @@ def guns_source():
     return src
 
 
-def ship_source():
+# Where the frigate is parted: between the accent band amidships and the bridge, where no lettering, window or lamp lies across it.
+SHIP_PARTING = -8.0
+
+
+# The frigate is two lengths, fore and aft of the parting, each a model with a map half the size hers was. She is built whole,
+# exactly as before, and the length that is not wanted is cut away: so the two are made at the same time on two workers, each
+# is a quarter of the work, and together they have half the texels she had. They are not two of the same part: her two sides
+# would be, mirrored, but a mirrored copy of a mesh is drawn inside out, so she is parted across and not along.
+def ship_source(part='fore'):
     rnd = random.Random(11)
+    def keep_part(S):
+        S.append({'op': 'slice', 'axis': 'z', 'at': SHIP_PARTING})
+        S.append({'op': 'delete', 'faces': {'within': {'max': [None, None, SHIP_PARTING]} if part == 'fore' else {'min': [None, None, SHIP_PARTING]}}})
     S=[]
     def step(**k): S.append(k); return k
     def oct(w,h,c): return [[-w+c,-h],[w-c,-h],[w,-h+c],[w,h-c],[w-c,h],[-w+c,h],[-w,h-c],[-w,-h+c]]
@@ -430,6 +443,7 @@ def ship_source():
         y=mount_height(x,z,s)
         step(op='cylinder',radius=1.9,height=0.5,sides=24,at=[x,y+0.25*s,z],tag='turret',color=DARK)
         step(op='cylinder',radius=1.6,height=0.3,sides=24,at=[x,y+0.65*s,z],tag='turret',color=DARK)
+    keep_part(S)
     S[-1]['id']='blockout'
 
     src={'version':1,'smoothAngle':28,'material':{'roughness':0.42,'metallic':0,'coat':SHIP_COAT[0],'coatRoughness':SHIP_COAT[1],'emissive':[16,16,16],'detail':SHIP_DETAIL},'steps':S}
@@ -483,6 +497,8 @@ def ship_source():
         for (x,y,z,c) in [(17,2.75,-20,[1,0.05,0.03]),(-17,2.75,-20,[0.05,1,0.2]),(0,22.75,-24.3,[1,1,1]),(3.3,-0.4,58.9,[1,1,1]),(-3.3,-0.4,58.9,[1,1,1]),(0,-10.6,-12,[1,0.05,0.03])]:
             step(op='box',size=[0.28,0.2,0.28],at=[x,y,z],tag='lamp',color=c)
         step(op='paint',faces='lamp',glow=1)
+        # What was added since the first cut (ports, deck gear, pipes, lamps) is cut to the same length.
+        keep_part(S)
         S[-1]['id']='dense'
         A={'tag':['plate','plateSide','trim','trimSide']}; G={'tag':['plate','plateSide','trim','trimSide','gear','pipe','turret','cowl','rib']}
         T=dict(op='stain',texel=True)
@@ -525,7 +541,7 @@ def ship_source():
             step(**T,faces={'tag':['nozzle','rib','cowl']},near={'at':[x,y,z+0.2],'radius':3.2},color=[0.2,0.24,0.5],roughness=0.24,amount=0.8)
             step(**T,faces=THROAT,near={'at':[x,y,z+2.2],'radius':3.6 if r>10 else 2.9},color=[0.45,0.7,1.0],glow=0.5,amount=0.95)
         step(op='decimate',**{'from':'blockout'},ratio=1)
-        src['normalBake']={'from':'dense','size':MAP,'distance':0.7,'color':True,'surface':True,'occlusion':{'samples':36,'size':min(1024,MAP//2),'reach':3.0}}
+        src['normalBake']={'from':'dense','size':MAP//2,'distance':0.7,'color':True,'surface':True,'occlusion':{'samples':36,'size':min(1024,MAP//4),'reach':3.0}}
     return src
 
 
@@ -534,19 +550,64 @@ FLARES = {'white': (1.0, 1.0, 1.0), 'red': (1.0, 0.08, 0.04), 'green': (0.08, 1.
 STROBES = [('StrobeMast', (0, 23.1, -24.3), 'white', 0.55), ('StrobeKeel', (0, -10.95, -12), 'red', 0.5), ('NavPort', (17, 3.05, -20), 'red', 0.42), ('NavStarboard', (-17, 3.05, -20), 'green', 0.42),
            ('BowPort', (3.3, -0.1, 59.1), 'white', 0.34), ('BowStarboard', (-3.3, -0.1, 59.1), 'white', 0.34)]
 
-def gate_source():
+GATE_ARCS = 6
+
+
+def gate_wear(step, plates, metal, lit, seed):
+    """The wear every part of a gate takes, laid on its maps: grime, streaks, worn edges, bare metal, scratches, pores and dark recesses."""
+    T=dict(op='stain',texel=True)
+    A={'tag':['plate','plateSide']}
+    step(**T,faces=A,pattern='bumps',scale=22,octaves=5,threshold=0.5,softness=0.4,roughness=0.64,amount=0.75,seed=seed)
+    step(**T,faces=A,pattern='bumps',scale=5,octaves=4,threshold=0.5,softness=0.45,roughness=0.3,amount=0.5,seed=seed+6)
+    step(**T,faces=A,pattern='bumps',scale=60,octaves=5,threshold=0.56,softness=0.22,color=[0.1,0.097,0.092],roughness=0.7,amount=0.5,seed=seed-12)
+    step(**T,faces=A,pattern='bumps',scale=8,octaves=5,stretch=[9,1,1],threshold=0.62,softness=0.14,color=[0.07,0.065,0.06],roughness=0.82,amount=0.45,seed=seed+20)
+    step(**T,faces=A,where='edges',reach=1.6,pattern='bumps',scale=3,octaves=5,fray=0.8,threshold=0.5,softness=0.14,color=[0.62,0.62,0.6],roughness=0.62,amount=0.6,seed=seed-19)
+    step(**T,faces={'tag':['plate','plateSide',*metal]},where='edges',reach=0.6,pattern='bumps',scale=1.1,octaves=4,fray=1,threshold=0.8,softness=0.04,color=[0.3,0.3,0.31],roughness=0.3,metallic=0.9,seed=seed-17)
+    step(**T,faces='plate',pattern='scratches',scale=11,width=0.012,threshold=0.5,softness=0.3,color=[0.6,0.6,0.6],roughness=0.3,amount=0.5,seed=seed-18)
+    step(**T,faces='plate',pattern='pores',scale=1.7,width=0.18,threshold=0.5,softness=0.2,color=[0.045,0.04,0.036],roughness=0.9,amount=0.6,seed=seed-13)
+    step(**T,faces={'not':{'tag':lit}},where='cavity',reach=1.2,threshold=0.3,softness=0.12,color=[0.016,0.014,0.012],roughness=0.95,metallic=0,amount=0.9)
+    return T
+
+
+# A gate is a ring of six alike parts and two towers. The ring is one part, a sixth of it with the node it carries, drawn six
+# times round: its map is a sixteenth the size the whole gate's was and as fine on the metal, and it is made once. The towers,
+# the mast and the lamps, which are not alike all round, are a model of their own.
+def gate_arc_source():
     S=[]
     def step(**k): S.append(k); return k
     R=GATE_RADIUS
-    STEEL=[0.27,0.28,0.3]; DARK=[0.1,0.105,0.115]; LIGHT=[0.4,0.41,0.42]; ACCENT=[0.6,0.15,0.03]; WARM=[1.0,0.8,0.5]
-    step(op='lathe',axis='z',profile=[[R-8,-11],[R+8,-11],[R+12,0],[R+8,11],[R-8,11],[R-12,0]],closed=True,sides=36,tag='ring',color=STEEL)
-    step(op='lathe',axis='z',profile=[[R-12.2,-4],[R-12.2,4],[R-13.4,4],[R-13.4,-4]],closed=True,sides=36,tag='band',color=[0.07,0.2,0.4])
+    STEEL=[0.27,0.28,0.3]; DARK=[0.1,0.105,0.115]; LIGHT=[0.4,0.41,0.42]
+    turn=360/GATE_ARCS
+    step(op='lathe',axis='z',arc=turn,profile=[[R-8,-11],[R+8,-11],[R+12,0],[R+8,11],[R-8,11],[R-12,0]],closed=True,sides=36//GATE_ARCS,tag='ring',color=STEEL)
+    step(op='lathe',axis='z',arc=turn,profile=[[R-12.2,-4],[R-12.2,4],[R-13.4,4],[R-13.4,-4]],closed=True,sides=36//GATE_ARCS,tag='band',color=[0.07,0.2,0.4])
+    # A slice of a lathe about z begins at -y and turns toward +x: brought round so the part lies either side of +x, where its node stands.
+    step(op='transform',faces={'tag':['ring','band']},rotate=[0,0,90-turn/2],pivot=[0,0,0])
     step(op='box',size=[30,22,34],at=[R+4,0,0],tag='node',color=LIGHT)
     step(op='box',size=[14,30,20],at=[R+22,0,0],tag='node',color=DARK)
     step(op='box',size=[10,2.5,46],at=[R+14,0,0],tag='node',color=STEEL)
     step(op='box',size=[16,6,6],at=[R-19,0,0],tag='prong',color=DARK)
     step(op='box',size=[3,8,8],at=[R-28,0,0],tag='emit',color=[0.16,0.4,0.7])
-    step(op='array',faces={'tag':['node','prong','emit']},count=6,rotate=[0,0,60],pivot=[0,0,0])
+    S[-1]['id']='blockout'
+    src={'version':1,'smoothAngle':30,'material':{'roughness':0.5,'metallic':0,'coat':0.15,'coatRoughness':0.3,'emissive':[14,14,14]},'steps':S}
+    step(op='paint',faces='prong',color=[0.3,0.31,0.34],roughness=0.32,metallic=0.9)
+    step(op='paint',faces='band',glow=0.16,roughness=0.3)
+    step(op='paint',faces='emit',glow=0.55,roughness=0.3)
+    step(op='panels',faces='ring',size=15,uneven=0.8,gap=0.7,height=[0.25,1.0],bevel=0.3,tones=0.2,seed=5,tag='plate')
+    step(op='panels',faces='node',size=8,uneven=0.8,gap=0.5,height=[0.18,0.7],bevel=0.22,tones=0.2,seed=9,tag='plate')
+    step(op='panels',faces='plate',size=6.4,uneven=0.75,gap=0.24,height=[0.04,0.12],bevel=0.05,tones=0.07,seed=31,tag='plate')
+    S[-1]['id']='dense'
+    T=gate_wear(step,['plate'],['prong'],['emit','band'],21)
+    step(**T,faces={'not':{'tag':['emit','band']}},near={'at':[R-24,0,0],'radius':20},color=[0.25,0.5,0.9],glow=0.05,amount=0.7)
+    step(op='decimate',**{'from':'blockout'},ratio=1)
+    src['normalBake']={'from':'dense','size':1024,'distance':2.5,'color':True,'surface':True,'occlusion':{'samples':25,'size':256,'reach':10.0}}
+    return src
+
+
+def gate_source():
+    S=[]
+    def step(**k): S.append(k); return k
+    R=GATE_RADIUS
+    STEEL=[0.27,0.28,0.3]; DARK=[0.1,0.105,0.115]; LIGHT=[0.4,0.41,0.42]; ACCENT=[0.6,0.15,0.03]; WARM=[1.0,0.8,0.5]
     step(op='box',size=[18,26,22],at=[0,R+34,0],tag='tower',color=LIGHT)
     step(op='box',size=[12,13,14],at=[0,R+15,0],tag='tower',color=DARK)
     step(op='box',size=[12,14,14],at=[0,R+54,0],tag='tower',color=STEEL)
@@ -559,16 +620,12 @@ def gate_source():
     S[-1]['id']='blockout'
 
     src={'version':1,'smoothAngle':30,'material':{'roughness':0.5,'metallic':0,'coat':0.15,'coatRoughness':0.3,'emissive':[14,14,14]},'steps':S}
-    step(op='paint',faces={'tag':['prong','mast']},color=[0.3,0.31,0.34],roughness=0.32,metallic=0.9)
+    step(op='paint',faces='mast',color=[0.3,0.31,0.34],roughness=0.32,metallic=0.9)
     step(op='paint',faces='window',glow=0.12,roughness=0.08)
-    step(op='paint',faces='band',glow=0.16,roughness=0.3)
-    step(op='paint',faces='emit',glow=0.55,roughness=0.3)
-    step(op='panels',faces='ring',size=15,uneven=0.8,gap=0.7,height=[0.25,1.0],bevel=0.3,tones=0.2,seed=5,tag='plate')
-    step(op='panels',faces={'tag':['node','tower']},size=8,uneven=0.8,gap=0.5,height=[0.18,0.7],bevel=0.22,tones=0.2,seed=9,tag='plate')
+    step(op='panels',faces='tower',size=8,uneven=0.8,gap=0.5,height=[0.18,0.7],bevel=0.22,tones=0.2,seed=9,tag='plate')
     step(op='panels',faces='plate',size=6.4,uneven=0.75,gap=0.24,height=[0.04,0.12],bevel=0.05,tones=0.07,seed=31,tag='plate')
     P={'tag':['plate','plateSide']}
-    step(op='paint',faces={**P,'within':{'min':[-26,R-14,None],'max':[26,R+14,None]}},color=ACCENT,roughness=0.44)
-    step(op='paint',faces={**P,'within':{'min':[-26,-(R+14),None],'max':[26,-(R-14),None]}},color=ACCENT,roughness=0.44)
+    step(op='paint',faces={**P,'within':{'min':[-26,R+2,None],'max':[26,R+22,None]}},color=ACCENT,roughness=0.44)
     step(op='paint',faces={**P,'within':{'min':[-20,-(R+54),None],'max':[20,-(R+48),None]}},color=[0.62,0.62,0.6],roughness=0.44)
     rnd=random.Random(23)
     for z in (11.02,-11.02):
@@ -578,6 +635,7 @@ def gate_source():
                 if rnd.random()<0.75: step(op='box',size=[1.0,0.9,0.4],at=[x,R+24+row*5,z],tag='port',color=WARM)
                 x+=2.1
     step(op='paint',faces='port',glow=0.14,roughness=0.08)
+    # The lamps on the six nodes are here and not on the part that is drawn six times: red to port, green to starboard, white between.
     for k in range(6):
         a=math.radians(k*60); c,sn=math.cos(a),math.sin(a)
         tone=[1,0.05,0.03] if c<-0.1 else [0.05,1,0.2] if c>0.1 else [1,1,1]
@@ -586,22 +644,9 @@ def gate_source():
     step(op='box',size=[1.4,1.4,1.4],at=[0,R+95,0],tag='lamp',color=[1,1,1])
     step(op='paint',faces='lamp',glow=1)
     S[-1]['id']='dense'
-    T=dict(op='stain',texel=True)
-    A={'tag':['plate','plateSide']}
-    step(**T,faces=A,pattern='bumps',scale=22,octaves=5,threshold=0.5,softness=0.4,roughness=0.64,amount=0.75,seed=21)
-    step(**T,faces=A,pattern='bumps',scale=5,octaves=4,threshold=0.5,softness=0.45,roughness=0.3,amount=0.5,seed=27)
-    step(**T,faces=A,pattern='bumps',scale=60,octaves=5,threshold=0.56,softness=0.22,color=[0.1,0.097,0.092],roughness=0.7,amount=0.5,seed=9)
-    step(**T,faces=A,pattern='bumps',scale=8,octaves=5,stretch=[9,1,1],threshold=0.62,softness=0.14,color=[0.07,0.065,0.06],roughness=0.82,amount=0.45,seed=41)
-    step(**T,faces=A,where='edges',reach=1.6,pattern='bumps',scale=3,octaves=5,fray=0.8,threshold=0.5,softness=0.14,color=[0.62,0.62,0.6],roughness=0.62,amount=0.6,seed=2)
-    step(**T,faces={'tag':['plate','plateSide','prong','mast']},where='edges',reach=0.6,pattern='bumps',scale=1.1,octaves=4,fray=1,threshold=0.8,softness=0.04,color=[0.3,0.3,0.31],roughness=0.3,metallic=0.9,seed=4)
-    step(**T,faces='plate',pattern='scratches',scale=11,width=0.012,threshold=0.5,softness=0.3,color=[0.6,0.6,0.6],roughness=0.3,amount=0.5,seed=3)
-    step(**T,faces='plate',pattern='pores',scale=1.7,width=0.18,threshold=0.5,softness=0.2,color=[0.045,0.04,0.036],roughness=0.9,amount=0.6,seed=8)
-    step(**T,faces={'not':{'tag':['window','port','lamp','emit','band']}},where='cavity',reach=1.2,threshold=0.3,softness=0.12,color=[0.016,0.014,0.012],roughness=0.95,metallic=0,amount=0.9)
-    for k in range(6):
-        a=math.radians(k*60)
-        step(**T,faces={'not':{'tag':['emit','band','lamp','window','port']}},near={'at':[(R-24)*math.cos(a),(R-24)*math.sin(a),0],'radius':20},color=[0.25,0.5,0.9],glow=0.05,amount=0.7)
+    gate_wear(step,['plate'],['mast'],['window','port','lamp'],21)
     step(op='decimate',**{'from':'blockout'},ratio=1)
-    src['normalBake']={'from':'dense','size':4096,'distance':2.5,'color':True,'surface':True,'occlusion':{'samples':25,'size':512,'reach':10.0}}
+    src['normalBake']={'from':'dense','size':1024,'distance':2.5,'color':True,'surface':True,'occlusion':{'samples':25,'size':256,'reach':10.0}}
     return src
 
 
@@ -638,10 +683,14 @@ def station_finish(S, step, plates, metal, glows, size, big=18.0, small=6.5, see
     return src
 
 
-def station_source():
+# The hub and the tower are the same on all four sides, so they are one quarter drawn four times: the whole of them is built as
+# it always was and all but the quarter between +x and +z is cut away, which leaves the look of every side what it was. Its map
+# is a sixteenth the size the whole core's was. What is not alike all round (the masts above, the refinery, tanks, pod and
+# radiators below) is the other model, with a map a quarter the size.
+def station_tower_source():
     S = []
     def step(**k): S.append(k); return k
-    PLATE, PALE, DARK, STEEL, WINE, WARM, CYAN, COPPER = (STATION_TONES[k] for k in ('PLATE', 'PALE', 'DARK', 'STEEL', 'WINE', 'WARM', 'CYAN', 'COPPER'))
+    PLATE, DARK, STEEL, WINE, WARM, CYAN = (STATION_TONES[k] for k in ('PLATE', 'DARK', 'STEEL', 'WINE', 'WARM', 'CYAN'))
     rnd = random.Random(41)
     FLAT = math.cos(math.radians(22.5))
     # The hub the wings meet at, and the tower over it: four octagonal tiers, each smaller, with a collar between.
@@ -663,13 +712,30 @@ def station_source():
             half = r * math.sin(math.radians(22.5)) - 7
             x = -half
             while x <= half:
-                if rnd.random() < 0.72: step(op='box', size=[3.0, 1.7, 1.2], at=[x, y, r * FLAT + 0.25], tag='port', color=WARM)
+                # A port astride the middle of a face would be cut in two by the quarter's edge: it is moved to one side of it.
+                if rnd.random() < 0.72: step(op='box', size=[3.0, 1.7, 1.2], at=[x if abs(x) > 2.2 else 2.6, y, r * FLAT + 0.25], tag='port', color=WARM)
                 x += 5.2
     step(op='array', faces='port', count=8, rotate=[0, 45, 0], pivot=[0, 0, 0])
     # Where each wing is made fast.
     step(op='box', size=[86, 42, 14], at=[0, 0, 98], tag='socket', color=STEEL)
     step(op='box', size=[60, 30, 6], at=[0, 0, 107], tag='socketDark', color=DARK)
     step(op='array', faces={'tag': ['socket', 'socketDark']}, count=4, rotate=[0, 90, 0], pivot=[0, 0, 0])
+    # The quarter: everything is cut along x = 0 and z = 0, and what is not between +x and +z is taken away.
+    step(op='slice', axis='x', at=0)
+    step(op='slice', axis='z', at=0)
+    step(op='delete', faces={'within': {'max': [0, None, None]}})
+    step(op='delete', faces={'within': {'max': [None, None, 0]}})
+    S[-1]['id'] = 'blockout'
+    return station_finish(S, step, ['tier', 'hub', 'socket'], ['cap', 'socketDark'], {'port': 0.14, 'glass': 0.3}, 1024)
+
+
+STATION_TOWERS = 4
+
+
+def station_source():
+    S = []
+    def step(**k): S.append(k); return k
+    PLATE, PALE, DARK, STEEL, WINE, WARM, CYAN, COPPER = (STATION_TONES[k] for k in ('PLATE', 'PALE', 'DARK', 'STEEL', 'WINE', 'WARM', 'CYAN', 'COPPER'))
     # Masts and aerials.
     step(op='box', size=[10, 12, 10], at=[0, 164, 0], tag='cap', color=STEEL)
     step(op='loft', path=[[0, 158, 0], [0, 232, 0]], section={'radius': 1.6}, sides=8, tag='mast', color=DARK)
@@ -701,8 +767,7 @@ def station_source():
         step(op='box', size=[84, 1.6, 26], at=[112, -182 - i * 20, 46], tag='radiator', color=COPPER)
         step(op='box', size=[86, 2.4, 2.4], at=[112, -182 - i * 20, 32], tag='pipe', color=DARK)
     S[-1]['id'] = 'blockout'
-    src = station_finish(S, step, ['tier', 'hub', 'tank', 'pod', 'socket'], ['mast', 'pipe', 'trunk', 'deck', 'cap', 'socketDark'], {'port': 0.14, 'glass': 0.3, 'lamp': 1.0}, 4096)
-    return src
+    return station_finish(S, step, ['tank', 'pod'], ['mast', 'pipe', 'trunk', 'deck', 'cap'], {'glass': 0.3, 'lamp': 1.0}, 2048)
 
 
 def station_wing_source(bay):
@@ -819,16 +884,43 @@ SMALL = {
               'steps': [{'op': 'lathe', 'axis': 'z', 'profile': [[0.0, 0.0], [0.62, 0.0], [0.78, -0.6], [0.5, -3.2], [0.16, -7.5], [0.0, -11.0]], 'sides': 32, 'curve': 3, 'tag': 'plume', 'color': [1, 1, 1]}]},
 }
 
+# The models that are one length of a larger one, built by its steps with what they lack left out.
+PARTS = ('frigate', 'frigate-aft')
+
 
 def make_models():
-    sources = {'frigate': ship_source(), 'turret': turret_source(), 'guns': guns_source(), 'raider': raider_source(), 'gate': gate_source(),
-               'station': station_source(), 'station-wing': station_wing_source(False), 'station-bay': station_wing_source(True), **SMALL}
+    sources = {'frigate': ship_source('fore'), 'frigate-aft': ship_source('aft'), 'turret': turret_source(), 'guns': guns_source(), 'raider': raider_source(), 'gate': gate_source(), 'gate-arc': gate_arc_source(),
+               'station': station_source(), 'station-tower': station_tower_source(), 'station-wing': station_wing_source(False), 'station-bay': station_wing_source(True), **SMALL}
     for name, source in sources.items():
         if MODELS_ONLY and name not in MODELS_ONLY:
             continue
         path = MODELS / f'{name}.esmodel'
-        path.write_text(json.dumps(source, indent=1) + '\n')
-        run('bake-model', path)
+        # A model that is one length of a larger one is built by the larger one's steps, and some of them are for parts it does not
+        # have (a nozzle on the fore length). The bake names the first such step and stops; it is left out and the bake asked again,
+        # until every step that is left has something to work on. Only such a refusal is passed over: anything else stops this.
+        crashes = 0
+        for _ in range(400):
+            path.write_text(json.dumps(source, indent=1) + '\n')
+            made = subprocess.run(['node', str(CLI), 'bake-model', str(path)], cwd=REPO, capture_output=True, text=True)
+            if made.returncode == 0:
+                break
+            said = made.stdout + made.stderr
+            unused = re.search(r'bake-model: step (\d+) \((\w+)\): `faces` .* matched no face', said)
+            if not unused:
+                # The baker itself falls over now and then, with nothing wrong with the model: it is asked again a few times.
+                crashes = crashes + 1 if 'bake-model:' not in said else 99
+                if crashes > 4:
+                    raise SystemExit(f'{name}: {said.strip()[-1200:]}')
+                continue
+            if name not in PARTS:
+                raise SystemExit(f'{name}: {said.strip()[-1200:]}')
+            at = int(unused.group(1))
+            # The bake counts steps from nought. A step that marks a stage is never one of these: it is the cut itself.
+            if source['steps'][at]['op'] != unused.group(2) or 'id' in source['steps'][at]:
+                raise SystemExit(f'{name}: the bake refused step {at}, which is not one that can be left out: {said.strip()[-400:]}')
+            del source['steps'][at]
+        else:
+            raise SystemExit(f'{name}: still steps with nothing to work on after 400 tries')
     for path in sorted(MODELS.iterdir()):
         if path.suffix != '.meta':
             stamp(path, None, {'compress': 'off'} if path.name.endswith('_emissive.png') else {'bake': 'load'} if path.suffix == '.esmodel' else None)
@@ -883,7 +975,7 @@ def make_materials():
     for name in ('atmosphere', 'plume', 'gatefield', 'flare', 'jet', 'ring', 'warp', 'entry', 'planet', 'shield', 'streak'):
         stamp(MAT / f'{name}.esshader', 'shader')
     stamp(ROOT / 'assets/fx/puff.esimage', 'imageSource')
-    for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'turret', 'guns')):
+    for hull in (MODELS / f'{name}.esmaterial' for name in ('frigate', 'frigate-aft', 'turret', 'guns')):
         if not hull.exists():
             continue
         doc = json.loads(hull.read_text())
@@ -992,7 +1084,9 @@ def make_scene():
     add('Rim', [transform((0, 0, 0), look((0, 0, 0), (0.55, 0.2, 0.8))),
                 {'type': 'Light', 'data': {'type': 1, 'color': {'r': 0.62, 'g': 0.74, 'b': 1.0, 'a': 1}, 'intensity': 0.26, 'enabled': True, 'meshShadows': False}}])
     ship = add('Ship', [transform()])
-    add('Hull', [transform(), mesh('frigate', 'assets/models/frigate.esmaterial', 'assets/models/frigate_color.png')], ship)
+    hull = add('Hull', [transform(), mesh('frigate', 'assets/models/frigate.esmaterial', 'assets/models/frigate_color.png')], ship)
+    # Her after length, a child of the fore one so that whatever places, hides or copies the hull takes both.
+    add('HullAft', [transform(), mesh('frigate-aft', 'assets/models/frigate-aft.esmaterial', 'assets/models/frigate-aft_color.png')], hull)
     for name, at, wide, long in [('PlumeL', (4.5, 0, -47.6), 4.0, 2.3), ('PlumeR', (-4.5, 0, -47.6), 4.0, 2.3), ('PlumeNL', (17, -1, -48.7), 3.0, 1.7), ('PlumeNR', (-17, -1, -48.7), 3.0, 1.7)]:
         sheath = add(name, [transform(at, None, (wide, wide, long)), mesh('plume', 'assets/materials/plume.esmaterial', None, False, False, False, False)], ship)
         add(name + 'Core', [transform((0, 0, 0.15), None, (0.42, 0.42, 0.78)), mesh('plume', 'assets/materials/plume-core.esmaterial', None, False, False, False, False)], sheath)
@@ -1062,10 +1156,19 @@ def make_scene():
         gate = add(name, [transform(at), mesh('gate', 'assets/models/gate.esmaterial', 'assets/models/gate_color.png', True, True, True, False)])
         add(name + 'Strobe', [transform((0, GATE_RADIUS + 96.5, 0), None, (2.6,) * 3), mesh('flare', 'assets/materials/flare-white.esmaterial', None, False, False, True, False)], gate)
         add(name + 'Field', [transform((0, 0, 0), None, (GATE_RADIUS - 13,) * 3), mesh('gate-field', 'assets/materials/gatefield.esmaterial', None, False, False, False, False)], gate)
+        # The ring: one part, drawn six times round the way through.
+        for k in range(GATE_ARCS):
+            half = math.radians(k * 360 / GATE_ARCS) / 2
+            add(f'{name}Arc{k}', [transform((0, 0, 0), {'x': 0, 'y': 0, 'z': math.sin(half), 'w': math.cos(half)} if k else None),
+                                  mesh('gate-arc', 'assets/models/gate-arc.esmaterial', 'assets/models/gate-arc_color.png', True, True, True, False)], gate)
     # The anchorage is out of the way of a voyage alone; in a sector the game puts it where the server says the station is.
     yaw = lambda degrees: {'x': 0, 'y': math.sin(math.radians(degrees) / 2), 'z': 0, 'w': math.cos(math.radians(degrees) / 2)}
     station = add('Station', [transform((0, -120000, 0))])
     add('StationCore', [transform(), mesh('station', 'assets/models/station.esmaterial', 'assets/models/station_color.png', True, True, True, False)], station)
+    # The hub and tower: a quarter, drawn four times round.
+    for k in range(STATION_TOWERS):
+        add(f'StationTower{k}', [transform((0, 0, 0), yaw(k * 360 / STATION_TOWERS) if k else None),
+                                 mesh('station-tower', 'assets/models/station-tower.esmaterial', 'assets/models/station-tower_color.png', True, True, True, False)], station)
     for i, (turn, kind) in enumerate([(0, 'station-wing'), (90, 'station-wing'), (-90, 'station-wing'), (180, 'station-bay')]):
         add(f'StationWing{i}', [transform((0, 0, 0), yaw(turn) if turn else None), mesh(kind, f'assets/models/{kind}.esmaterial', f'assets/models/{kind}_color.png', True, True, True, False)], station)
     add('Planet', [transform(HOME['at'], None, (HOME['radius'],) * 3), mesh('planet', 'assets/materials/world-planet.esmaterial', None, False, True, True, False)])

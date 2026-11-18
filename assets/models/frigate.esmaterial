@@ -5,7 +5,7 @@
   "blendMode": 9,
   "depthTest": true,
   "depthWrite": true,
-  "cull": 1,
+  "cull": 0,
   "properties": {
     "u_clearcoat": 0.22,
     "u_clearcoatRoughness": 0.24,

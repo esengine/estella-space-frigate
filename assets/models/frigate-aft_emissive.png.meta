@@ -1,0 +1,29 @@
+{
+  "uuid": "e7da3a87-42a3-4f47-9e29-a5e1038c2a0f",
+  "version": "2.0",
+  "type": "texture",
+  "importer": {
+    "use": "colour",
+    "maxSize": 2048,
+    "compress": "off",
+    "compressFormat": "uastc",
+    "mipmaps": true,
+    "filterMode": "linear",
+    "wrapMode": "repeat",
+    "sRGB": false,
+    "alphaIsTransparency": true,
+    "mipCoverage": 0,
+    "sliceBorder": {
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    "sheet": {
+      "cellWidth": 0,
+      "cellHeight": 0,
+      "margin": 0,
+      "spacing": 0
+    }
+  }
+}

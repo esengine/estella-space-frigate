@@ -6,7 +6,7 @@ import { SHARED_ROCK, connectOnline, online, parkedRock } from './online';
 import { tonnage, type Quat4, type Vec3 } from './shared/sector';
 import { ship } from './shipState';
 
-interface Seen { entity: Entity; tag: Entity; name: Entity; note: Entity; p: Vec3; q: Quat4; here: boolean }
+interface Seen { entity: Entity; aft: Entity | null; tag: Entity; name: Entity; note: Entity; p: Vec3; q: Quat4; here: boolean }
 
 /** What the berth marker shows: 0 is that no berth is hers. */
 export const berthSeen = { id: 0, name: '' };
@@ -18,6 +18,9 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
     const { world, root, textures, node, image, label, centred, say, ink, fade } = kit;
     const hull = world.findEntityByName('Hull');
     const hullMesh = hull === null ? null : { ...world.get(hull, MeshRenderer) };
+    // The hull is two lengths, the after one a child of the fore: another pilot's ship is a copy of both.
+    const aftHull = world.findEntityByName('HullAft');
+    const aftMesh = aftHull === null ? null : { ...world.get(aftHull, MeshRenderer) };
     const hullAt = hull === null ? { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 }, scale: { x: 1, y: 1, z: 1 } } : world.get(hull, Transform);
     const seat = { position: { ...hullAt.position }, rotation: { ...hullAt.rotation }, scale: { ...hullAt.scale } };
     const majors = rocks.filter((rock) => rock.big && rock.foe === undefined);
@@ -44,13 +47,20 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         const entity = world.spawn(`Pilot ${account}`);
         world.insert(entity, Transform, { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 }, scale: { ...seat.scale } });
         if (hullMesh) world.insert(entity, MeshRenderer, { ...hullMesh });
+        let aft: Entity | null = null;
+        if (aftMesh) {
+            aft = world.spawn(`PilotAft ${account}`);
+            world.insert(aft, Transform, { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 }, scale: { x: 1, y: 1, z: 1 } });
+            world.insert(aft, MeshRenderer, { ...aftMesh });
+            world.setParent(aft, entity);
+        }
         const tag = centred(node(root, `PilotTag ${account}`, { left: 0, top: 0, width: 44, height: 44 }), 44, 44);
         world.insert(tag, UIWorldAnchor, { clampToEdges: true, edgeMargin: 96, edgeInsets: { ...KEPT_CLEAR } });
         world.update(tag, UIWorldAnchor, (anchored) => { anchored.target = entity; });
         image(tag, `PilotBracket ${account}`, { left: 0, top: 0, width: 44, height: 44 }, textures.bracket, rgb(AMBER, 0.9));
         const name = label(tag, `PilotName ${account}`, { left: 52, top: 6, width: 240, height: 14 }, { size: 11, color: rgb(AMBER), spacing: 2.6 });
         const note = label(tag, `PilotNote ${account}`, { left: 52, top: 23, width: 240, height: 14 }, { size: 10, color: rgb(HAZE), spacing: 1.6, strong: false });
-        return { entity, tag, name, note, p: [...p] as Vec3, q: [...q] as Quat4, here: true };
+        return { entity, aft, tag, name, note, p: [...p] as Vec3, q: [...q] as Quat4, here: true };
     };
 
     return (frame) => {
@@ -97,7 +107,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
             const at = { x: one.p[0] - me[0] + off.x, y: one.p[1] - me[1] + off.y, z: one.p[2] - me[2] + off.z };
             const turned = mulQuat(facing, seat.rotation);
             world.update(one.entity, Transform, (t) => { t.position = at; t.rotation = turned; });
-            if (hullMesh && !world.get(one.entity, MeshRenderer).enabled) world.update(one.entity, MeshRenderer, (m) => { m.enabled = true; });
+            if (hullMesh && !world.get(one.entity, MeshRenderer).enabled) { world.update(one.entity, MeshRenderer, (m) => { m.enabled = true; }); if (one.aft !== null) world.update(one.aft, MeshRenderer, (m) => { m.enabled = true; }); }
             fade(one.tag, ship.away ? 0 : 1);
             say(one.name, other.name);
             say(one.note, `${reach(Math.hypot(at.x, at.y, at.z))}   ${other.mooring === 'docked' ? `BERTH ${other.berth}   ` : other.mooring === 'docking' ? `TO BERTH ${other.berth}   ` : other.mooring === 'undocking' ? 'CASTING OFF   ' : other.mining ? 'MINING   ' : ''}${tonnage(other.cargo)} T`);
@@ -108,7 +118,7 @@ export function installSector(kit: Kit, rocks: readonly Rock[]): (frame: Frame) 
         for (const one of seen.values()) {
             if (one.here) continue;
             fade(one.tag, 0);
-            if (hullMesh && world.get(one.entity, MeshRenderer).enabled) world.update(one.entity, MeshRenderer, (m) => { m.enabled = false; });
+            if (hullMesh && world.get(one.entity, MeshRenderer).enabled) { world.update(one.entity, MeshRenderer, (m) => { m.enabled = false; }); if (one.aft !== null) world.update(one.aft, MeshRenderer, (m) => { m.enabled = false; }); }
         }
     };
 }
