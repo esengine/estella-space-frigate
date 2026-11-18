@@ -96,21 +96,30 @@ The station is built in `tools/generate.py` after the multi-view design, from pa
 
 Assets are regenerated from their recipes with `python3 tools/generate.py`.
 
-## What grows on a world
+## What a world is
 
-A terran world has woods: oak, birch, pine and brush, with stones among them, laid out by the engine's world generation over the
-planet as she flies (`src/flora.ts`: biomes by height, moisture and slope, the same from the same seed every time). The trees are
-grown by the engine's tree step and written by the editor's model tools (`flora-src/`), then made ready for a wood by
-`tools/flora-meshes.mjs`, which says what had to change and why. `tools/probe-flora.mjs` puts her low over the ground and takes
-pictures.
+A world is made once, from the voyage's seed like the rest of its system, and everything that shows it reads the one thing
+(`src/planetSpec.ts`):
 
-The ground of every world has a grain: four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's
-paint and tinted by that world's own colours, with tall grass in clumps on a terran world's open ground.
+- **Its ground** is one function of where on the planet a place is (`src/planetGround.ts`). The planet seen from space is drawn
+  from a map of that ground, made a few rows a frame after she arrives in the system (how each place is painted and how high
+  it stands), so its coasts, plains and ranges are the ones she lands among. She comes down where she came in: the place of the
+  planet under her is turned to the top of the ground that is made.
+- **What grows** is laid out by the engine's world generation from rules made for that world (`src/flora.ts`): how much grows
+  and where, how large (a wood is several times its grown size, and a world has giants several times that), which trees make
+  its woods and which its high ground, how much stone lies about. A desert has scrub, a rare tree and standing stones; a
+  frozen world stone and a few trees low down; a lava world stone. Its leaves take after the colour of its plains, so no two
+  worlds are the one green.
+- **Its ground's grain** is four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's paint and
+  tinted by that world's colours, and **its sea** has waves, pale shallows and a shore (the engine's planet sea).
 
-A world's sea has waves, is clearer and paler in its shallows and breaks white along the shore (the engine's planet sea).
+The trees are grown by the engine's tree step and written by the editor's model tools (`flora-src/`), then made ready for a wood
+by `tools/flora-meshes.mjs`, which says what had to change and why. `tools/probe-flora.mjs` puts her low over the ground and
+takes pictures.
 
-Not yet: the sea does not rise and fall, only the terran kind has anything growing, and every terran world grows the same
-things: a world has no climate of its own, and what is seen of it from space is drawn apart from its ground.
+Not yet: a world's climate does not change across it beyond wet and dry and high and low (no poles, no belts), the planet's
+own cloud, ice cap and city lights are still drawn apart from its ground, the sea does not rise and fall, and far mountains are
+coarse.
 
 ## License
 

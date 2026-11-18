@@ -3,8 +3,9 @@ import type { Color, Entity, PostProcessVolumeData, World } from 'esengine';
 
 type PostProcessEffectData = PostProcessVolumeData['effects'][number];
 import { Planet, registerPlanetProvider } from 'esengine/terrain';
-import { WorldGen, WorldSurface } from 'esengine/worldgen';
-import { floraFor, registerFlora } from './flora';
+import { WorldGen, WorldSurface, registerWorldRules } from 'esengine/worldgen';
+import { floraRules } from './flora';
+import { siteTurn, specFor, type PlanetSpec } from './planetSpec';
 import { groundFor, heightAt, type Ground } from './grounds';
 import { GROUND_ID, GROUND_VERSION, groundRange, groundSample, groundWorkerSource } from './planetGround';
 import { lookRotation } from './flight';
@@ -69,7 +70,6 @@ let registered = false;
 function register(): void {
     if (registered) return;
     registered = true;
-    registerFlora();
     registerPlanetProvider({
         id: GROUND_ID,
         versions: [GROUND_VERSION],
@@ -95,6 +95,8 @@ const levelFacing = (yaw: number, pitch: number): Quat =>
 export interface PlanetfallHooks {
     parts: (world: World) => Entity[];
     hideSpace: (world: World, hidden: boolean) => void;
+    /** Puts what grows in the world's own colours, as she comes down on it. */
+    tintFlora: (spec: PlanetSpec) => void;
 }
 
 export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: number, drift: number) => void {
@@ -194,7 +196,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
         world.insert(camera, PostProcessVolume, { ...volume, effects: volume.effects.map((e) => (e.type === 'colorGrade' ? { ...e, uniforms: { ...e.uniforms, ...flare() } } : e)) });
     };
 
-    const ensureSurface = (world: World, ground: Ground): Entity => {
+    const ensureSurface = (world: World, ground: Ground, spec: PlanetSpec | null, name: string): Entity => {
         if (surface !== null && world.valid(surface)) return surface;
         const e = world.spawn('PlanetSurface');
         world.insert(e, Transform, { position: { ...fall.centre } });
@@ -209,8 +211,13 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             layers: GROUND_LAYERS, tintLayers: true,
         });
         // What grows there: laid out over the planet by the world's rules, round wherever she is. The ground keeps its own paint.
-        const flora = floraFor(ground.world);
-        if (flora) world.insert(e, WorldGen, { rules: flora, version: 1, world: `${ground.world}:${ground.seed}`, seed: ground.seed, paintGround: false, surface: WorldSurface.Planet, seaLevel: 0, groundStep: 6 });
+        if (spec) {
+            hooks.tintFlora(spec);
+            // The world's own rules, made known to the engine under its name (a second set under the same name takes the first's place).
+            const flora = `space-frigate:flora:${name}`;
+            registerWorldRules(floraRules(flora, spec));
+            world.insert(e, WorldGen, { rules: flora, version: 1, world: `${ground.world}:${ground.seed}`, seed: ground.seed, paintGround: false, surface: WorldSurface.Planet, seaLevel: 0, groundStep: 6 });
+        }
         surface = e;
         return e;
     };
@@ -221,6 +228,8 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
     };
 
     let counted = 0;
+    let site = '';
+    let sited: { from: Ground; site: string; ground: Ground } | null = null;
     return (world, dt, drift) => {
         if ((counted += dt) > 1) {
             counted = 0;
@@ -229,7 +238,11 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             fall.flora = pieces;
         }
         const here = systemAt(ship.system);
-        const ground = groundFor(here);
+        const base = groundFor(here);
+        // Once she is down the ground is the world's with the place she came in over turned to its top (planetSpec.ts).
+        if (!base) site = '';
+        if (base && site && (!sited || sited.from !== base || sited.site !== site)) sited = { from: base, site, ground: { ...base, world: `${base.world}@${site}` } };
+        const ground = base && site ? sited!.ground : base;
         fall.landable = ground !== null;
         fall.body = here.body;
         const step = scale(helm.forward, -drift);
@@ -282,9 +295,14 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
                 helm.mode = 'manual';
                 helm.rudder = 0;
                 helm.elevation = 0;
-                fall.ground = groundUnder(ground, { x: 0, y: 1, z: 0 });
+                // The place she came in over: the way from the planet's middle to her, read before the planet is put away.
+                const from = spacePlanet(world).centre;
+                site = siteTurn(here.surface.tilt, { x: -from.x, y: -from.y, z: -from.z });
+                const landed: Ground = { ...ground, world: `${ground.world}@${site}` };
+                sited = { from: ground, site, ground: landed };
+                fall.ground = groundUnder(landed, { x: 0, y: 1, z: 0 });
                 fall.centre = { x: 0, y: -(ground.radius + fall.ground + PLANETFALL.startAbove), z: 0 };
-                ensureSurface(world, ground);
+                ensureSurface(world, landed, specFor(here, ground), `${here.index}:${ground.seed}`);
                 fall.note = `${here.body}   ${ground.site}   GROUND MAPPED`;
             }
             if (fall.t >= PLANETFALL.entry) { fall.stage = 'surface'; fall.t = 0; }
@@ -326,6 +344,7 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
                 const below = scale(fall.centre, 1 / d);
                 ship.away = false;
                 dropSurface(world);
+                site = '';
                 hooks.hideSpace(world, false);
                 ambient(world, null);
                 placeParts(world, scale(below, here.radius * Math.max(here.air, PLANETFALL.entryShell) * 1.25));

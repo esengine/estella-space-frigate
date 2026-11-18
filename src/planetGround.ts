@@ -1,6 +1,10 @@
 export const GROUND_ID = 'space-frigate:ground';
 export const GROUND_VERSION = 1;
 
+/**
+ * `world` is the kind of ground, and after an `@` the turn (a quaternion x,y,z,w) that takes the directions asked about to the planet's own:
+ * the ground is drawn with the place she came down at on top, and that place is wherever on the planet she came in over.
+ */
 export interface GroundRegion { world: string; seed: number; radius: number; directions: Float32Array; count: number }
 
 export function groundSample(region: GroundRegion): { heights: Float32Array; paint: Float32Array } {
@@ -48,7 +52,10 @@ export function groundSample(region: GroundRegion): { heights: Float32Array; pai
         const t = Math.min(Math.max((v - a) / (b - a), 0), 1);
         return t * t * (3 - 2 * t);
     };
-    const style = region.world === 'ocean' ? 1 : region.world === 'lava' ? 2 : region.world === 'frozen' ? 3 : region.world === 'terran' ? 4 : 0;
+    const named = region.world.split('@');
+    const kind = named[0];
+    const turn = named[1] ? named[1].split(',').map(Number) : null;
+    const style = kind === 'ocean' ? 1 : kind === 'lava' ? 2 : kind === 'frozen' ? 3 : kind === 'terran' ? 4 : 0;
     const bands = [[0.42, 0.8, 1150, 1600, 40, 420], [0.55, 0.95, 600, 1000, -40, 120], [0.55, 0.95, 600, 1000, 40, 420], [0.5, 0.9, 900, 1400, 80, 500], [0.5, 0.9, 900, 1300, -30, 90]][style]!;
     const r = region.radius;
     const height = (dx: number, dy: number, dz: number): number => {
@@ -93,7 +100,14 @@ export function groundSample(region: GroundRegion): { heights: Float32Array; pai
     const heights = new Float32Array(count), paint = new Float32Array(count * 4);
     const reach = 6 / r;
     for (let i = 0; i < count; i++) {
-        const dx = dirs[i * 3]!, dy = dirs[i * 3 + 1]!, dz = dirs[i * 3 + 2]!;
+        let dx = dirs[i * 3]!, dy = dirs[i * 3 + 1]!, dz = dirs[i * 3 + 2]!;
+        if (turn) {
+            // v + 2w(q x v) + 2 q x (q x v)
+            const qx = turn[0]!, qy = turn[1]!, qz = turn[2]!, qw = turn[3]!;
+            const cx = qy * dz - qz * dy, cy = qz * dx - qx * dz, cz = qx * dy - qy * dx;
+            const ex = qy * cz - qz * cy, ey = qz * cx - qx * cz, ez = qx * cy - qy * cx;
+            dx += 2 * (qw * cx + ex); dy += 2 * (qw * cy + ey); dz += 2 * (qw * cz + ez);
+        }
         const h = Math.min(Math.max(height(dx, dy, dz), lo + 1), hi - 1);
         heights[i] = h;
         let ax = Math.abs(dx) < 0.9 ? 1 : 0, ay = ax ? 0 : 1, az = 0;

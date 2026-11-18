@@ -14,6 +14,9 @@ import { installLoading, loading } from './loading';
 import { configureOnline, online } from './online';
 import { installSky } from './sky';
 import { PLANETFALL, createPlanetfall, fall } from './planetfall';
+import { FLORA_MATERIALS, STONE_MATERIAL } from './flora';
+import { groundFor } from './grounds';
+import { WORLD_MAP, mapSeaLevel, worldMapMaker, type PlanetSpec } from './planetSpec';
 import { DIRECTOR, director, handOver, stepDirector, type Rig } from './director';
 import { pendingShaders } from './shaders';
 import { graphics } from './hudSettings';
@@ -122,7 +125,28 @@ let welcomed = 0;
             for (let i = 0; ; i++) { const e = world.findEntityByName(`Rock${i}`); if (e === null) break; out.push(e); }
             return out;
         };
+        // What grows is drawn by a few materials every world shares; a world puts them in its own colours as she comes down on it.
+        // They are loaded once and kept: the engine's own use of them is by the same handles.
+        let flora: Promise<{ leaves: number[]; stone: number }> | null = null;
+        const tintFlora = (spec: PlanetSpec): void => {
+            const assets = app.getResource(Assets);
+            flora ??= Promise.all([...FLORA_MATERIALS, STONE_MATERIAL].map((path) => assets.loadMaterial(path).then((m) => m.handle)))
+                .then((handles) => ({ leaves: handles.slice(0, -1), stone: handles[handles.length - 1]! }));
+            void flora.then(({ leaves, stone }) => {
+                const by = (c: { r: number; g: number; b: number }, k: number): number[] => [c.r * k, c.g * k, c.b * k, 1];
+                // Darker at the foot than at the top, as a tree standing among others is (tools/flora-meshes.mjs has the same two numbers).
+                for (const m of leaves) { Material.setUniform(m, 'u_baseColor', by(spec.leaf, 0.62)); Material.setUniform(m, 'u_tipColor', by(spec.leaf, 1.12)); }
+                Material.setUniform(stone, 'u_baseColor', by(spec.rock, 0.2));
+                Material.setUniform(stone, 'u_tipColor', by(spec.rock, 0.5));
+            }, (err: unknown) => console.error(`space-frigate: the flora's materials did not load: ${String(err)}`));
+        };
+        // The world as a map (planetSpec.ts): made a few rows a frame after she arrives in a system, then given to the planet's
+        // material, which draws its coasts and its plains from it. Until it is there the planet is drawn by its own noise.
+        let mapMaker: ReturnType<typeof worldMapMaker> | null = null;
+        let mapOf = -1;
+        let mapTexture = 0;
         const planetfall = createPlanetfall({
+            tintFlora,
             parts: (world) => BODY.map((name) => get(world, name)),
             hideSpace: (world, hidden) => {
                 const ringed = systemAt(ship.system).ring !== null;
@@ -188,6 +212,15 @@ let welcomed = 0;
             Material.setUniform(ground, 'u_sun', toSun);
             Material.setUniform(ground, 'u_sunColor', tone(here.sunColor));
             Material.setUniform(ground, 'u_power', here.sunPower);
+            // Its ground's own colours, and the height of its sea in the map's measure (under 0 for a world with none).
+            const land = groundFor(here);
+            Material.setUniform(ground, 'u_mapOn', 0);
+            mapOf = system;
+            mapMaker = land ? worldMapMaker(land) : null;
+            if (land) {
+                land.colors.forEach((color, i) => Material.setUniform(ground, `u_g${i}`, tone(color)));
+                Material.setUniform(ground, 'u_sea', land.sea ? mapSeaLevel(land.world) : -1);
+            }
             const shell = here.radius * here.air;
             world.update(air, Transform, (t) => { t.position = { ...here.at }; t.scale = { x: shell, y: shell, z: shell }; });
             const sky = world.get(air, MeshRenderer).material;
@@ -390,6 +423,22 @@ let welcomed = 0;
                 stage(world, ship.system);
                 dress(world, ship.system, ship.system, 1);
                 grade(world, EXPOSURE, ship.system, 1);
+            }
+            if (mapMaker) {
+                const pixels = mapMaker.step(3);
+                if (pixels) {
+                    mapMaker = null;
+                    const assets = app.getResource(Assets), system = mapOf;
+                    void assets.createTexture({ width: WORLD_MAP.width, height: WORLD_MAP.height, pixels }, { srgb: false, flipY: false }).then((handle) => {
+                        // She may have jumped on while it was made: the map is the system's it was made for, or nobody's.
+                        if (mapOf !== system || handle === 0) { if (handle) assets.releaseBuiltTexture(handle); return; }
+                        const material = world.get(get(world, 'Planet'), MeshRenderer).material;
+                        Material.setUniform(material, 'u_map', { __textureRef: true, textureId: handle });
+                        Material.setUniform(material, 'u_mapOn', 1);
+                        if (mapTexture) assets.releaseBuiltTexture(mapTexture);
+                        mapTexture = handle;
+                    });
+                }
             }
             if (ship.jump >= 0) ship.jump += dt;
             const leap = jumpAt(ship.jump);
