@@ -104,8 +104,10 @@ grown by the engine's tree step and written by the editor's model tools (`flora-
 `tools/flora-meshes.mjs`, which says what had to change and why. `tools/probe-flora.mjs` puts her low over the ground and takes
 pictures.
 
-Not yet: the ground is plain colour with no texture or grass, the sea is a flat coloured sphere, and only the terran kind has
-anything growing. The project turns the depth prepass off (`depthPrepass` in `project.esproject`): with it on, the engine draws a
+The ground of every world has a grain: four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's
+paint and tinted by that world's own colours, with tall grass in clumps on a terran world's open ground.
+
+Not yet: the sea is a flat coloured sphere, and only the terran kind has anything growing. The project turns the depth prepass off (`depthPrepass` in `project.esproject`): with it on, the engine draws a
 cut-out material wrong, and the leaves are cut-outs.
 
 ## License

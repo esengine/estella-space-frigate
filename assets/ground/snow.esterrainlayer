@@ -1,0 +1,12 @@
+{
+  "albedo": "assets/ground/snow.png",
+  "tile": 160,
+  "tint": [
+    1,
+    1,
+    1
+  ],
+  "roughness": 0.6,
+  "normalStrength": 1,
+  "heightBlend": 0.2
+}

@@ -43,6 +43,7 @@ const terran: WorldRules = {
                 { recipe: 'copse', layer: 'stands', density: 0.1 },
                 { recipe: 'lone broadleaf', layer: 'scatter', density: 0.025 },
                 { recipe: 'thicket', layer: 'scatter', density: 0.07 },
+                { recipe: 'tussock', layer: 'scatter', density: 0.34 },
                 { recipe: 'stones', layer: 'scatter', density: 0.02 },
             ],
         },
@@ -109,6 +110,12 @@ const terran: WorldRules = {
             id: 'thicket', version: 2, tags: ['brush'],
             anchor: { id: 'bush', ...BUSH, scale: [0.9, 1.7] },
             members: [{ id: 'more', ...BUSH, count: [0, 3], ring: [3, 10], scale: [0.6, 1.3] }],
+        },
+        {
+            // Tall grass in clumps on open ground: the brush's leaves, small, many to a patch.
+            id: 'tussock', version: 1, tags: ['grass'],
+            anchor: { id: 'tuft', ...BUSH, footprint: 0.5, canopy: 0, scale: [0.22, 0.4] },
+            members: [{ id: 'more', ...BUSH, footprint: 0.4, canopy: 0, count: [5, 11], ring: [1.5, 14], scale: [0.16, 0.36] }],
         },
         { id: 'stones', version: 1, tags: ['rock'], anchor: { id: 'stone', ...ROCK, scale: [0.6, 1.8] } },
     ],

@@ -13,6 +13,7 @@ import { ship } from './shipState';
 import { systemAt } from './worlds';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
+const GROUND_LAYERS = ['grass', 'soil', 'snow', 'rock'].map((name) => `assets/ground/${name}.esterrainlayer`);
 
 export const PLANETFALL = {
     // The way down takes this long: the air heats and she shakes, the cloud deck closes over her (and the ground is made behind it at `swap`), and she breaks out below it.
@@ -200,8 +201,10 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
         world.insert(e, Planet, {
             radius: ground.radius, provider: GROUND_ID, world: ground.world, generatorVersion: GROUND_VERSION, seed: ground.seed,
             cellSize: 2, detail: 1.6, layerColor0: ground.colors[0], layerColor1: ground.colors[1], layerColor2: ground.colors[2], layerColor3: ground.colors[3],
-            macroScale: 1400, macroVariation: 0.4, collision: false, gravity: 0,
+            macroScale: 520, macroVariation: 0.5, collision: false, gravity: 0,
             sea: ground.sea !== null, seaLevel: 0, seaColor: ground.sea ?? rgb(0, 0, 0), seaOpacity: 0.86,
+            // The ground's grain: four grey pictures (tools/make-ground.py) in the order its paint weighs them, each tinted by the world's own colour above.
+            layers: GROUND_LAYERS, tintLayers: true,
         });
         // What grows there: laid out over the planet by the world's rules, round wherever she is. The ground keeps its own paint.
         const flora = floraFor(ground.world);

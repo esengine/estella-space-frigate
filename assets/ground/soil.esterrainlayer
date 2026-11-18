@@ -1,0 +1,12 @@
+{
+  "albedo": "assets/ground/soil.png",
+  "tile": 90,
+  "tint": [
+    1,
+    1,
+    1
+  ],
+  "roughness": 0.9,
+  "normalStrength": 1,
+  "heightBlend": 0.2
+}

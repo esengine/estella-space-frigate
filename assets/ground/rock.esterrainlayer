@@ -1,0 +1,12 @@
+{
+  "albedo": "assets/ground/rock.png",
+  "tile": 120,
+  "tint": [
+    1,
+    1,
+    1
+  ],
+  "roughness": 0.85,
+  "normalStrength": 1,
+  "heightBlend": 0.2
+}
