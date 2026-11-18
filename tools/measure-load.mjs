@@ -18,7 +18,8 @@ const report = [];
 for (const visit of ['first visit', 'second visit']) {
     const page = await context.newPage();
     let bytes = 0, files = 0;
-    page.on('response', (r) => { const size = Number(r.headers()['content-length'] ?? 0); if (r.status() === 200) { bytes += size; files++; } });
+    // What came over the wire, as the browser counted it: a body served in ranges or without a length is still counted.
+    page.on('requestfinished', (request) => { void request.sizes().then((sizes) => { bytes += sizes.responseBodySize; files++; }, () => undefined); });
     const began = Date.now();
     await page.goto(`http://127.0.0.1:${server.address().port}/?seed=1`, { waitUntil: 'load', timeout: 300000 });
     const loadedAt = Date.now() - began;
