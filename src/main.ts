@@ -90,6 +90,8 @@ addPlugin({
         let throttle = 0.65;
         let tour = true;
         let hand: Orbit = { ...SHOTS[0] };
+        // For a tool that looks at something from where it chooses (tools/probe-flora.mjs): the view by hand, set whole.
+        (globalThis as { __spaceView?: (to: Partial<Orbit>) => void }).__spaceView = (to) => { hand = { ...hand, ...to }; tour = false; };
         let grabbed = false;
         let last = { x: 0, y: 0 };
         let ahead = 1;

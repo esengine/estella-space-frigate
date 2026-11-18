@@ -96,6 +96,18 @@ The station is built in `tools/generate.py` after the multi-view design, from pa
 
 Assets are regenerated from their recipes with `python3 tools/generate.py`.
 
+## What grows on a world
+
+A terran world has woods: oak, birch, pine and brush, with stones among them, laid out by the engine's world generation over the
+planet as she flies (`src/flora.ts`: biomes by height, moisture and slope, the same from the same seed every time). The trees are
+grown by the engine's tree step and written by the editor's model tools (`flora-src/`), then made ready for a wood by
+`tools/flora-meshes.mjs`, which says what had to change and why. `tools/probe-flora.mjs` puts her low over the ground and takes
+pictures.
+
+Not yet: the ground is plain colour with no texture or grass, the sea is a flat coloured sphere, and only the terran kind has
+anything growing. The project turns the depth prepass off (`depthPrepass` in `project.esproject`): with it on, the engine draws a
+cut-out material wrong, and the leaves are cut-outs.
+
 ## License
 
 [Apache-2.0](LICENSE). The piano samples are CC0 and the Chakra Petch font is under the SIL Open Font License; each carries its own licence file.

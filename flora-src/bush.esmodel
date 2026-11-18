@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "op": "tree",
+      "height": 3.4,
+      "shape": "bush",
+      "seed": 9,
+      "detail": 1,
+      "bark": [
+        0.2,
+        0.15,
+        0.1
+      ],
+      "leaf": [
+        0.16,
+        0.3,
+        0.09
+      ]
+    },
+    {
+      "op": "decimate",
+      "faces": "bark",
+      "ratio": 0.25,
+      "error": 0.01
+    }
+  ]
+}

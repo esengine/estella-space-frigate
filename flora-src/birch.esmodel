@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "steps": [
+    {
+      "op": "tree",
+      "height": 15,
+      "shape": "tall",
+      "seed": 5,
+      "detail": 1,
+      "crown": 1.2,
+      "barkStyle": "banded",
+      "bark": [
+        0.72,
+        0.7,
+        0.64
+      ],
+      "leaf": [
+        0.2,
+        0.36,
+        0.09
+      ]
+    },
+    {
+      "op": "decimate",
+      "faces": "bark",
+      "ratio": 0.3,
+      "error": 0.006
+    }
+  ]
+}

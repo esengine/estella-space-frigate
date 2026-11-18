@@ -1,8 +1,10 @@
-import { Light, PostProcessVolume, Transform } from 'esengine';
+import { Light, Name, PostProcessVolume, Transform } from 'esengine';
 import type { Color, Entity, PostProcessVolumeData, World } from 'esengine';
 
 type PostProcessEffectData = PostProcessVolumeData['effects'][number];
 import { Planet, registerPlanetProvider } from 'esengine/terrain';
+import { WorldGen, WorldSurface } from 'esengine/worldgen';
+import { floraFor, registerFlora } from './flora';
 import { groundFor, heightAt, type Ground } from './grounds';
 import { GROUND_ID, GROUND_VERSION, groundRange, groundSample, groundWorkerSource } from './planetGround';
 import { lookRotation } from './flight';
@@ -58,12 +60,15 @@ export const fall = {
     target: null as Vec | null,
     planet: null as Vec | null,
     warned: false,
+    /** How many pieces of what grows there are drawn (a piece is one kind in one square of ground), counted now and then. */
+    flora: 0,
 };
 
 let registered = false;
 function register(): void {
     if (registered) return;
     registered = true;
+    registerFlora();
     registerPlanetProvider({
         id: GROUND_ID,
         versions: [GROUND_VERSION],
@@ -198,6 +203,9 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             macroScale: 1400, macroVariation: 0.4, collision: false, gravity: 0,
             sea: ground.sea !== null, seaLevel: 0, seaColor: ground.sea ?? rgb(0, 0, 0), seaOpacity: 0.86,
         });
+        // What grows there: laid out over the planet by the world's rules, round wherever she is. The ground keeps its own paint.
+        const flora = floraFor(ground.world);
+        if (flora) world.insert(e, WorldGen, { rules: flora, version: 1, world: `${ground.world}:${ground.seed}`, seed: ground.seed, paintGround: false, surface: WorldSurface.Planet, seaLevel: 0 });
         surface = e;
         return e;
     };
@@ -207,7 +215,14 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
         surface = null;
     };
 
+    let counted = 0;
     return (world, dt, drift) => {
+        if ((counted += dt) > 1) {
+            counted = 0;
+            let pieces = 0;
+            if (surface !== null) for (const e of world.getEntitiesWithComponents([Name])) { const name = world.get(e, Name).value; if (name === 'WorldGenDecor' || name === 'WorldGenPlants') pieces++; }
+            fall.flora = pieces;
+        }
         const here = systemAt(ship.system);
         const ground = groundFor(here);
         fall.landable = ground !== null;
