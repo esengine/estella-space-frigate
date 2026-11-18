@@ -107,8 +107,9 @@ pictures.
 The ground of every world has a grain: four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's
 paint and tinted by that world's own colours, with tall grass in clumps on a terran world's open ground.
 
-Not yet: the sea is a flat coloured sphere, and only the terran kind has anything growing. The project turns the depth prepass off (`depthPrepass` in `project.esproject`): with it on, the engine draws a
-cut-out material wrong, and the leaves are cut-outs.
+Not yet: the sea is a flat coloured sphere, and only the terran kind has anything growing. The project turns the depth prepass off (`depthPrepass` in `project.esproject`): with it on, on a Windows browser at the high
+level, the trees were not drawn. That was the engine's (a draw that writes depth after draws that only test it is lost on D3D11
+with four samples) and is mended there; the switch goes back on once the engine build this project is exported with has it.
 
 ## License
 

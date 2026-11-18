@@ -436,6 +436,9 @@ let welcomed = 0;
             }
             // What the frame cost the GPU, as the engine measured it: for a check, and for anyone asking why it is slow.
             const meter = (app as unknown as { wasmModule?: { renderer_getGpuTimeMs?: () => number; renderer_getGpuDrawCalls?: () => number; renderer_getEstimatedGpuBytes?: () => number } }).wasmModule;
+            // For a tool that asks the engine what a frame was made of (tools/probe-prepass.mjs).
+            (globalThis as { __spaceEngine?: unknown }).__spaceEngine ??= meter;
+            (globalThis as { __spaceCounters?: () => string }).__spaceCounters ??= () => { const m = meter as unknown as { engine_setCpuProfiling?: (on: boolean) => void; engine_getCounters?: () => string } | undefined; m?.engine_setCpuProfiling?.(true); return m?.engine_getCounters?.() ?? ''; };
             facts.gpuMs = meter?.renderer_getGpuTimeMs?.() ?? 0;
             facts.gpuDraws = meter?.renderer_getGpuDrawCalls?.() ?? 0;
             facts.gpuBytes = meter?.renderer_getEstimatedGpuBytes?.() ?? 0;
