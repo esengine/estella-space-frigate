@@ -167,6 +167,15 @@ try {
         const k = (d - (f.altitude - h)) / d;
         f.centre = { x: c.x * k, y: c.y * k, z: c.z * k };
     }, above);
+    // FLORA_CLOCK=1: how long, by the clock and with the game running as a player has it, the ground takes to fill once she is under the cloud.
+    if (process.env.FLORA_CLOCK) {
+        await lower(300);
+        await page.evaluate(() => window.__estellaCooked.setPaused(false));
+        const began = Date.now(), seen = [];
+        for (let n = 0; n < 40; n++) { await page.waitForTimeout(500); if (n % 6 === 0) await lower(300); seen.push(`${((Date.now() - began) / 1000).toFixed(1)}s:${(await fall()).flora}`); }
+        await page.evaluate(() => window.__estellaCooked.setPaused(true));
+        problems.push(`pieces by the clock ${seen.filter((_, i) => i % 2 === 1).join(' ')}`);
+    }
     await tap('KeyZ');
     await step(120);
     for (const above of [900, 320, 130]) {
@@ -211,8 +220,8 @@ try {
         f.centre = { x: c.x, y: c.y * cos - c.z * sin, z: c.y * sin + c.z * cos };
     }, angle);
     let found = false;
-    for (let n = 0; n < 500 && !found; n++) { await turn(0.004); await step(1); await lower(400); found = (await fall()).ground < -4; }
-    for (let n = 0; n < 40 && found; n++) { await turn(-0.0006); await step(1); await lower(400); if ((await fall()).ground > 3) break; }
+    let turned = 0;
+    for (let n = 0; n < 500 && !found; n++) { await turn(0.004); turned += 0.004; await step(1); await lower(400); found = (await fall()).ground < -4; }
     if (!found) problems.push('no sea was found');
     await lower(260);
     await step(300);
@@ -220,6 +229,13 @@ try {
     await tap('Digit2');
     await step(120);
     await shoot('d-shore-2');
+    // Just out over the water, low, the eye near it: its waves, its shallows and where it breaks.
+    await lower(60);
+    await step(240);
+    await lower(60);
+    for (const [name, to] of [['d-sea-low', { yaw: 0.2, pitch: 0.07, distance: 170, height: 16, along: 0 }], ['d-sea-back', { yaw: 3.3, pitch: 0.1, distance: 190, height: 10, along: 0 }], ['d-sea-down', { yaw: 2.4, pitch: 0.6, distance: 320, height: 0, along: 0 }]]) {
+        await view(to); await step(40); await shoot(name);
+    }
     await tap('Digit3');
     await step(120);
     await shoot('c-view-3');

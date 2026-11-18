@@ -203,12 +203,14 @@ export function createPlanetfall(hooks: PlanetfallHooks): (world: World, dt: num
             cellSize: 2, detail: 1.6, layerColor0: ground.colors[0], layerColor1: ground.colors[1], layerColor2: ground.colors[2], layerColor3: ground.colors[3],
             macroScale: 520, macroVariation: 0.5, collision: false, gravity: 0,
             sea: ground.sea !== null, seaLevel: 0, seaColor: ground.sea ?? rgb(0, 0, 0), seaOpacity: 0.86,
+            // Waves some forty metres from crest to crest, and a bottom that shows through the first thirty metres of water.
+            seaWaveLength: 22, seaWaveSteepness: 0.6, seaShallowDepth: 14,
             // The ground's grain: four grey pictures (tools/make-ground.py) in the order its paint weighs them, each tinted by the world's own colour above.
             layers: GROUND_LAYERS, tintLayers: true,
         });
         // What grows there: laid out over the planet by the world's rules, round wherever she is. The ground keeps its own paint.
         const flora = floraFor(ground.world);
-        if (flora) world.insert(e, WorldGen, { rules: flora, version: 1, world: `${ground.world}:${ground.seed}`, seed: ground.seed, paintGround: false, surface: WorldSurface.Planet, seaLevel: 0 });
+        if (flora) world.insert(e, WorldGen, { rules: flora, version: 1, world: `${ground.world}:${ground.seed}`, seed: ground.seed, paintGround: false, surface: WorldSurface.Planet, seaLevel: 0, groundStep: 6 });
         surface = e;
         return e;
     };

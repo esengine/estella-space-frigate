@@ -33,18 +33,20 @@ const terran: WorldRules = {
             recipes: [
                 { recipe: 'grove', layer: 'stands', density: 0.85 },
                 { recipe: 'lone broadleaf', layer: 'scatter', density: 0.16 },
-                { recipe: 'thicket', layer: 'scatter', density: 0.2 },
+                { recipe: 'thicket', layer: 'scatter', density: 0.36 },
+                { recipe: 'stones', layer: 'scatter', density: 0.03 },
+                { recipe: 'tussock', layer: 'grass', density: 0.3 },
             ],
         },
         {
             id: 'grassland', transition: 240,
             conditions: [DRY_LAND, { field: 'height', max: 560, blend: 90 }, { field: 'moisture', max: 0.5, blend: 0.07 }, { field: 'up', min: 0.8, blend: 0.06 }],
             recipes: [
-                { recipe: 'copse', layer: 'stands', density: 0.1 },
-                { recipe: 'lone broadleaf', layer: 'scatter', density: 0.025 },
-                { recipe: 'thicket', layer: 'scatter', density: 0.07 },
-                { recipe: 'tussock', layer: 'scatter', density: 0.34 },
-                { recipe: 'stones', layer: 'scatter', density: 0.02 },
+                { recipe: 'copse', layer: 'stands', density: 0.26 },
+                { recipe: 'lone broadleaf', layer: 'scatter', density: 0.07 },
+                { recipe: 'thicket', layer: 'scatter', density: 0.2 },
+                { recipe: 'tussock', layer: 'grass', density: 0.6 },
+                { recipe: 'stones', layer: 'scatter', density: 0.06 },
             ],
         },
         {
@@ -53,18 +55,20 @@ const terran: WorldRules = {
             recipes: [
                 { recipe: 'pinewood', layer: 'stands', density: 0.5 },
                 { recipe: 'lone conifer', layer: 'scatter', density: 0.1 },
-                { recipe: 'stones', layer: 'scatter', density: 0.06 },
+                { recipe: 'stones', layer: 'scatter', density: 0.14 },
+                { recipe: 'thicket', layer: 'scatter', density: 0.08 },
+                { recipe: 'tussock', layer: 'grass', density: 0.28 },
             ],
         },
         {
             id: 'crag', transition: 120,
             conditions: [DRY_LAND, { field: 'up', max: 0.8, blend: 0.06 }],
-            recipes: [{ recipe: 'outcrop', layer: 'stands', density: 0.35 }, { recipe: 'stones', layer: 'scatter', density: 0.08 }],
+            recipes: [{ recipe: 'outcrop', layer: 'stands', density: 0.5 }, { recipe: 'stones', layer: 'scatter', density: 0.2 }, { recipe: 'tussock', layer: 'grass', density: 0.12 }],
         },
         {
             id: 'shore', transition: 60,
             conditions: [{ field: 'height', min: 1.5, max: 10, blend: 3 }],
-            recipes: [{ recipe: 'stones', layer: 'scatter', density: 0.04 }],
+            recipes: [{ recipe: 'stones', layer: 'scatter', density: 0.1 }, { recipe: 'tussock', layer: 'grass', density: 0.22 }],
         },
     ],
     recipes: [
@@ -114,8 +118,8 @@ const terran: WorldRules = {
         {
             // Tall grass in clumps on open ground: the brush's leaves, small, many to a patch.
             id: 'tussock', version: 1, tags: ['grass'],
-            anchor: { id: 'tuft', ...BUSH, footprint: 0.5, canopy: 0, scale: [0.22, 0.4] },
-            members: [{ id: 'more', ...BUSH, footprint: 0.4, canopy: 0, count: [5, 11], ring: [1.5, 14], scale: [0.16, 0.36] }],
+            anchor: { id: 'tuft', ...BUSH, footprint: 0.5, canopy: 0, scale: [0.3, 0.55] },
+            members: [{ id: 'more', ...BUSH, footprint: 0.4, canopy: 0, count: [3, 7], ring: [1.2, 9], scale: [0.2, 0.5] }],
         },
         { id: 'stones', version: 1, tags: ['rock'], anchor: { id: 'stone', ...ROCK, scale: [0.6, 1.8] } },
     ],
@@ -123,6 +127,8 @@ const terran: WorldRules = {
     layers: [
         { id: 'stands', spacing: 120, drawDistance: 3200, lodDistance: 650, chunkSize: 800 },
         { id: 'scatter', spacing: 34, drawDistance: 800, lodDistance: 400, chunkSize: 400 },
+        // Tall grass in clumps, drawn only round her: far off the ground's own grain is the grass. It keeps clear of nothing and nothing of it.
+        { id: 'grass', spacing: 14, drawDistance: 420, chunkSize: 210, occupies: false },
     ],
 };
 

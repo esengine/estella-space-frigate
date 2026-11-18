@@ -107,7 +107,10 @@ pictures.
 The ground of every world has a grain: four grey pictures (grass, soil, snow, rock; `tools/make-ground.py`) laid by the planet's
 paint and tinted by that world's own colours, with tall grass in clumps on a terran world's open ground.
 
-Not yet: the sea is a flat coloured sphere, and only the terran kind has anything growing.
+A world's sea has waves, is clearer and paler in its shallows and breaks white along the shore (the engine's planet sea).
+
+Not yet: the sea does not rise and fall, only the terran kind has anything growing, and every terran world grows the same
+things: a world has no climate of its own, and what is seen of it from space is drawn apart from its ground.
 
 ## License
 
