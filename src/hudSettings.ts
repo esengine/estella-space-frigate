@@ -181,7 +181,8 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
             graphics.scale = q.renderScale;
             graphics.msaa = p.msaaSamples;
             graphics.antialiasing = p.antialiasing;
-            graphics.ssao = p.ssao;
+            // Ambient occlusion is one of the level's effects now: on unless the level skips it.
+            graphics.ssao = !p.skipEffects.some((e) => e.toLowerCase() === 'ssao');
             graphics.skipped = p.skipEffects;
             graphics.trimmed = finish(graphics.level === 'low');
         }
