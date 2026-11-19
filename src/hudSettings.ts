@@ -1,4 +1,4 @@
-import { Device, Material, MeshRenderer, Quality, TextAlign, UIVisual } from 'esengine';
+import { Device, Material, MeshRenderer, Quality, TextAlign, UIVisual, qualityRunsEffect } from 'esengine';
 import type { App, QualityController, QualityLevel, QualityMode, QualityPreferences } from 'esengine';
 import { AMBER, DESIGN, EDGE, HAZE, ICE, rgb, type Frame, type Kit } from './hudKit';
 import { SETTLED_FRAMES, pendingShaders } from './shaders';
@@ -181,8 +181,8 @@ export function buildSettings(app: App, kit: Kit): (frame: Frame) => void {
             graphics.scale = q.renderScale;
             graphics.msaa = p.msaaSamples;
             graphics.antialiasing = p.antialiasing;
-            // Ambient occlusion is one of the level's effects now: on unless the level skips it.
-            graphics.ssao = !p.skipEffects.some((e) => e.toLowerCase() === 'ssao');
+            // Asked of the engine, which knows every rule a level runs an effect by, not read off the skipped list.
+            graphics.ssao = qualityRunsEffect(p, 'ssao');
             graphics.skipped = p.skipEffects;
             graphics.trimmed = finish(graphics.level === 'low');
         }
